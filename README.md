@@ -190,5 +190,6 @@ General skills read facts from each project's `AGENTS.md`. The planned headings 
 - Verify: how to run and drive the app.
 - Data access: how to query safely, and which environments are read-only.
 - Risk areas: contracts, schema, authorisation, generated files.
+- External systems and owners: each outside system, which endpoints and features depend on it, and who owns it.
 
 `agentd-onboard` fills these in for a new project.

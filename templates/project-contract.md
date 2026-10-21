@@ -64,3 +64,16 @@ Run from: `<directory>`
 - **Generated files:** `<file and the exact command that regenerates it>`
 - **Business-critical calculations:** `<where the rules are documented and tested>`
 - **Never commit:** `<files that hold secrets or local settings>`
+
+### External systems and owners
+
+One row per system outside this repository that the application calls or that calls the application
+(for example a message broker, an integration platform, an identity provider, a payment service).
+
+| System | Direction | Our endpoints and services that depend on it | Features that depend on it | Owner | Test environment |
+|---|---|---|---|---|---|
+| `<name>` | `<outbound / inbound / both>` | `<controller routes, services, jobs>` | `<features or use cases that fail without it>` | `<team or person>` | `<where it can be tested, or "none">` |
+
+- **Failure behaviour:** `<timeouts, retries, queues, what the user sees when the system is down>`
+- **Other side of the boundary:** the logic inside the external system is not in this repository.
+  Write `unknown: ask <owner>` for anything you cannot read here.
