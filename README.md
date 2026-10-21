@@ -1,0 +1,195 @@
+# agent-skills
+
+My personal agent skills, global guide and safety hooks. One repository sets up
+Claude Code and GitHub Copilot CLI on a new machine.
+
+## What is here
+
+```
+skills/         General skills, one folder each. Each holds a SKILL.md.
+global/         The global guide (AGENTS.md) and the Claude Code CLAUDE.md that imports it.
+hooks/copilot/  Copilot CLI safety hooks. git-safety.json.tmpl is a template.
+harness/        One script per tool: claude-code.sh, copilot-cli.sh.
+lib/common.sh   Link, backup and conflict logic shared by the scripts.
+setup.manifest  Plugins and marketplaces to reinstall by hand.
+install.sh      The setup script. Dry run by default.
+tests/          test-install.sh runs the installer against throwaway home folders.
+```
+
+Skills in this repository are general. They work for any client and any stack.
+A skill that only makes sense for one project belongs in that project's own
+repository, not here. This keeps client details out of this repository. See
+[Project skills in customer repositories](#project-skills-in-customer-repositories).
+
+## Set up a new machine
+
+1. Install Claude Code and Copilot CLI, and start each once so `~/.claude` and `~/.copilot` exist.
+2. Clone this repository, for example to `~/Projects/agent-skills`.
+3. Install `jq` (`brew install jq`). The Copilot shell hook needs it.
+4. See the plan. This changes nothing:
+
+   ```bash
+   ./install.sh
+   ```
+
+5. Apply it:
+
+   ```bash
+   ./install.sh --apply
+   ```
+
+6. If the plan reports `CONFLICT`, an item already exists at that path. Read the
+   conflict lines, then decide:
+
+   ```bash
+   ./install.sh --apply --adopt
+   ```
+
+   `--adopt` moves the existing item to `~/.agent-skills-backup/<time>/` and links
+   the repository version in its place. It never deletes anything.
+
+7. Install the plugins listed at the end of the plan by hand. The script prints
+   them from `setup.manifest` and never installs them, because plugin commands
+   change between versions.
+8. Sign in to each tool again. Credentials are not stored here.
+
+Options:
+
+| Option | Effect |
+|---|---|
+| (none) | Show the plan. Change nothing. |
+| `--apply` | Create the missing links and files. Leave conflicts alone. |
+| `--adopt` | With `--apply`, move conflicting items to the backup folder and link ours. |
+| `--harness LIST` | Limit to `claude-code`, `copilot-cli`, or both (comma separated). |
+
+Exit status: `0` clean, `1` conflicts remain, `2` bad usage.
+
+## How the links work
+
+```
+repo/skills/<name>  <-  ~/.agents/skills/<name>  <-  ~/.claude/skills/<name>
+repo/global/AGENTS.md  <-  ~/.agents/AGENTS.md  <-  ~/.copilot/copilot-instructions.md
+repo/global/claude/CLAUDE.md  <-  ~/.claude/CLAUDE.md   (imports ~/.agents/AGENTS.md)
+repo/hooks/copilot/block-dangerous-shell.sh  <-  ~/.copilot/hooks/block-dangerous-shell.sh
+repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   (rendered copy)
+```
+
+- `~/.agents/skills` is the shared home. Copilot CLI reads it from version 1.0.11. Claude Code does not, so it gets links in `~/.claude/skills`.
+- `git-safety.json` holds an absolute path, so the script writes a rendered copy. It replaces `@HOME@` with your home folder.
+- Edit skills in this repository, not through the links. `git pull` then updates both tools.
+
+## Safety rules for the scripts
+
+- Dry run by default.
+- Safe to run twice. A second run changes nothing.
+- No deletes. A conflicting item is only moved to the backup folder, and only with `--adopt`.
+- The script checks that Copilot CLI is at least version 1.0.11 and that `jq` exists. It warns if not.
+- It skips a tool whose folder does not exist and says so.
+
+## Test
+
+```bash
+tests/test-install.sh
+```
+
+The test builds throwaway home folders, runs the installer in them, and checks the
+result. It never touches your real home. It deletes nothing, so it prints the temp
+folders it used. The operating system clears them later.
+
+`shellcheck` is not run by the tests. Run it yourself if it is installed.
+
+## Add a skill
+
+1. Create `skills/<name>/SKILL.md` with `name` and `description` in the frontmatter. Use lowercase and hyphens.
+2. Keep the skill general. Read project facts from the project's `AGENTS.md`. Do not write `dotnet test` or any one stack's command in the skill.
+3. Put stack-specific detail in `skills/<name>/references/<stack>.md`, and load it only when the stack is detected.
+4. Run `./install.sh` to see the new links, then `./install.sh --apply`.
+5. Test the skill in both Claude Code and Copilot CLI.
+
+## Project skills in customer repositories
+
+Some customers allow only Copilot, some allow Claude Code, and some do not want
+extra files in their repository. Skills that generate project skills (such as
+`agentd-verify-init`) must ask before they write.
+
+Ask these two questions once per project:
+
+1. Which tools does the customer allow? Claude Code, Copilot CLI, or both.
+2. May the skills be committed to the customer repository?
+
+Then write to the matching folder. Tested on Copilot CLI 1.0.101:
+
+| Customer allows | Write project skills to | Why |
+|---|---|---|
+| Copilot CLI only | `.github/skills/<name>/` | The Copilot convention. Copilot also reads `.claude/skills/` and `.agents/skills/`. |
+| Claude Code only | `.claude/skills/<name>/` | The Claude Code project folder. |
+| Both | `.claude/skills/<name>/` | The one project folder both tools read. |
+
+If the customer does not want the files committed, keep them local. Add the folder
+to `.git/info/exclude` in your own clone, not to `.gitignore`:
+
+```bash
+echo '.github/skills/' >> .git/info/exclude
+```
+
+`.git/info/exclude` is private to your clone and cannot be committed by accident.
+A shared `.gitignore` tells the whole team the folder exists.
+
+A local-only skill is lost when you clone again on a new machine. If the project
+keeps `docs/onboarding/`, regenerate the project skills from it. Record the two
+answers above in `docs/onboarding/` so a later session does not ask again.
+
+## What stays out of this repository
+
+- Credentials, tokens, licence keys and login state.
+- Plugin cache folders. Reinstall from `setup.manifest`.
+- Session history and per-project memory.
+- Live settings files such as `~/.claude/settings.json` and `~/.copilot/config.json`. They can hold machine paths and permissions.
+- Client project knowledge, such as `docs/onboarding/`. That lives in each client repository.
+- The `copilot` shell alias that adds `--allow-all`. It removes permission prompts, so set it up on purpose on each machine.
+
+## Skills
+
+| Skill | Purpose |
+|---|---|
+| `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
+| `agentd-pr-prep` | Write a PR title and description from the branch diff. |
+| `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
+
+Some other skills on my machines come from my employer's tooling. They are not
+stored here. `setup.manifest` lists them as reminders, and `install.sh` prints the
+reminder. Install them from the employer source into `~/.agents/skills/`.
+
+## Planned
+
+These are designs, not files yet.
+
+| Skill | Purpose |
+|---|---|
+| `agentd-onboard` | Learn a new project: business domain, data flow, runtime, delivery. Writes `docs/onboarding/` and fills the project contract. |
+| `agentd-intake` | Turn an Azure DevOps work item into a confirmed requirement. |
+| `agentd-diagnose` | Reproduce and find the root cause of bugs, data issues and slow code. Proposes a fix and hands off to `agentd-dev-rev`. |
+| `agentd-blast-radius` | List what else a change could break, with evidence. |
+| `agentd-explain` | Explain how a part of the system works and why. |
+| `agentd-data-fix` | Repair data safely: read first, idempotent script, backup, rollback. |
+| `agentd-verify-init` | Generate a project-local skill that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. |
+
+Planned flow:
+
+```
+onboard (once per project) -> intake -> explain -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
+```
+
+Start at any step. Small changes skip `diagnose`. Support questions stop at `explain`.
+
+### Project contract
+
+General skills read facts from each project's `AGENTS.md`. The planned headings are:
+
+- Commands: build, test, lint, and how to confirm the test count is real.
+- Verify: how to run and drive the app.
+- Data access: how to query safely, and which environments are read-only.
+- Risk areas: contracts, schema, authorisation, generated files.
+- Ticket source: Azure DevOps project and branch naming.
+
+`agentd-onboard` fills these in for a new project.
