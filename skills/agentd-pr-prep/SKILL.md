@@ -1,6 +1,7 @@
 ---
 name: agentd-pr-prep
 description: Use when the engineer asks to prepare a PR, or for a PR title and description for the current branch compared with its base branch.
+disable-model-invocation: true
 ---
 
 # agentd-pr-prep
