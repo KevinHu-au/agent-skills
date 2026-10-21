@@ -1,6 +1,7 @@
 ---
 name: agentd-dev-rev
 description: Use when the engineer asks an agent to carry out an application development task, bug fix, feature implementation, performance tuning, or other code change that needs staged review before handoff.
+disable-model-invocation: true
 ---
 
 # agentd-dev-rev

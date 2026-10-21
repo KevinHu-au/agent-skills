@@ -1,6 +1,7 @@
 ---
 name: agentd-prompt
 description: Use when the engineer asks to enhance, rewrite, or tighten a prompt into a clearer, more concise Markdown prompt without executing it.
+disable-model-invocation: true
 ---
 
 # agentd-prompt

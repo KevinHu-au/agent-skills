@@ -98,9 +98,21 @@ folders it used. The operating system clears them later.
 
 `shellcheck` is not run by the tests. Run it yourself if it is installed.
 
+The `agentd-onboard` skill has its own tests in `tests/onboard/`. They check the skill files, the brief
+checker, and a synthetic fixture project. They use throwaway folders in the system temp folder and delete
+nothing.
+
+```bash
+tests/onboard/test-check-brief.sh
+tests/onboard/test-make-fixture.sh
+tests/onboard/test-skill-structure.sh
+```
+
+`tests/onboard/EVAL.md` explains how to run the skill on the fixture and records the results.
+
 ## Add a skill
 
-1. Create `skills/<name>/SKILL.md` with `name` and `description` in the frontmatter. Use lowercase and hyphens.
+1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
 2. Keep the skill general. Read project facts from the project's `AGENTS.md`. Do not write `dotnet test` or any one stack's command in the skill.
 3. Put stack-specific detail in `skills/<name>/references/<stack>.md`, and load it only when the stack is detected.
 4. Run `./install.sh` to see the new links, then `./install.sh --apply`.
@@ -153,8 +165,15 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | Skill | Purpose |
 |---|---|
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
+| `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
+
+Every skill sets `disable-model-invocation: true`. The model never starts one on its own, so run a skill by
+typing `/skill-name`. This field is a Claude Code feature. In Copilot CLI an open issue
+([github/copilot-cli#4438](https://github.com/github/copilot-cli/issues/4438)) says a skill with the field is
+not found, even when you name it. That has not been tested on the version in use here. If a skill is not found
+in Copilot CLI, remove the line from that skill.
 
 Skills that belong to my separate AgentKit repository are not stored here.
 `setup.manifest` lists them as reminders, and `install.sh` prints the reminder.
@@ -166,7 +185,6 @@ These are designs, not files yet.
 
 | Skill | Purpose |
 |---|---|
-| `agentd-onboard` | Learn a new project: business domain, data flow, runtime, delivery. Writes `docs/onboarding/` and fills the project contract. |
 | `agentd-intake` | Turn an Azure DevOps work item into a confirmed requirement. |
 | `agentd-diagnose` | Reproduce and find the root cause of bugs, data issues and slow code. Proposes a fix and hands off to `agentd-dev-rev`. |
 | `agentd-blast-radius` | List what else a change could break, with evidence. |
