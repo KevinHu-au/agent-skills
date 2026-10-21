@@ -1,0 +1,66 @@
+<!--
+Project contract, version 1.
+
+Copy the "## Project contract" section into the project's AGENTS.md and fill it in.
+General agent skills read the project's facts from these exact headings. Do not rename them.
+
+Rules for filling it in:
+- Cite a source for each fact: `path/to/file:line`, a URL, or "told by <role>".
+- Write `unknown: ask <role or name>` when you cannot find a fact. Never guess.
+- Write `inferred:` before a fact you worked out but could not confirm.
+- When two sources disagree, write both with their sources and mark it `conflict:`. Do not pick one
+  silently. Prefer the source closest to the running code (a project file beats a README).
+- Never write secrets. Write where they are kept, for example "LastPass folder X".
+- Keep each answer short. Link to longer documents instead of copying them.
+-->
+
+## Project contract
+
+### Commands
+
+Run from: `<directory>`
+
+- **Prerequisites:** `<runtime versions, tools, Docker, VPN, licences>`
+- **Build:** `<command>`
+- **Unit tests:** `<command>`
+- **Integration tests:** `<command>` (needs: `<Docker, database, services>`)
+- **Run one test:** `<command with a filter>`
+- **Lint and format:** `<commands>`
+- **Run locally:** `<commands for each part: API, UI, database>`
+- **Count check:** how to confirm tests really ran. Give the expected count, and any filter that
+  matches zero tests but still exits 0.
+- **Known failing on a clean main:** `<command: what fails and why>`
+
+### Verify
+
+- **Start the app:** `<steps>`
+- **Sign in:** `<how a local user gets in and gets roles, without secrets>`
+- **Test data:** `<how to load it, where the files are>`
+- **Key flows to drive** (three to five; one row each):
+
+  | Flow | Start at | Expected result |
+  |---|---|---|
+  | `<name>` | `<screen or URL>` | `<what you see>` |
+
+- **Automated checks of the running app:** `<UI or API test commands, or "none">`
+
+### Data access
+
+| Environment | URL | Database | Access rule | Who approves access |
+|---|---|---|---|---|
+| `<Dev>` | `<url>` | `<server / name>` | `<read-write / read-only / none>` | `<role>` |
+
+- **Network:** `<VPN, firewall rules, IP allow list>`
+- **Query safely:** `<read-only login, tool, how to avoid locks>`
+- **Never do:** `<for example: writes to Prod, running a reset against a shared database>`
+- **Schema changes:** `<where scripts live, naming, and the rule that applied scripts are never edited>`
+- **Sensitive data:** `<personal or financial data, masking rules>`
+
+### Risk areas
+
+- **Public contracts:** `<HTTP API, DTOs, serialized shapes, config keys: who depends on them>`
+- **Database:** `<schema, stored procedures, migrations>`
+- **Authorisation:** `<where it is enforced, and the rule that it must not move>`
+- **Generated files:** `<file and the exact command that regenerates it>`
+- **Business-critical calculations:** `<where the rules are documented and tested>`
+- **Never commit:** `<files that hold secrets or local settings>`

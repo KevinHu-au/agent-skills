@@ -190,6 +190,5 @@ General skills read facts from each project's `AGENTS.md`. The planned headings 
 - Verify: how to run and drive the app.
 - Data access: how to query safely, and which environments are read-only.
 - Risk areas: contracts, schema, authorisation, generated files.
-- Ticket source: Azure DevOps project and branch naming.
 
 `agentd-onboard` fills these in for a new project.
