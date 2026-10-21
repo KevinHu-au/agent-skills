@@ -1,0 +1,20 @@
+# Plugins and marketplaces to reinstall by hand on a new machine.
+# install.sh only prints these; plugin commands change between versions.
+# Format: harness  kind  name  detail
+claude-code  plugin       superpowers@claude-plugins-official   on
+claude-code  plugin       swift-lsp@claude-plugins-official     on
+claude-code  plugin       understand-anything@understand-anything on
+claude-code  plugin       caveman@caveman                       on
+claude-code  plugin       ecc@ecc                               on
+claude-code  marketplace  understand-anything                   github:Lum1104/Understand-Anything
+claude-code  marketplace  caveman                               github:JuliusBrussee/caveman
+claude-code  marketplace  ecc                                   git:https://github.com/affaan-m/ECC.git
+claude-code  marketplace  dotnet-agent-skills                   github:dotnet/skills
+claude-code  local-skill  agentd-tasks,lead                     not in this repo; install from the employer source into ~/.agents/skills
+copilot-cli  local-skill  agentd-tasks,lead                     not in this repo; install from the employer source into ~/.agents/skills
+copilot-cli  plugin       superpowers@superpowers-marketplace   on
+copilot-cli  plugin       ecc@ecc                               off
+copilot-cli  plugin       dotnet@dotnet-agent-skills            off
+copilot-cli  marketplace  superpowers-marketplace               github:obra/superpowers-marketplace
+copilot-cli  marketplace  ecc                                   git:https://github.com/affaan-m/ECC
+copilot-cli  marketplace  dotnet-agent-skills                   github:dotnet/skills

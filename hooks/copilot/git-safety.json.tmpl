@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "bash|powershell",
+        "bash": "@HOME@/.copilot/hooks/block-dangerous-shell.sh",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
