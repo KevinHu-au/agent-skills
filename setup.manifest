@@ -10,8 +10,8 @@ claude-code  marketplace  understand-anything                   github:Lum1104/U
 claude-code  marketplace  caveman                               github:JuliusBrussee/caveman
 claude-code  marketplace  ecc                                   git:https://github.com/affaan-m/ECC.git
 claude-code  marketplace  dotnet-agent-skills                   github:dotnet/skills
-claude-code  local-skill  agentd-tasks,lead                     not in this repo; install from the employer source into ~/.agents/skills
-copilot-cli  local-skill  agentd-tasks,lead                     not in this repo; install from the employer source into ~/.agents/skills
+claude-code  local-skill  agentd-tasks,lead                     not in this repo; install from the AgentKit repository into ~/.agents/skills
+copilot-cli  local-skill  agentd-tasks,lead                     not in this repo; install from the AgentKit repository into ~/.agents/skills
 copilot-cli  plugin       superpowers@superpowers-marketplace   on
 copilot-cli  plugin       ecc@ecc                               off
 copilot-cli  plugin       dotnet@dotnet-agent-skills            off

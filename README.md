@@ -156,9 +156,9 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
 
-Some other skills on my machines come from my employer's tooling. They are not
-stored here. `setup.manifest` lists them as reminders, and `install.sh` prints the
-reminder. Install them from the employer source into `~/.agents/skills/`.
+Skills that belong to my separate AgentKit repository are not stored here.
+`setup.manifest` lists them as reminders, and `install.sh` prints the reminder.
+Install them from that repository into `~/.agents/skills/`.
 
 ## Planned
 
