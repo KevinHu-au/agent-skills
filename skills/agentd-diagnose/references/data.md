@@ -1,0 +1,27 @@
+# Data mode
+
+Find why the data is wrong, how far it goes, and whether it is still happening. A repair is not part of this mode.
+
+## Rules for the data
+
+- SELECT only, and only on an environment that the Data access heading of the contract marks read-only. If the heading is missing, run no query. Mark the environment `unknown:` and ask the engineer to add the heading to `AGENTS.md`. The engineer's word in chat does not replace the heading.
+- Limit the rows. Ask before you scan a large table or run a query that may lock it.
+- Run a stored procedure or function only when you know it does not write.
+- Put row IDs, counts and date ranges in the report. Never put names, emails, addresses or other personal data in the report or the hand-off. The report is pasted into the ticket. Keep result files in the scratch folder.
+
+## Four questions
+
+1. **Is the data wrong or the code that reads it wrong?** Look at the rows, not at the screen. If the rows are right, the problem is a bug in the reading code. Say so and follow `references/bug.md`.
+2. **What wrote the bad rows?** List every writer of the table: code paths, imports, integrations, stored procedures, triggers, jobs and manual edits. Find the first bad row by date, using the column that records when the row was written. If the only date is one the data carries (a feed or document date), say that it is not the write date. Compare that date with `git log` and the deploy dates. Look for what the bad rows share: a source, a user, a batch, a time.
+3. **Is it still happening?** Count the bad rows by day or week. New bad rows in the latest period mean the cause is live. The code fix then comes before any repair.
+4. **How wide is it?** Count the rows, tables and customers, and give the date range. Write the query that identifies a bad row, so the engineer can run it again.
+
+## Confirmation
+
+A data cause is confirmed when the suspected writer, run on a copy or in memory, makes the same bad-row shape, and the first bad row follows the change. If the data has no write date, the second part cannot be shown: say so, and keep the cause supported. That this writer produced these exact rows stays supported, unless a log or an audit trail shows it. Say which of the two you have.
+
+## Hand-off
+
+The hand-off lists the query that finds the bad rows, the count and the date range, the writer you found, and the code fix for `agentd-dev-rev` when the cause is live. If the cause is not live (a one-off edit, a finished migration), there is no code fix. The hand-off is then the repair, listed under Follow-on, and the report says so.
+
+A repair needs its own reviewed script: the scope, a backup, a rollback, counts before and after, and the engineer's sign-off. No skill runs it yet. Say so under Follow-on, and do not write the repair.
