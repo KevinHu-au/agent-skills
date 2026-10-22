@@ -39,6 +39,9 @@ grep -c '^Task:' report.md                       # 1 in scenarios 1 to 3, 0 in s
 grep -c 'Confidence: confirmed' report.md        # 1 in scenarios 1 to 3, 0 in scenario 4
 grep -c 'hand off anyway' report.md              # at least 1 in scenario 4
 ls -d "<the scratch folder named in the report>" # "No such file or directory", or the report says "Scratch folder: none"
+git -C "$FIX/shop" stash list                    # prints nothing
+git -C "$FIX/shop" worktree list                 # prints one line, the fixture itself
+grep -c '^Design concern: none' report.md        # 1 in every scenario
 ```
 
 The database is built last, so any file newer than it was written by the run. This prints nothing:
@@ -104,7 +107,7 @@ that read the skill from this repository and used the default model of the harne
 was first written. "Round 2" is the skill after iteration 1, and only scenarios 2 and 4 were run again. "Round 3"
 is scenario 2 on the corrected fixture and the skill after iteration 4. Iterations 2 to 5 (wording only, the
 last three from the independent reviews and round 3) were not run on agents again, except as round 3 says. There
-were seven skill runs and one baseline run.
+were seven skill runs and one baseline run before round 4. Round 4 added five skill runs, on 2026-10-23.
 
 **The prompt in this file is the final one.** Rounds 1 and 2 used an earlier prompt: the skill feedback came last,
 and there was no sentence about removing the scratch folder first. The "feedback first" sentence was added in
@@ -128,10 +131,19 @@ and commit ids in the rows below are from the first build, except round 3.
 | Round 2 | 2 data | 7 of 7 | T2 pass | Same findings. "Scratch folder: none", read-only connection used instead of a copy. Wrote "Started as data" although it did not switch. |
 | Round 2 | 4 gate | 6 of 6 | T4 pass | Possible causes now `inferred:` with the limit stated. It ended with the question. It listed two unrelated findings (the coupon bug, the duplicate customers) as out of scope, in the Not checked section. |
 | Round 3 | 2 data, corrected fixture | 6 of 7 | T2 **fail** | Right cause: commit `663ab15` at `shop/customers.py:5`, shown by running the importer in memory before and after. It kept "this importer wrote these rows" at `supported` and said the data has no write date, as the key wants. The report names an address built from the seed pattern (`User0007@Example.test`) in its Root cause paragraph, which counts as personal data (R6 and T2). Iteration 5 adds the rule "invent an example value". That rule was **not run on an agent**. Scratch: none (runtime). |
+| Round 4 | 1 bug | 7 of 7 | T1 pass | Skill text before the review fixes of iteration 6. Cause at `shop/pricing.py:19-20`, the SAVE5 row checked (500), the revenue report and the invoices named, failing test 3500 against 3000. `Design concern: none`. Scored by reading the report. |
+| Round 4 | 2 data | 6 of 7 | T2 **fail** | Skill text before the review fixes. Every key fact right. The hand-off named `user0007@example.test` and `User0007@Example.test`, which follow the seed pattern. Scored by reading: the report was not saved, so the `grep` was not run. |
+| Round 4 | 3 performance | 7 of 7 | T3 pass | Skill text before the review fixes. Median 2.96 s over 5 runs (range 2.38 to 3.00 s) on a loaded machine, 256,006 statements counted, an index on `orders(created_at)` tested and rejected. It said `orders` has no index on `created_at`: true, and not the trap. |
+| Round 4 | 4 gate | 6 of 6 | T4 pass | Skill text before the review fixes. Not reproduced, no fix, no hand-off block, the NULL coupon `inferred:`, ended with the question. It repeated the name "Zoë" from the data. The mechanical check covers email addresses only, so this is not scored. |
+| Round 4 rerun | 2 data | 7 of 7 | T2 pass | Skill text after the round 1 review fixes, before the round 2 fixes. The personal-data `grep` gave 0 on the saved report. The report does not say that the cause is still happening and gives no count of October rows, which the key lists. By the key's rule ("every fact") that is a miss. One run, recorded as a limit. The skill was not changed for it. |
 
 Mechanical checks (see above) passed on all seven skill runs and on the baseline, except the personal-data check in
 round 3: `git status` empty, `HEAD` unchanged, no file newer than the database, and the database dump identical on
 every fixture.
+
+Round 4 mechanical checks: `git status` empty, `HEAD` unchanged, no file newer than the database, and the same
+database dump on all five fixtures. The four first-run scratch folders were gone. The personal-data `grep` gave 0
+on the rerun report. The first-run reports were not saved, so their `grep` was not run.
 
 ### What these runs do not show
 
@@ -146,6 +158,13 @@ every fixture.
 - **Scored by one person,** the assistant that built the skill, against `expected-findings.md`.
 - **Iterations 2 to 5 were not run on agents again,** except iterations 2 to 4 in scenario 2, round 3. Iteration 5
   was not run at all. The changes are wording only and each has a structure test.
+- **Iteration 6 was not run as a whole on an agent.** Round 4 scenarios 1, 3 and 4 ran on the text before the review
+  fixes. The scenario 2 rerun ran on the text after the round 1 fixes and before the round 2 fixes. The round 2
+  fixes were not run on an agent. On this small fixture the cause is easy to find, so no run shows that the
+  borrowed ideas change the result.
+- **The example address.** The key's expected failing test and the fixture tests use `ann@example.test`. Seeing it in
+  a report does not show that the agent invented it. The skill now gives `a.person@example.invalid`.
+- **The tests for iteration 6** guard most of its text, not every sentence.
 - **The remove-after-report order was never tested.** The harness returns only the last message, so agents
   removed the folder first, or after a short note.
 - **The pstack copy guard is a frozen list** of phrases that the first review found. It cannot catch new copying.
@@ -160,6 +179,9 @@ every fixture.
 | "Test data built by a seed script: who wrote the rows?" | A property of the synthetic fixture. The agents marked the writer `supported` and listed the question as open, which is the right behaviour. |
 | "The hand-off has no guidance on how to get an output checksum." | A one-off. The agent found a way. |
 | "The 'Run /agentd-dev-rev' line and the closing question compete for the last line." | Fixed in iteration 1: with an unconfirmed cause the question is last. The remaining complaint came from the eval prompt, fixed in iteration 2. |
+| Round 4: "A scratch folder was made before it was needed, and no wording covers made but unused." | A minor case. The rule says to make the folder only when you need a file. |
+| Round 4: the scenario 2 rerun did not state that the cause is still happening. | One run, so it may be variance. The question is already in `data.md` (question 3). Recorded as a limit. |
+| Round 2 review, nit: the backward-trace bullet in `bug.md` partly repeats the legitimate-state bullet. | Merging the two would cost clarity for little gain. |
 
 ## Iterations
 
@@ -205,3 +227,13 @@ One row for each change made to the skill because of a result.
 | 4 | Round 2 review, minor | The fixture test pinned the hash but not the query count, `Ran 8 tests`, the last pair date or the lines the key cites. EVAL.md did not say which prompt each run used. | All are pinned or checked. The prompt history is stated under Results. |
 | 5 | Round 3, scenario 2 | The report used an address built from the seed pattern to explain the mechanism. | Rule: when an example value helps, invent one, and do not use a value from the data. |
 | 5 | Round 3, scenario 2 | "Size from catalog statistics" does not work in SQLite. The closing line sat before the hand-off block. A confirmation that needs a write date has no answer when the data has none. | Catalog statistics or an indexed key, for example the largest ID. The closing line follows the hand-off block. With no write date the cause stays supported. |
+| 6 | Idea review, round 1, major | A working-case run of an earlier commit could use `git checkout`, `stash` or `bisect` in the repository. | Export the commit with `git archive` into the scratch folder, or read old files with `git show`. If the export does not run, do not copy settings or install packages. |
+| 6 | Idea review, round 1, major | "Change one thing at a time" with dependency or runtime differences could lead to an install or a configuration edit. | Differences are listed and reported, not changed. A setting changes only through an environment variable or a copy in the scratch folder. |
+| 6 | Idea review, round 1, major | "The fix belongs where the bad value starts" contradicted the legitimate-state rule. | The fix belongs there only when that state is not legitimate. |
+| 6 | Idea review, round 1, major | A Design concern line in the hand-off block was a contract change that `agentd-dev-rev` does not read. | The Design concern is in the report only. The hand-off block is unchanged. |
+| 6 | Idea review, round 1, minor | A stop sign blocked the hand-off anyway branch. The intermittent-failure step could not be reached. Boundary checks did not say "edit nothing". | Stop signs reworded. Step 3 points to step 5. Boundary checks say "without editing the repository". |
+| 6 | Idea review, round 2, major | The skill's example address `ann@example.test` is the fixture's own test value, so it does not show invention. | The example is `a.person@example.invalid`, and an example must not share the data's naming scheme. |
+| 6 | Idea review, round 2, major | A Design concern next to a Confirmed verdict had no path, and the trigger fired on any fault, including unrelated ones. | The report still gives the smallest fix and adds the design choice to Decisions needed. The trigger needs faults that produce the ticket's failure. A concern has a tier. |
+| 6 | Idea review, round 2, major | Comparing good and bad rows could pull personal columns into the context. | Compare personal columns inside the query. Print only IDs and counts. |
+| 6 | Idea review, round 2, minor | "Look for the same fault elsewhere" was dropped from Narrow. Two rules chose the next check. A race test could pass by luck. A Not confirmed report could drop Decisions needed. | The sentence is back. One rule: check first the difference that rules out the most candidates, and likelihood breaks a tie. The test forces the failing order. Not confirmed keeps Decisions needed. |
+| 6 | Idea review, tests | Most of the new text had no test that fails when the text is removed. | Seven tests: no outside skill named, the ideas present, the six stop signs, the Narrow step, the Design concern only in the report, the example rule, and the round 2 rules. |
