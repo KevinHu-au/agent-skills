@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Remove one scratch file or folder, and refuse anything else.
+# Usage: rm-scratch [--dry-run] <path>
+#
+# Agents call this to clean up what they made with mktemp. It removes only a path that
+# resolves to a place under a system temporary folder (/tmp, /var/tmp, and on macOS the
+# per-user folder from getconf), that you own, and that is not a symlink. It does not read
+# $TMPDIR, because the caller controls that. It cannot tell who made a path, so the caller
+# must pass only a path that its own mktemp printed. Anything else is refused with exit 1.
+# --dry-run runs every check and prints the path it would remove, and removes nothing.
+set -u
+unset CDPATH
+
+die() {
+  printf 'rm-scratch: %s\n' "$*" >&2
+  exit 1
+}
+
+dry=0
+if [ $# -ge 1 ] && [ "$1" = "--dry-run" ]; then
+  dry=1
+  shift
+fi
+
+[ $# -eq 1 ] || die "usage: rm-scratch [--dry-run] <path> (exactly one path)"
+path=$1
+[ "$(id -u)" -ne 0 ] || die "refused: do not run as root"
+[ -n "$path" ] || die "refused: empty path"
+case "$path" in
+  -*) die "refused: '$path' looks like an option" ;;
+  *$'\n'*) die "refused: the path contains a newline" ;;
+esac
+case "/$path/" in
+  */../*) die "refused: '$path' contains '..'" ;;
+esac
+
+while [ "${#path}" -gt 1 ] && [ "${path%/}" != "$path" ]; do path=${path%/}; done
+base=${path##*/}
+[ "$base" != "." ] || die "refused: '$path' ends in '.'"
+[ -n "$base" ] || die "refused: '$path' has no name"
+[ -L "$path" ] && die "refused: '$path' is a symlink"
+[ -e "$path" ] || die "refused: '$path' does not exist"
+
+case "$path" in
+  */*) parent=${path%/*}; [ -n "$parent" ] || parent=/ ;;
+  *) parent=. ;;
+esac
+parent=$(cd -P -- "$parent" 2>/dev/null && pwd -P) || die "refused: cannot resolve '$path'"
+target="$parent/$base"
+[ "$parent" = "/" ] && target="/$base"
+[ -O "$target" ] || die "refused: '$target' is not owned by you"
+
+roots="/tmp /var/tmp"
+if user_tmp=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null) && [ -n "$user_tmp" ]; then
+  roots="$roots $user_tmp"
+fi
+allowed=0
+for root in $roots; do
+  [ -d "$root" ] || continue
+  resolved=$(cd -P -- "$root" && pwd -P) || continue
+  case "$resolved/" in
+    "$target"/*) die "refused: '$target' is, or contains, a system temporary folder" ;;
+  esac
+  case "$target" in
+    "$resolved"/*) allowed=1 ;;
+  esac
+done
+[ "$allowed" -eq 1 ] || die "refused: '$target' is not under a system temporary folder"
+
+if [ -d "$target" ]; then
+  other=$(find "$target" \( -type s -o ! -user "$(id -u)" \) -print -quit 2>/dev/null)
+  [ -z "$other" ] || die "refused: '$other' is a socket or is not owned by you"
+fi
+
+if [ "$dry" -eq 1 ]; then
+  printf 'rm-scratch: would remove %s\n' "$target"
+  exit 0
+fi
+
+# Remove from inside the checked parent, and stay on one file system.
+cd -P -- "$parent" || die "refused: cannot enter '$parent'"
+[ "$(pwd -P)" = "$parent" ] || die "refused: '$parent' changed while checking"
+if rm --version >/dev/null 2>&1; then
+  rm -rf --one-file-system -- "./$base"
+else
+  rm -rfx -- "./$base"
+fi
