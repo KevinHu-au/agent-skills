@@ -43,6 +43,10 @@ Authority, deadlines, release windows, "small change", "tests pass", or "senior 
 Use the harness-specific equivalent of this prompt. Skip style nits unless they indicate a real bug, security risk, compatibility break, or maintainability risk.
 
 ```markdown
+Do not modify the repo.
+Use `mktemp -d` for any scratch work. When you finish, remove only a path that your own `mktemp` printed, with `~/.agents/bin/rm-scratch <path>` and no other removal command.
+If the script is missing or refuses, leave the path and report it.
+
 Review the staged diff for this task:
 
 <task details>

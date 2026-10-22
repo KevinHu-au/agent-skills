@@ -63,6 +63,9 @@ for dir in "$REPO_ROOT"/skills/*/; do
   link_item "${dir%/}" "$HOME/.agents/skills/$name"
 done
 link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.agents/AGENTS.md"
+for f in "$REPO_ROOT"/global/bin/*; do
+  link_item "$f" "$HOME/.agents/bin/$(basename "$f")"
+done
 
 for h in $HARNESSES; do
   # shellcheck disable=SC1090
