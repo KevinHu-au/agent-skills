@@ -39,9 +39,18 @@ For a .NET project also read `references/dotnet.md`. A ticket that mixes kinds i
 2. **Orient.** Load the mode reference. Find the use case and the code path that the symptom belongs to. Read `git log` and `git blame` for those files to spot a regression.
 3. **Run plan.** List every command you will run, the scratch folder, and that the folder is removed after the report. Ask for one confirmation. See Running commands.
 4. **Reproduce.** Make the problem happen where the ticket saw it. If it does not happen, tighten the conditions, build the trigger, or add instrumentation without editing the repository (see `references/bug.md`). If it still does not happen, say what blocked you and ask the engineer for the missing evidence: a log line, a row ID, a trace. Never guess.
-5. **Narrow.** Keep two or more candidate causes, including the ticket's. Run the check that rules out the most at once, and repeat. Keep asking "why". Stop when the answer is a decision in the code, and not a side effect of something earlier. When two theories built on the same premise have failed, write the premise down and check it on its own before you try another. Look for the same fault elsewhere. For a large codebase you may start read-only sub-agents, one for each candidate cause. Each returns a short summary with its evidence.
+5. **Narrow.** Keep two or more candidate causes, including the ticket's. Find a working case and list every difference from the broken one (the mode reference says how). When the system has several components, check what enters and leaves each one, in one run or along the stages of one record, without editing the repository. The first place the data is wrong shows which component breaks. Pick the check that rules out the most candidates at once, change one thing at a time in it, and repeat. Keep asking "why". Stop when the answer is a decision in the code, and not a side effect of something earlier. When two theories built on the same premise have failed, write the premise down and check it on its own before you try another. Look for the same fault elsewhere. If checks on three or more candidate causes each show a different fault that produces the ticket's failure, suspect the design. Do the same when many modules write one piece of state with no single owner, and the fault comes from the order of the writes. Report it as a Design concern in the report, and leave the decision to the engineer. Copies of one fault are not a design concern: list them. For a large codebase you may start read-only sub-agents, one for each candidate cause. Each returns a short summary with its evidence.
 6. **Gate.** Give every claim a tier (see Evidence). A fix proposal goes into the hand-off only when the mechanism is confirmed: shown to produce the ticket's own failure. If it is not, the verdict is Not confirmed, or Not reproduced when you tried and the ticket's failure did not happen. List the competing causes and the evidence each one needs, then ask the engineer: keep investigating, or hand off anyway. If the engineer says keep investigating, go back to Run plan with a new list of commands. If the engineer says hand off anyway, the block says the fix is a hypothesis and tells `agentd-dev-rev` when to stop.
 7. **Report.** Write the report and the hand-off block with `references/report-template.md`. Then remove the scratch folder, as Running commands says. If the removal fails, say so in one line.
+
+**Stop signs.** These thoughts and actions mean you are guessing. Stop, and name the check you need before you go on.
+
+- "It is probably X", with no run behind it.
+- "Let me just try Y and see."
+- Changing two things between two runs while you narrow.
+- Treating a fact you have not checked as confirmed.
+- Presenting a fix as confirmed before a run shows the ticket's own failure.
+- "One more theory", after two failed on the same premise.
 
 ## Running commands
 
@@ -79,7 +88,7 @@ The report and the hand-off block go in chat. Nothing is saved in the repository
 
 - Edit no code. Change no file in the repository, including configuration, except build and test output (see Running commands). The only files you make are in the scratch folder.
 - Never write to a shared environment. Never install a tool or package.
-- Keep secrets and personal data out of the report. Name a key, never its value. Give data rows by ID and count. A name or ID that the ticket itself gives may be repeated. Add no other personal data. When an example value helps to explain a mechanism, invent one. Do not use a value from the data.
+- Keep secrets and personal data out of the report. Name a key, never its value. Give data rows by ID and count. A name or ID that the ticket itself gives may be repeated. Apart from that, add no personal data, and quote no name or address from the data, even to show a difference. When an example value helps to explain a mechanism, invent one. It must not share the data's naming scheme (prefix, numbering, domain), for example `a.person@example.invalid`. It may still show the mechanism, such as a change of letter case.
 - Do not read Azure DevOps. Take the ticket as it was pasted. A paste is the fallback for anything else.
 - One repository per run. A part in another repository is `unknown:` plus who to ask.
 - The ticket's theory is a candidate. Do not confirm it because someone said it first.
