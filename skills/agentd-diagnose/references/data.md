@@ -12,9 +12,13 @@ Find why the data is wrong, how far it goes, and whether it is still happening. 
 ## Four questions
 
 1. **Is the data wrong or the code that reads it wrong?** Look at the rows, not at the screen. If the rows are right, the problem is a bug in the reading code. Say so and follow `references/bug.md`.
-2. **What wrote the bad rows?** List every writer of the table: code paths, imports, integrations, stored procedures, triggers, jobs and manual edits. Find the first bad row by date, using the column that records when the row was written. If the only date is one the data carries (a feed or document date), say that it is not the write date. Compare that date with `git log` and the deploy dates. Look for what the bad rows share: a source, a user, a batch, a time.
+2. **What wrote the bad rows?** List every writer of the table: code paths, imports, integrations, stored procedures, triggers, jobs and manual edits. Find the first bad row by date, using the column that records when the row was written. If the only date is one the data carries (a feed or document date), say that it is not the write date. Compare that date with `git log`, the deploy dates, and changes to the writer's configuration, library versions and the source feed's format. Look for what the bad rows share: a source, a user, a batch, a time. Then take good rows from the same writer. List every difference from the bad rows, however small. Check first the difference that rules out the most candidates. Compare personal columns inside the query, for example by counting rows that match on one column and differ on another. Print only IDs and counts.
 3. **Is it still happening?** Count the bad rows by day or week. New bad rows in the latest period mean the cause is live. The code fix then comes before any repair.
 4. **How wide is it?** Count the rows, tables and customers, and give the date range. Write the query that identifies a bad row, so the engineer can run it again.
+
+## Follow bad records through their stages
+
+Pick a few bad record IDs and follow them through every stage: the source, the import or integration, the table, the code that reads it. Check the record at each stage, read-only. The first stage where it is already wrong names the component to read. Question 2 finds the writer. Then follow what fed the writer. A stage you cannot read, such as an outside feed or another repository, is `unknown:`. Name who to ask.
 
 ## Confirmation
 

@@ -360,6 +360,46 @@ test_data_dates_and_the_two_not_verdicts_are_defined() {
     has_all "$REFS/report-template.md" 'Not reproduced: you tried' 'Not confirmed: '
 }
 
+# Rules added after the review of the ideas borrowed from a debugging skill.
+test_the_skill_files_name_no_outside_skill() {
+  [ -f "$SKILL" ] || return 1
+  ! grep -qiE 'superpowers|systematic-debugging|test-driven-development|verification-before-completion' "$SKILL" "$REFS"/*.md
+}
+
+test_the_borrowed_debugging_ideas_are_in_the_references() {
+  has_all "$REFS/bug.md" 'whole error' 'working case' 'backward' 'fixed sleep' 'git archive' 'git stash' &&
+    has_all "$REFS/data.md" 'good rows' 'stages' 'cannot read' &&
+    has_all "$REFS/performance.md" 'Time each layer' 'fast case' 'git archive'
+}
+
+test_narrow_has_the_working_case_the_boundary_check_and_the_design_concern() {
+  local n
+  n=$(section_of "$SKILL" Flow | grep -E '^5\. \*\*Narrow')
+  printf '%s\n' "$n" | grep -qi 'working case' && printf '%s\n' "$n" | grep -qF 'enters and leaves' &&
+    printf '%s\n' "$n" | grep -qF 'Design concern' && printf '%s\n' "$n" | grep -qi 'same fault elsewhere'
+}
+
+test_the_six_stop_signs_sit_in_flow() {
+  section_of "$SKILL" Flow | grep -qF 'Stop signs' && [ "$(section_of "$SKILL" Flow | grep -c '^- ')" = 6 ]
+}
+
+test_the_new_rules_have_their_text() {
+  has_all "$REFS/bug.md" 'enters and leaves' 'several times (step 5)' 'Do not copy local settings' 'latch' &&
+    has_all "$REFS/performance.md" 'Do not change a dependency' &&
+    has_all "$REFS/data.md" 'Print only IDs and counts' &&
+    has_all "$REFS/report-template.md" 'Keep the Decisions needed' 'smallest fix' &&
+    section_of "$SKILL" Rules | grep -qF 'quote no name or address'
+}
+
+test_the_design_concern_is_in_the_report_and_not_in_the_hand_off_block() {
+  [ "$(grep -c 'Design concern:' "$REFS/report-template.md")" = 1 ] &&
+    in_order "$REFS/report-template.md" 'Design concern:' '## Hand-off block'
+}
+
+test_example_values_do_not_follow_the_data_pattern() {
+  section_of "$SKILL" Rules | grep -qF 'a.person@example.invalid' && section_of "$SKILL" Rules | grep -qi 'naming scheme'
+}
+
 echo "agentd-diagnose skill structure"
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with 'Use when' and covers root cause, bug, data and slow" test_description_starts_with_use_when_and_covers_the_jobs
@@ -412,6 +452,13 @@ check "the closing line follows the hand-off block, and a missing write date kee
 check "a unit test with its own temp folder is safe, and a read-only connection is the fallback" test_unit_tests_that_use_their_own_temp_folder_are_safe_and_a_read_only_connection_is_the_fallback
 check "the ticket may name a person, and a mixed ticket keeps the code fix in the hand-off" test_the_ticket_may_name_a_person_and_mixed_tickets_keep_the_code_fix_in_the_hand_off
 check "data.md says which date to use, and the two Not verdicts are defined" test_data_dates_and_the_two_not_verdicts_are_defined
+check "no skill file names an outside skill" test_the_skill_files_name_no_outside_skill
+check "the references hold the borrowed debugging ideas" test_the_borrowed_debugging_ideas_are_in_the_references
+check "Narrow has the working case, the boundary check, the same-fault search and the Design concern" test_narrow_has_the_working_case_the_boundary_check_and_the_design_concern
+check "the six stop signs sit in Flow" test_the_six_stop_signs_sit_in_flow
+check "the round 2 rules have their text" test_the_new_rules_have_their_text
+check "the Design concern is in the report and not in the hand-off block" test_the_design_concern_is_in_the_report_and_not_in_the_hand_off_block
+check "an example value does not follow the data's pattern" test_example_values_do_not_follow_the_data_pattern
 
 echo
 echo "passed=$PASS failed=$FAIL"
