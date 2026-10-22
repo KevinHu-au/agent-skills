@@ -122,6 +122,18 @@ tests/diagnose/test-make-fixture.sh
 
 `tests/diagnose/EVAL.md` explains how to run the skill on the fixture and records the results.
 
+The `agentd-blast-radius` skill has its own tests in `tests/blast-radius/`. They check the skill files and a
+synthetic Python and SQLite fixture with three seeded changes (a rename with readers that a caller search misses,
+a change that is safe because of one provable fact, and a change that depends on a partner system that cannot be
+run). They need `git`, Python 3 and `sqlite3`, use throwaway folders in the system temp folder, and delete nothing.
+
+```bash
+tests/blast-radius/test-skill-structure.sh
+tests/blast-radius/test-make-fixture.sh
+```
+
+`tests/blast-radius/EVAL.md` (not written yet) will explain how to run the skill on the fixture and record the results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -176,6 +188,7 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 
 | Skill | Purpose |
 |---|---|
+| `agentd-blast-radius` | Find what else one change could break, including what search misses. Proves the one fact the change is safe because of by running code, edits no code, and ends with an add-on block for `agentd-dev-rev`. |
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
@@ -199,7 +212,6 @@ These are designs, not files yet.
 | Skill | Purpose |
 |---|---|
 | `agentd-intake` | Turn an Azure DevOps work item into a confirmed requirement. |
-| `agentd-blast-radius` | List what else a change could break, with evidence. |
 | `agentd-explain` | Explain how a part of the system works and why. |
 | `agentd-data-fix` | Repair data safely: read first, idempotent script, backup, rollback. |
 | `agentd-verify-init` | Generate a project-local skill that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. |
