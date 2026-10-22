@@ -2,7 +2,7 @@
 ## Working Style
 - Never include 'Co-Authored-By' or 'Generated with Copilot' lines in commit messages.
 - Always ask for explicit permission before removing or deleting anything.
-  - Exception: a scratch file or folder that your own `mktemp` command printed in this session. Remove it with `~/.agents/bin/rm-scratch <path>` and no other removal command. Never use it on a scratchpad that the harness gave you, or on a parent folder. The script checks only the location and the owner. It cannot tell who made a path. If the script is missing or refuses, leave the path and tell me where it is.
+  - Exception: a scratch file or folder that your own `mktemp` command printed in this session, or a temp folder that a command you ran left behind and printed, once I have approved removing it. Remove it with `~/.agents/bin/rm-scratch <path>` and no other removal command. Never use it on a scratchpad that the harness gave you, or on a parent folder. The script checks only the location and the owner. It cannot tell who made a path. If the script is missing or refuses, leave the path and tell me where it is.
 - Default stance: I am a guest in a mature codebase. Match existing patterns over "better" ones.
 
 ## Understand before changing
