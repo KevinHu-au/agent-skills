@@ -17,7 +17,9 @@ Measure first. Tie every claim to a number from a run. Reading the code gives ca
 
 ## Find the limiter
 
-Name the thing that sets the time: the CPU, waiting on locks, disk or network I/O, the number of queries, or a query plan. Find it with a profile, a trace, a query plan or counters, and trace it back to the source. A guess from the code is not a measurement. Ask why the result is not twice as fast. If you cannot answer, you have not understood what you measured.
+Name the thing that sets the time: the CPU, waiting on locks, disk or network I/O, the number of queries, or a query plan. Find it with a profile, a trace, a query plan or counters, and trace it back to the source. A guess from the code is not a measurement. Time each layer (client, API, service, database, network) in one run, without editing the repository. Then you know which layer holds the time before you profile inside it. Ask why the result is not twice as fast. If you cannot answer, you have not understood what you measured.
+
+To compare, find a fast case: a smaller input, an earlier commit or release, or a measurement the engineer already has from another environment. To run an earlier commit, export it with `git archive` into the scratch folder, as `references/bug.md` says. List every difference from the slow case, including dependency versions, runtime and configuration. Report these differences. Do not change a dependency or install one. Change a setting only through an environment variable or a copy in the scratch folder. Change one thing at a time, and check first the difference that rules out the most candidates. Measure again after each change.
 
 Ask what else the number could be measuring: failed requests, cached or skipped work, a code path that never ran, or the load tool itself. Count the failures and the non-success responses. Check that the work really happened.
 

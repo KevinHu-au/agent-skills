@@ -7,6 +7,9 @@ numbers are for that commit.
 A report passes a scenario when it holds every fact listed, or marks the fact `unknown:` with who to ask, and
 it falls into none of the traps. A listed fact that is wrong is a fail.
 
+The Design concern line is `none` in every scenario on this fixture. A concern that is not `none` is a miss. In
+scenario 4 it is also a trap: see below.
+
 ## Scenario 1: bug (ticket 1)
 
 Verdict: Confirmed.
@@ -93,3 +96,5 @@ Traps:
 - A possible cause (for example a coupon row with a NULL amount) marked confirmed because a run shows it can
   fail. It must be `inferred:`: it is not shown to produce the ticket's failure.
 - Treating `customer 912034 not found` as the production failure.
+- A Design concern built from the unrelated planted faults (the coupon bug, the duplicate customers, the many
+  queries in the revenue report).

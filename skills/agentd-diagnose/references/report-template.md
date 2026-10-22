@@ -35,12 +35,15 @@ The smallest change the evidence supports.
 Does not change: ...
 Decisions needed from the engineer: <a product or rule choice the fix depends on, for example how to round>, or none.
 Risk areas touched: ... (the contract's Risk areas, plus callers found by search)
+Design concern: <the shared state or coupling, and why one small fix may not be enough>. Tier: confirmed | supported | inferred. Or none.
 
 ### Not checked
 - <what you did not run or could not verify, and why>
 
 Scratch folder: `<path>`, removed after this report. Or: `Scratch folder: none`.
 ```
+
+With a Design concern, still propose the smallest fix for the ticket's failure, and add the design choice to Decisions needed from the engineer.
 
 ## Hand-off block
 
@@ -62,7 +65,7 @@ After the hand-off block, end with this line when the cause is confirmed: Run `/
 
 ## When the cause is not confirmed
 
-The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write the `/agentd-dev-rev` line until the engineer says to hand off.
+The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write the `/agentd-dev-rev` line until the engineer says to hand off.
 
 If the engineer says hand off anyway, write the block with these changes:
 
