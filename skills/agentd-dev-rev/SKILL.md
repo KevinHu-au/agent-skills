@@ -14,7 +14,7 @@ Run development work through a strict implement → stage → independent review
 2. **Do not self-review.** Your own diff read, checklist, tests, or summary never counts as review.
 3. **Use a separate review agent.** Review must be performed by an independent agent on the staged diff.
 4. **Reviewer model floor is mandatory.** Use Opus 5.5 or GPT-6 with high effort. If the harness cannot set that model/effort, or no separate review agent is available, stop and tell the engineer. Do not substitute a cheaper model, your own review, or "review later."
-5. **Two review rounds maximum.** Round 1 reviews the staged diff. If you change code after triage, stage again and run Round 2. After Round 2, stop and report any unresolved claims.
+5. **Two review rounds maximum.** Round 1 reviews the staged diff. Run Round 2 only if a Round 1 fix was blocker or major, or a minor fix changed production logic. Otherwise skip it. After Round 2, stop and report any unresolved claims.
 6. **Preserve unrelated work.** Stage only files that belong to the task. Never use broad staging when unrelated dirty files exist.
 7. **Dependency approval gate.** Before adding, removing, or upgrading a package, ask the engineer for approval. Do not proceed silently.
 8. **Backcompat gate.** Public API, HTTP contract, DB schema, stored procedure signature, serialized shape, or config-key changes must be either explicitly required by the task or approved by the engineer.
@@ -33,8 +33,10 @@ Authority, deadlines, release windows, "small change", "tests pass", or "senior 
    - Agree: fix surgically, validate, and restage.
    - Disagree: keep the change, but record the exact claim and your evidence-based reason.
    - Unsure or product-impacting: ask the engineer.
-7. **Review Round 2 if code changed after Round 1.** Run the same independent review process on the restaged diff.
-8. **Handoff.** Report staged files, validation run, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Do not commit.
+7. **Decide on Review Round 2.**
+   - Run it on the restaged diff, using the same independent review process, if a blocker or major finding was fixed, or a minor fix changed production logic.
+   - Skip it if Round 1 found nothing, or every fix was minor and limited to comments, docs, formatting, behavior-preserving renames, or test-only changes. Re-run local validation before skipping.
+8. **Handoff.** Report staged files, validation run, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. If Round 2 was skipped, state that and why, and list the minor fixes applied. Do not commit.
 
 ## Reviewer Prompt Template
 
@@ -115,7 +117,8 @@ Any red flag means stop and return to the hard rules.
 | Committing after review passes | Keep changes staged and hand off. |
 | Reviewing unstaged or narrative-only changes | Review the actual staged diff. |
 | Treating tests-after as equivalent to TDD | Prefer failing test first when practical; explain exceptions. |
-| Skipping Round 2 after fixing review findings | Restage and review once more. |
+| Skipping Round 2 after fixing a blocker or major finding, or a minor fix that changed production logic | Restage and review once more. |
+| Starting Round 2 after only minor fixes that did not change production logic | Skip it, re-run validation, and report the skip in the handoff. |
 | Treating low-capability review as acceptable fallback | Stop and report the missing required reviewer. |
 | Silently accepting product/backcompat decisions | Ask the engineer. |
 | Hiding disagreed claims | Report them with evidence. |
