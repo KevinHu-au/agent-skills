@@ -110,6 +110,18 @@ tests/onboard/test-skill-structure.sh
 
 `tests/onboard/EVAL.md` explains how to run the skill on the fixture and records the results.
 
+The `agentd-diagnose` skill has its own tests in `tests/diagnose/`. They check the skill files and a synthetic
+Python and SQLite fixture with four seeded problems (a bug, bad data, a slow report, and a failure that cannot
+be reproduced). They need `git`, Python 3 and `sqlite3`, use throwaway folders in the system temp folder, and
+delete nothing.
+
+```bash
+tests/diagnose/test-skill-structure.sh
+tests/diagnose/test-make-fixture.sh
+```
+
+`tests/diagnose/EVAL.md` explains how to run the skill on the fixture and records the results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -165,6 +177,7 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | Skill | Purpose |
 |---|---|
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
+| `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
@@ -186,7 +199,6 @@ These are designs, not files yet.
 | Skill | Purpose |
 |---|---|
 | `agentd-intake` | Turn an Azure DevOps work item into a confirmed requirement. |
-| `agentd-diagnose` | Reproduce and find the root cause of bugs, data issues and slow code. Proposes a fix and hands off to `agentd-dev-rev`. |
 | `agentd-blast-radius` | List what else a change could break, with evidence. |
 | `agentd-explain` | Explain how a part of the system works and why. |
 | `agentd-data-fix` | Repair data safely: read first, idempotent script, backup, rollback. |
