@@ -24,7 +24,7 @@ check() {
   fi
 }
 
-REFERENCES="dotnet.md report-template.md surfaces.md"
+REFERENCES="dotnet.md ios.md report-template.md surfaces.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -114,7 +114,7 @@ test_skill_files_have_no_absolute_home_paths() {
 
 test_general_files_name_no_stack_command() {
   [ -f "$SKILL" ] || return 1
-  ! grep -qiE 'dotnet (build|test|run|ef)|npm (test|run|install)|pytest|python3' \
+  ! grep -qiE 'dotnet (build|test|run|ef)|npm (test|run|install)|pytest|python3|xcodebuild|swift (build|test)|pod install' \
     "$SKILL" "$REFS/surfaces.md" "$REFS/report-template.md" 2>/dev/null
 }
 
@@ -144,6 +144,10 @@ test_proof_runs_real_code_at_the_pinned_library_version() {
 
 test_dotnet_reference_is_loaded_for_dotnet_only() {
   grep -qE 'references/dotnet\.md' "$SKILL" && grep -qi '\.NET' "$SKILL"
+}
+
+test_ios_reference_is_loaded_for_ios_only() {
+  grep -qF 'For an iOS (SwiftUI) project also read `references/ios.md`' "$SKILL"
 }
 
 test_verdicts_are_defined_and_the_gate_asks_the_question() {
@@ -258,6 +262,11 @@ test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked() {
     'not yet checked'
 }
 
+test_ios_reference_names_where_to_look_and_says_it_is_unchecked() {
+  has_all "$REFS/ios.md" 'CodingKeys' 'SchemaMigrationPlan' 'cascade' 'Package.resolved' 'old build stays installed' 'general knowledge' \
+    'not yet checked' '## Run and count tests' 'Never run UI tests' '-derivedDataPath'
+}
+
 # Phrases from the pstack original that must not come back. Our wording is our own.
 test_no_phrase_is_copied_from_pstack() {
   local p
@@ -282,6 +291,7 @@ check "general files name no stack command" test_general_files_name_no_stack_com
 check "Prerequisite takes either input and reads the contract and the onboarding pack" test_prerequisite_takes_either_input_and_reads_the_contract
 check "Flow has seven numbered steps, in order" test_flow_has_seven_numbered_steps_in_order
 check "the safety fact is one claim a run can check, and may be absent" test_the_safety_fact_is_one_claim_a_run_can_check_and_may_be_absent
+check "the iOS reference is loaded for an iOS project" test_ios_reference_is_loaded_for_ios_only
 check "search is the start and the surfaces reference is read" test_search_is_the_start_and_the_surfaces_reference_is_read
 check "the proof runs real code at the shipped library version and is pasted verbatim" test_proof_runs_real_code_at_the_pinned_library_version
 check "the .NET reference is loaded for a .NET project" test_dotnet_reference_is_loaded_for_dotnet_only
@@ -308,6 +318,7 @@ check "a search that finds no caller is supported and never confirmed" test_a_se
 check "staged runs, the no-fact case and the Unproven tier rules are written" test_staged_runs_the_no_fact_case_and_the_unproven_tier_rules_are_written
 check "surfaces.md covers every surface" test_surfaces_reference_covers_every_surface
 check "dotnet.md names where to look and says it is unchecked" test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked
+check "ios.md names where to look and says it is unchecked" test_ios_reference_names_where_to_look_and_says_it_is_unchecked
 check "no phrase is copied from the pstack original" test_no_phrase_is_copied_from_pstack
 
 echo

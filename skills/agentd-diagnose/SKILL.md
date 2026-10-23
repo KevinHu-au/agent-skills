@@ -31,7 +31,7 @@ Pick one mode. The engineer may name it, for example `/agentd-diagnose perf <tic
 - **data:** the data is wrong or missing. Read `references/data.md`.
 - **performance:** something is slow or uses too much of a resource. Read `references/performance.md`.
 
-For a .NET project also read `references/dotnet.md`. A ticket that mixes kinds is diagnosed under its main mode. The second kind goes to Follow-on in the hand-off. For bad rows caused by a code bug, the code fix is the hand-off and the repair is the follow-on. If the evidence shows the problem is another kind, switch: say so in one line and read that reference. If you switched, the report's Mode line says where you started.
+For a .NET project also read `references/dotnet.md`. For an iOS (SwiftUI) project also read `references/ios.md`. A ticket that mixes kinds is diagnosed under its main mode. The second kind goes to Follow-on in the hand-off. For bad rows caused by a code bug, the code fix is the hand-off and the repair is the follow-on. If the evidence shows the problem is another kind, switch: say so in one line and read that reference. If you switched, the report's Mode line says where you started.
 
 ## Flow
 
