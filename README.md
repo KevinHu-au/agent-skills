@@ -134,6 +134,18 @@ tests/blast-radius/test-make-fixture.sh
 
 `tests/blast-radius/EVAL.md` (not written yet) will explain how to run the skill on the fixture and record the results.
 
+The `agentd-intake` skill has its own tests in `tests/intake/`. They check the skill files and a fixture: the
+diagnose fixture plus a small onboarding pack, with five work items (an enhancement that asks for the wrong fix, a bug
+whose claim the code contradicts, a clear request, a support question, and a second run after the customer replies).
+They need `git` and Python 3, use throwaway folders in the system temp folder, and delete nothing.
+
+```bash
+tests/intake/test-skill-structure.sh
+tests/intake/test-make-fixture.sh
+```
+
+`tests/intake/EVAL.md` explains how to run the skill on the fixture and records the results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -191,6 +203,7 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | `agentd-blast-radius` | Find what else one change could break, including what search misses. Proves the one fact the change is safe because of by running code, edits no code, and ends with an add-on block for `agentd-dev-rev`. |
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
+| `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
@@ -211,18 +224,20 @@ These are designs, not files yet.
 
 | Skill | Purpose |
 |---|---|
-| `agentd-intake` | Turn an Azure DevOps work item into a confirmed requirement. |
-| `agentd-explain` | Explain how a part of the system works and why. |
+| `agentd-explain` | Help the engineer understand the business domain, the business logic and technical questions, including the end-to-end route of a feature from the frontend to the database. |
 | `agentd-data-fix` | Repair data safely: read first, idempotent script, backup, rollback. |
 | `agentd-verify-init` | Generate a project-local skill that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. |
 
 Planned flow:
 
 ```
-onboard (once per project) -> intake -> explain -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
+onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
+
+explain: a side tool, run any time
 ```
 
-Start at any step. Small changes skip `diagnose`. Support questions stop at `explain`.
+Start at any step. Small changes skip `diagnose`. A support question stops at `intake`: it gives the code facts and
+you answer.
 
 ### Project contract
 
