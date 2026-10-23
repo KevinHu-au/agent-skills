@@ -4,7 +4,7 @@ An external system is anything outside this repository that the application call
 
 ## Method
 
-1. **Find the integration code.** Look for client or adapter classes, generated service references, queue or topic senders and receivers, SDK packages, and configuration keys that hold an address or a queue name (name the key, never the value). `dotnet.md` lists where these live in a .NET project.
+1. **Find the integration code.** Look for client or adapter classes, generated service references, queue or topic senders and receivers, SDK packages, and configuration keys that hold an address or a queue name (name the key, never the value). `dotnet.md` lists where these live in a .NET project. `ios.md` (section External systems) lists where they live in an iOS project.
 2. **Trace up to the callers.** From each integration call, find the code that calls it. Then follow those callers up to an entry point: a controller endpoint, a UI handler, or a background job (hosted service, scheduler, queue consumer). Cite `path:line` at each hop.
 3. **Map to use cases.** Match each endpoint and job to a use case in the brief. A feature depends on the system when its use case reaches an integration call.
 4. **Find the inbound side.** Look for endpoints that an outside system calls: unusual authentication (API key, client certificate, IP allow list), unusual message formats (SOAP, XML, EDI, webhooks with signatures), and routes no user screen uses.

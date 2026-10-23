@@ -25,7 +25,7 @@ check() {
   fi
 }
 
-REFERENCES="brief-template.md contract-fill.md dotnet.md explorer-prompts.md external-systems.md safe-checks.md update-mode.md"
+REFERENCES="brief-template.md contract-fill.md dotnet.md explorer-prompts.md external-systems.md ios.md safe-checks.md update-mode.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -144,6 +144,13 @@ test_external_systems_has_method_limits_and_record() {
 test_dotnet_reference_names_where_to_look() {
   has_all "$REFS/dotnet.md" "*.csproj" "TargetFramework" "Route" "Authorize" "IHostedService" "AddHttpClient" \
     "appsettings" "DbUp" "migrations" "stored procedures"
+}
+
+test_ios_reference_names_where_to_look() {
+  has_all "$REFS/ios.md" "*.xcodeproj" "Package.swift" "IPHONEOS_DEPLOYMENT_TARGET" "@main" "NavigationStack" "@Observable" \
+    "SwiftData" "SchemaMigrationPlan" "Info.plist" "xcodebuild" "-only-testing" "general knowledge" "not yet checked" \
+    "safe-checks.md" "Never run them from this skill" &&
+    grep -qF 'For iOS (SwiftUI) projects also load `references/ios.md`' "$SKILL"
 }
 
 test_update_mode_has_the_eight_steps_in_order() {
@@ -362,6 +369,7 @@ check "safe-checks.md lists the forbidden commands" test_safe_checks_lists_forbi
 check "SKILL.md, explorer-prompts.md and brief-template.md name the four markers" test_references_name_the_four_markers
 check "external-systems.md has method, limits and the per-system record" test_external_systems_has_method_limits_and_record
 check "dotnet.md names where to look in a .NET project" test_dotnet_reference_names_where_to_look
+check "ios.md names where to look in an iOS project" test_ios_reference_names_where_to_look
 check "update-mode.md has the eight steps, in order" test_update_mode_has_the_eight_steps_in_order
 check "update-mode.md covers a missing or garbled header" test_update_mode_covers_missing_header
 check "update-mode.md covers a scanned commit that does not exist" test_update_mode_covers_missing_commit
