@@ -24,7 +24,7 @@ check() {
   fi
 }
 
-REFERENCES="bug.md data.md dotnet.md performance.md report-template.md"
+REFERENCES="bug.md data.md dotnet.md ios.md performance.md report-template.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -281,6 +281,11 @@ test_performance_verdicts_map_to_the_report_verdicts_and_the_test_guards_the_cos
 test_the_verdict_line_lists_the_three_verdicts_exactly() {
   grep -qF 'Verdict: Confirmed | Not confirmed | Not reproduced' "$REFS/report-template.md"
 }
+test_ios_reference_names_where_to_look() {
+  has_all "$REFS/ios.md" '-only-testing' 'zero' '@MainActor' 'Instruments' 'Release' 'N+1' 'migration' 'general knowledge' 'not yet checked' \
+    '## Run and count tests' 'Never run UI tests' '-derivedDataPath' &&
+    grep -qF 'For an iOS (SwiftUI) project also read `references/ios.md`' "$SKILL"
+}
 
 # Rules added after the Round 2 review.
 test_rules_cover_configuration_files_and_instrumentation_without_edits() {
@@ -419,6 +424,7 @@ check "bug.md covers the method" test_bug_reference_covers_the_method
 check "data.md covers the four questions and privacy" test_data_reference_covers_the_four_questions_and_privacy
 check "performance.md has the seven mantras in order and the vetting" test_performance_reference_has_the_mantras_in_order_and_the_vetting
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
+check "ios.md names where to look" test_ios_reference_names_where_to_look
 check "report-template.md has the report headings in order" test_report_template_has_the_headings_in_order
 check "the hand-off block has every field" test_hand_off_block_has_every_field
 check "report-template.md has the three verdicts" test_report_template_has_the_three_verdicts
