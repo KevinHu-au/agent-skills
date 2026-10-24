@@ -7,10 +7,10 @@ examples use a made-up shop, not a real project.
 ## Answer
 
 For `figure or term`, `status` and `code` questions.
-Line budget, 60 lines in all as the target, 70 at most: Short answer 3, Domain 3, Core code 6, Flow 18 (layers plus the formula and its inputs,
-or the Conditions), Traps 5, Gaps 3, Ask next 4, Next 1. The labels and blank lines make up the rest. In the Flow,
-name the screen once: route, tab, column and grid are one screen line, not four. Leave out pure plumbing such as a
-mapping step that copies a value unchanged.
+Line budget, 60 lines in all as the target, 70 at most: Short answer 3, Domain 3, Core code 6, Flow 18 (layers plus
+the formula and its inputs, or the Conditions), Traps 5, Gaps 3, Ask next 4, Next 1. The labels and blank lines make
+up the rest. In the Flow, name the screen once: route, tab, column and grid are one screen line, not four. Leave out
+pure plumbing such as a mapping step that copies a value unchanged.
 
 - **Short answer**: two or three sentences in business words. What it is and why it matters to the user.
 - **Domain**: the general meaning, marked `general knowledge` when it is an industry term, then what this project means
