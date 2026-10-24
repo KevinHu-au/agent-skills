@@ -116,7 +116,7 @@ after iteration 4.
 - **The fixture is small** (21 files). The baseline agent found almost every fact without the skill. On this
   fixture the skill's measurable gains are the checker pass, the markers, the header and `Sources:` lines, the
   refresh behaviour, and the questions grouped by who to ask. Whether it finds facts a plain agent misses needs
-  a bigger codebase: that is the InSite check.
+  a bigger codebase: that is the real-project check.
 - **No run had an engineer to answer.** The question steps and the confirm-before-editing `AGENTS.md` step were
   not exercised. In headless mode `AGENTS.md` is never written, so the contract-filling path is untested.
 - **The reader was scored by one person** (the assistant who built the skill), against `expected-facts.md`.
