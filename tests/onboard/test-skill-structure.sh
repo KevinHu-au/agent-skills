@@ -25,7 +25,7 @@ check() {
   fi
 }
 
-REFERENCES="brief-template.md contract-fill.md dotnet.md explorer-prompts.md external-systems.md ios.md safe-checks.md update-mode.md"
+REFERENCES="brief-template.md contract-fill.md dotnet.md explorer-prompts.md external-systems.md ios.md react.md safe-checks.md update-mode.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -151,6 +151,12 @@ test_ios_reference_names_where_to_look() {
     "SwiftData" "SchemaMigrationPlan" "Info.plist" "xcodebuild" "-only-testing" "general knowledge" "not yet checked" \
     "safe-checks.md" "Never run them from this skill" &&
     grep -qF 'For iOS (SwiftUI) projects also load `references/ios.md`' "$SKILL"
+}
+
+test_react_reference_names_where_to_look() {
+  has_all "$REFS/react.md" "react-dom" "vite.config" "createBrowserRouter" "createContext" "NSwag" ".env" "localStorage" \
+    "general knowledge" "not yet checked" "safe-checks.md" "Never run them from this skill" "root \`package.json\` of a monorepo" &&
+    grep -qF 'For React web projects (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also load `references/react.md`' "$SKILL"
 }
 
 test_update_mode_has_the_eight_steps_in_order() {
@@ -370,6 +376,7 @@ check "SKILL.md, explorer-prompts.md and brief-template.md name the four markers
 check "external-systems.md has method, limits and the per-system record" test_external_systems_has_method_limits_and_record
 check "dotnet.md names where to look in a .NET project" test_dotnet_reference_names_where_to_look
 check "ios.md names where to look in an iOS project" test_ios_reference_names_where_to_look
+check "react.md names where to look in a React project" test_react_reference_names_where_to_look
 check "update-mode.md has the eight steps, in order" test_update_mode_has_the_eight_steps_in_order
 check "update-mode.md covers a missing or garbled header" test_update_mode_covers_missing_header
 check "update-mode.md covers a scanned commit that does not exist" test_update_mode_covers_missing_commit
