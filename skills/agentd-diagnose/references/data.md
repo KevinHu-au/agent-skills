@@ -28,4 +28,4 @@ A data cause is confirmed when the suspected writer, run on a copy or in memory,
 
 The hand-off lists the query that finds the bad rows, the count and the date range, the writer you found, and the code fix for `agentd-dev-rev` when the cause is live. If the cause is not live (a one-off edit, a finished migration), there is no code fix. The hand-off is then the repair, listed under Follow-on, and the report says so.
 
-A repair needs its own reviewed script: the scope, a backup, a rollback, counts before and after, and the engineer's sign-off. No skill runs it yet. Say so under Follow-on, and do not write the repair.
+A repair needs its own reviewed script, and `/agentd-data-fix` writes it for SQL Server. Under Follow-on, tell the engineer to run `/agentd-data-fix` with the work item and to paste this report as extra facts. Do not write the repair.
