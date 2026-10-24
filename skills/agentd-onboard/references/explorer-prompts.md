@@ -35,7 +35,7 @@ Each unknown: with who could answer it.
 
 Goal: find out who uses the application and how they move through it.
 
-Look for screens, pages, routes and navigation; forms and what they submit; menus and who sees which one; user-facing text and labels; empty and error states. In .NET look at views, Razor pages, Blazor `@page`, and SPA route tables. In an iOS app look at `View` types, `NavigationStack`, `TabView` and `.sheet`. Read any user guide or help text for the words users use.
+Look for screens, pages, routes and navigation; forms and what they submit; menus and who sees which one; user-facing text and labels; empty and error states. In .NET look at views, Razor pages, Blazor `@page`, and SPA route tables. In an iOS app look at `View` types, `NavigationStack`, `TabView` and `.sheet`. In a React app look at the router (`<Route>`, `createBrowserRouter`), `pages/` folders, the Next.js `app/` folder (`page.tsx`) and the components they render. Read any user guide or help text for the words users use.
 
 Report: the types of user; the screens each type uses; three to five candidate use cases, each as a short numbered journey of screens and actions. Mark every use case `inferred:` until the engineer confirms it, even when a document states it. Name the document. Name the entry point of each in the code.
 
