@@ -82,7 +82,7 @@ The report and the hand-off block go in chat. Nothing is saved in the repository
 - Lead with the verdict: Confirmed, Not confirmed, or Not reproduced.
 - Paste the reproduction output verbatim, after you remove secrets and personal data.
 - Say plainly what you did not run or could not check.
-- The closing line depends on the verdict. When the cause is confirmed, it tells the engineer to run `/agentd-dev-rev` and paste the block. The skill cannot start it. When it is not confirmed, the closing line is the question. If removing the scratch folder fails, say so in one line, then repeat the closing line.
+- The closing line depends on the verdict. When the cause is confirmed, it tells the engineer to run `/agentd-dev-rev` and paste the block, or, when Proposed fix is `none:`, `/agentd-data-fix` with the work item, and paste the report and the hand-off block as extra facts. The skill cannot start either. When it is not confirmed, the closing line is the question. If removing the scratch folder fails, say so in one line, then repeat the closing line.
 
 ## Rules
 

@@ -58,19 +58,20 @@ Proposed fix: <the smallest change>
 Do not change: <what stays as it is>
 Risk areas: <contracts, schema, authorisation, generated files, callers>
 Verification: <the reproduction command; the expected output before and after the fix>
-Follow-on: <the second kind of problem, a data repair with its scope and how bad rows are identified, or none>
+Follow-on: <the second kind of problem> | <a data repair: its scope and how bad rows are identified; then run `/agentd-data-fix` with the work item and paste this report and the hand-off block as extra facts> | none
 ```
 
-After the hand-off block, end with this line when the cause is confirmed: Run `/agentd-dev-rev` and paste the hand-off block. The skill cannot start the next skill.
+After the hand-off block, end with this line when the cause is confirmed: Run `/agentd-dev-rev` and paste the hand-off block. The skill cannot start the next skill. When Proposed fix is `none:`, first name any other Follow-on problem in one line. Then end with this line instead of `/agentd-dev-rev`: Run `/agentd-data-fix` with the work item, and paste this report and the hand-off block as extra facts (it writes T-SQL only).
 
 ## When the cause is not confirmed
 
-The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write the `/agentd-dev-rev` line until the engineer says to hand off.
+The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write a closing line (`/agentd-dev-rev` or `/agentd-data-fix`) until the engineer says to hand off.
 
 If the engineer says hand off anyway, write the block with these changes:
 
 - `Confidence: hypothesis, not confirmed` replaces the first line, so `agentd-dev-rev` reads it before anything else.
 - The cause under Root cause is written as a hypothesis, with the open causes listed.
+- When Proposed fix is `none:`, leave out the `If the failing test cannot be made to fail` line, and end with the `/agentd-data-fix` line from the Hand-off block section. Otherwise end with the `/agentd-dev-rev` line.
 - One more line at the end: `If the failing test cannot be made to fail for the stated reason, stop and report back. Do not ship the fix.`
 
 ## Performance reports
