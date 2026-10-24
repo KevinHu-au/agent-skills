@@ -156,6 +156,16 @@ tests/explain/test-skill-structure.sh
 
 `tests/explain/EVAL.md` explains the real check on two customer projects and records a summary of the results.
 
+The `agentd-data-fix` skill has a structure test in `tests/data-fix/`. It reads the skill files, this README and
+`tests/data-fix/EVAL.md`, and writes nothing. It uses the same git-ignored name list as the explain test.
+
+```bash
+tests/data-fix/test-skill-structure.sh
+```
+
+`tests/data-fix/EVAL.md` explains the real check on copies of two customer projects and records a summary of the
+results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -211,6 +221,7 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | Skill | Purpose |
 |---|---|
 | `agentd-blast-radius` | Find what else one change could break, including what search misses. Proves the one fact the change is safe because of by running code, edits no code, and ends with an add-on block for `agentd-dev-rev`. |
+| `agentd-data-fix` | Turn a work item into a safe, re-runnable data fix: look queries, a guarded script, a capture query, a reverse script and check queries, all written in chat. Never runs anything against a database; edits no code. |
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
@@ -235,7 +246,6 @@ These are designs, not files yet.
 
 | Skill | Purpose |
 |---|---|
-| `agentd-data-fix` | Repair data safely: read first, idempotent script, backup, rollback. |
 | `agentd-verify-init` | Generate a project-local skill that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. |
 
 Planned flow:
@@ -244,6 +254,7 @@ Planned flow:
 onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
 
 explain: a side tool, run any time
+data-fix: after diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
 ```
 
 Start at any step. Small changes skip `diagnose`. A support question stops at `intake`: it gives the code facts and
