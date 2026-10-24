@@ -172,10 +172,27 @@ test_data_reference_covers_the_four_questions_and_privacy() {
 
 test_data_repair_hand_off_names_the_data_fix_skill() {
   local s; s=$(section_of "$REFS/data.md" 'Hand-off')
-  for p in '/agentd-data-fix' 'with the work item' 'extra facts' 'Follow-on' 'do not write the repair'; do
+  for p in '/agentd-data-fix' 'with the work item' 'and the hand-off block as extra facts' 'Follow-on' 'do not write the repair'; do
     printf '%s\n' "$s" | grep -qiF -- "$p" || return 1
   done
   ! printf '%s\n' "$s" | grep -qiE 'a backup, a rollback|no skill runs it yet'
+}
+
+test_report_template_hands_a_data_repair_to_the_data_fix_skill() {
+  local t="$REFS/report-template.md" hb nc
+  hb=$(section_of "$t" 'Hand-off block')
+  nc=$(section_of "$t" 'When the cause is not confirmed')
+  grep '^Follow-on:' "$t" | grep -qF 'with the work item' &&
+    grep '^Follow-on:' "$t" | grep -qF '/agentd-data-fix' &&
+    grep '^Follow-on:' "$t" | grep -qF '| none' &&
+    printf '%s\n' "$hb" | grep -qE 'Proposed fix is .none:., first name any other Follow-on problem' &&
+    printf '%s\n' "$hb" | grep -qE 'instead of .?/agentd-dev-rev' &&
+    ! printf '%s\n' "$hb" | grep -qiE 'both lines|as well as|also end' &&
+    printf '%s\n' "$hb" | grep -qF 'with the work item, and paste this report and the hand-off block as extra facts (it writes T-SQL only)' &&
+    printf '%s\n' "$nc" | grep -qF 'Do not write a closing line (`/agentd-dev-rev` or `/agentd-data-fix`) until the engineer says to hand off' &&
+    printf '%s\n' "$nc" | grep -qF 'When Proposed fix is `none:`, leave out' &&
+    printf '%s\n' "$nc" | grep -qF 'Otherwise end with the `/agentd-dev-rev` line' &&
+    section_of "$SKILL" Output | grep -qF 'when Proposed fix is `none:`, `/agentd-data-fix` with the work item, and paste the report and the hand-off block as extra facts'
 }
 
 test_performance_reference_has_the_mantras_in_order_and_the_vetting() {
@@ -436,6 +453,7 @@ check "the hand-off tells the engineer to run the next skill" test_the_skill_nev
 check "bug.md covers the method" test_bug_reference_covers_the_method
 check "data.md covers the four questions and privacy" test_data_reference_covers_the_four_questions_and_privacy
 check "data.md hands a repair to /agentd-data-fix and keeps the stale backup wording out" test_data_repair_hand_off_names_the_data_fix_skill
+check "the report template hands a data repair to /agentd-data-fix, and the closing line follows" test_report_template_hands_a_data_repair_to_the_data_fix_skill
 check "performance.md has the seven mantras in order and the vetting" test_performance_reference_has_the_mantras_in_order_and_the_vetting
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
 check "ios.md names where to look" test_ios_reference_names_where_to_look
