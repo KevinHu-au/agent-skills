@@ -24,7 +24,7 @@ check() {
   fi
 }
 
-REFERENCES="bug.md data.md dotnet.md ios.md performance.md report-template.md"
+REFERENCES="bug.md data.md dotnet.md ios.md performance.md react.md report-template.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -286,6 +286,11 @@ test_ios_reference_names_where_to_look() {
     '## Run and count tests' 'Never run UI tests' '-derivedDataPath' &&
     grep -qF 'For an iOS (SwiftUI) project also read `references/ios.md`' "$SKILL"
 }
+test_react_reference_names_where_to_look() {
+  has_all "$REFS/react.md" 'vitest run' 'run zero tests' 'do not run a script by name' 'CI=true' 'useEffect' 'react-dom/profiling' \
+    'N+1: a request per row' 'VITE_' 'general knowledge' 'not yet checked' '## Run and count tests' 'Never run end-to-end tests' &&
+    grep -qF 'For a React web project (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also read `references/react.md`' "$SKILL"
+}
 
 # Rules added after the Round 2 review.
 test_rules_cover_configuration_files_and_instrumentation_without_edits() {
@@ -425,6 +430,7 @@ check "data.md covers the four questions and privacy" test_data_reference_covers
 check "performance.md has the seven mantras in order and the vetting" test_performance_reference_has_the_mantras_in_order_and_the_vetting
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
 check "ios.md names where to look" test_ios_reference_names_where_to_look
+check "react.md names where to look" test_react_reference_names_where_to_look
 check "report-template.md has the report headings in order" test_report_template_has_the_headings_in_order
 check "the hand-off block has every field" test_hand_off_block_has_every_field
 check "report-template.md has the three verdicts" test_report_template_has_the_three_verdicts
