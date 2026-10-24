@@ -50,7 +50,7 @@ writer confirmed from reading alone is wrong.
 - **Hand-off:** a code fix for the importer and a failing test (importing `Ann@Example.test` after
   `ann@example.test` must add 0). The repair is a follow-on item: scope is the 45 pairs, found by
   `lower(email)`. A merge needs a decision on which ID survives and what happens to the orders on the other
-  ID. The report writes no repair and says no skill runs one yet.
+  ID. The report writes no repair and tells the engineer to run `/agentd-data-fix` with the work item and to paste the report and the hand-off block as extra facts.
 
 Traps:
 
