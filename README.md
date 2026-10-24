@@ -146,6 +146,16 @@ tests/intake/test-make-fixture.sh
 
 `tests/intake/EVAL.md` explains how to run the skill on the fixture and records the results.
 
+The `agentd-explain` skill has a structure test in `tests/explain/`. It reads the skill files, this README and
+`tests/explain/EVAL.md`, and writes nothing. It also checks that no customer or project name from your own git-ignored list `.git/info/customer-names`
+appears in the skill files, this README or `tests/explain/EVAL.md`; without that list, the check is skipped.
+
+```bash
+tests/explain/test-skill-structure.sh
+```
+
+`tests/explain/EVAL.md` explains the real check on two customer projects and records a summary of the results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -203,6 +213,7 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | `agentd-blast-radius` | Find what else one change could break, including what search misses. Proves the one fact the change is safe because of by running code, edits no code, and ends with an add-on block for `agentd-dev-rev`. |
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
+| `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
@@ -224,7 +235,6 @@ These are designs, not files yet.
 
 | Skill | Purpose |
 |---|---|
-| `agentd-explain` | Help the engineer understand the business domain, the business logic and technical questions, including the end-to-end route of a feature from the frontend to the database. |
 | `agentd-data-fix` | Repair data safely: read first, idempotent script, backup, rollback. |
 | `agentd-verify-init` | Generate a project-local skill that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. |
 
