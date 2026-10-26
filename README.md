@@ -166,6 +166,16 @@ tests/data-fix/test-skill-structure.sh
 `tests/data-fix/EVAL.md` explains the real check on copies of two customer projects and records a summary of the
 results.
 
+The `agentd-verify-init` skill has a structure test in `tests/verify-init/`. It reads the skill files, `agentd-dev-rev`,
+`agentd-pr-prep`, this README and `tests/verify-init/EVAL.md`, and writes nothing. It uses the same git-ignored name
+list as the explain test.
+
+```bash
+tests/verify-init/test-skill-structure.sh
+```
+
+`tests/verify-init/EVAL.md` explains the real check of the generated skill and records a summary of the results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -229,26 +239,25 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
+| `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. |
 
 Every skill sets `disable-model-invocation: true`. The model never starts one on its own, so run a skill by
-typing `/skill-name`. This field is a Claude Code feature. In Copilot CLI an open issue
-([github/copilot-cli#4438](https://github.com/github/copilot-cli/issues/4438)) says a skill with the field is
-not found, even when you name it. That has not been tested on the version in use here. If a skill is not found
-in Copilot CLI, remove the line from that skill.
+typing `/skill-name`. This field is a Claude Code feature.
+
+Tested on Copilot CLI 1.0.102 on 2026-10-26, in a throwaway repository. Copilot's skill tool does not load a skill
+with the field. This matches the open issue
+([github/copilot-cli#4438](https://github.com/github/copilot-cli/issues/4438)). The same skill without the field
+loads, also from a subfolder, and a nested `metadata:` marker is accepted. A Copilot task agent also cannot run a
+flagged skill. Claude Code runs a flagged skill.
+
+So the flagged skills in this repository do not load in Copilot CLI 1.0.102. Use them in Claude Code. The generated
+project skill `verify-<app>` is written without the field for this reason.
 
 Skills that belong to my separate AgentKit repository are not stored here.
 `setup.manifest` lists them as reminders, and `install.sh` prints the reminder.
 Install them from that repository into `~/.agents/skills/`.
 
-## Planned
-
-These are designs, not files yet.
-
-| Skill | Purpose |
-|---|---|
-| `agentd-verify-init` | Generate a project-local skill that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. |
-
-Planned flow:
+## Flow
 
 ```
 onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
@@ -257,12 +266,14 @@ explain: a side tool, run any time
 data-fix: after diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
 ```
 
+In the flow, `verify` means the project skill `/verify-<app>`, which `agentd-verify-init` generates for a project.
+
 Start at any step. Small changes skip `diagnose`. A support question stops at `intake`: it gives the code facts and
 you answer.
 
-### Project contract
+## Project contract
 
-General skills read facts from each project's `AGENTS.md`. The planned headings are:
+General skills read facts from each project's `AGENTS.md`. The headings are:
 
 - Commands: build, test, lint, and how to confirm the test count is real.
 - Verify: how to run and drive the app.
