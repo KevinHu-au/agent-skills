@@ -53,7 +53,7 @@ Run from: `<directory>`
 - **Network:** `<VPN, firewall rules, IP allow list>`
 - **Query safely:** `<read-only login, tool, how to avoid locks>`
 - **Never do:** `<for example: writes to Prod, running a reset against a shared database>`
-- **Schema changes:** `<where scripts live, naming, and the rule that applied scripts are never edited>`
+- **Schema changes:** `<where scripts live, naming, which scripts run once (never edited after they are applied) and which re-run on every deploy (edited in place)>`
 - **Sensitive data:** `<personal or financial data, masking rules>`
 
 ### Risk areas
