@@ -46,7 +46,10 @@ Use at step 4. Walk the section for the work item's type. For a mixed work item,
 - Which records, by ID or count, and in which environment.
 - The expected value against the actual value, and the source of truth.
 - Since when, and what wrote the records (an import, a job, a screen).
-- Repair: a one-off fix, or also stop new bad records? Who approves a change to production data?
+- Repair: a one-off fix, or also stop new bad records? Who approves a change to production data? A repair with no
+  code change is written by `/agentd-data-fix`. When new bad records are still being written, the work item also
+  needs a code fix: with a known cause, `/agentd-dev-rev` for the code and `/agentd-data-fix` for the rows; with an
+  unknown cause, `/agentd-diagnose` first.
 - Reports or figures that already used the bad data.
 
 ## Performance

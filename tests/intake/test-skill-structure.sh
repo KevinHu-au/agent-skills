@@ -354,6 +354,21 @@ test_the_other_part_of_a_mixed_ticket_is_raised_separately() { has_all "$TPL" "r
 
 test_headings_are_translated() { has_all "$TPL" "Translate the headings"; }
 
+# ---------------------------------------------------------------- data-fix hand-off
+
+test_a_data_change_with_no_code_change_goes_to_data_fix() {
+  section_has "$SKILL" Output '`/agentd-data-fix` for a data work item that needs only a data change' \
+    'Bad rows with an unknown cause go to `/agentd-diagnose` first'
+}
+
+test_the_data_fix_closing_line_pastes_the_work_item() {
+  section_has "$TPL" "Closing lines" 'Run `/agentd-data-fix` and paste the work item, the comment and the engineer block'
+}
+
+test_the_data_checklist_names_data_fix() {
+  section_has "$CHK" Data '`/agentd-data-fix`' '`/agentd-diagnose`'
+}
+
 check "name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
@@ -431,6 +446,9 @@ check "no contract means no safe default for outputs" test_no_contract_means_no_
 check "investigation examples are engineer-side" test_investigation_examples_are_engineer_side
 check "the other part of a mixed ticket is raised separately" test_the_other_part_of_a_mixed_ticket_is_raised_separately
 check "comment headings are translated" test_headings_are_translated
+check "a data change with no code change goes to /agentd-data-fix" test_a_data_change_with_no_code_change_goes_to_data_fix
+check "the data-fix closing line pastes the work item" test_the_data_fix_closing_line_pastes_the_work_item
+check "the Data checklist names data-fix and diagnose" test_the_data_checklist_names_data_fix
 
 echo
 echo "passed=$PASS failed=$FAIL"

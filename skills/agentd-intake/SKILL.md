@@ -84,6 +84,8 @@ Use the shapes in `references/comment-template.md`.
     A cause the customer names is a candidate. A cause read from the code is `inferred:`,
     so diagnose comes first, also when the fix may touch a contract.
   - `/agentd-dev-rev` for a small enhancement, or a fix whose cause is known.
+  - `/agentd-data-fix` for a data work item that needs only a data change and no code change: new reference data, or
+    a repair of rows whose cause is known. Bad rows with an unknown cause go to `/agentd-diagnose` first.
   - `/agentd-blast-radius`, then `/agentd-dev-rev`, when the change touches a contract, schema, shared code or an external system.
   - `/agentd-intake` again, once the customer's replies or the investigation results are in.
   - For a support question: the engineer answers the customer, plus `/agentd-diagnose` when the facts suggest a bug.

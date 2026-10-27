@@ -192,6 +192,10 @@ test_diagnose_report_is_extra_facts() {
   has_all "$SKILL" "diagnose report" "extra facts"
 }
 
+test_intake_comment_is_extra_facts_and_keeps_its_stop_condition() {
+  has_all "$SKILL" "an intake comment with its engineer block" 'Requirement: unconfirmed' "Stop condition"
+}
+
 test_live_cause_is_warned_and_the_fix_is_still_written() {
   has_all "$SKILL" "still being created" "very brief summary" "still write the full" "release order"
 }
@@ -652,6 +656,7 @@ check "a vague work item lists matches and never guesses" test_vague_work_item_l
 check "an empty paste asks once" test_empty_paste_asks_once
 check "scope is data only" test_scope_is_data_only
 check "a diagnose report is extra facts" test_diagnose_report_is_extra_facts
+check "an intake comment is extra facts and keeps its stop condition" test_intake_comment_is_extra_facts_and_keeps_its_stop_condition
 check "a live cause is warned and the fix is still written" test_live_cause_is_warned_and_the_fix_is_still_written
 check "the turns are three replies" test_turns_are_three_replies
 check "the local check runs the text twice" test_local_check_runs_the_text_twice
