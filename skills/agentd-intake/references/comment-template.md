@@ -124,6 +124,8 @@ Next: <one target from SKILL.md>
 - **Confirm on Actionable:** show the engineer block again with `Requirement: confirmed` and `Stop condition: none`.
   Then: "Run `/<next>` and paste the comment and the engineer block." For two targets:
   "Run `/agentd-blast-radius`, then `/agentd-dev-rev`, and paste the comment and the engineer block into each."
+  For a data fix, which takes the work item as its main input:
+  "Run `/agentd-data-fix` and paste the work item, the comment and the engineer block."
 - **Confirming a Not actionable yet** means "post the questions". `Requirement:` stays `unconfirmed` and the
   "do not build until" stop condition stays. Show the engineer block again, unchanged. The last line is the post
   line, or the investigation line when the comment has no customer questions.

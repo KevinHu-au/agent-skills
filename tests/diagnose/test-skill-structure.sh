@@ -189,7 +189,7 @@ test_report_template_hands_a_data_repair_to_the_data_fix_skill() {
     printf '%s\n' "$hb" | grep -qE 'instead of .?/agentd-dev-rev' &&
     ! printf '%s\n' "$hb" | grep -qiE 'both lines|as well as|also end' &&
     printf '%s\n' "$hb" | grep -qF 'with the work item, and paste this report and the hand-off block as extra facts (it writes T-SQL only)' &&
-    printf '%s\n' "$nc" | grep -qF 'Do not write a closing line (`/agentd-dev-rev` or `/agentd-data-fix`) until the engineer says to hand off' &&
+    printf '%s\n' "$nc" | grep -qF 'Do not write a closing line (`/agentd-dev-rev`, `/agentd-blast-radius` or `/agentd-data-fix`) until the engineer says to hand off' &&
     printf '%s\n' "$nc" | grep -qF 'When Proposed fix is `none:`, leave out' &&
     printf '%s\n' "$nc" | grep -qF 'Otherwise end with the `/agentd-dev-rev` line' &&
     section_of "$SKILL" Output | grep -qF 'when Proposed fix is `none:`, `/agentd-data-fix` with the work item, and paste the report and the hand-off block as extra facts'
@@ -212,7 +212,7 @@ test_report_template_has_the_headings_in_order() {
 
 test_hand_off_block_has_every_field() {
   has_all "$REFS/report-template.md" 'Task:' 'Root cause:' 'Failing test first:' 'Proposed fix:' \
-    'Do not change:' 'Risk areas:' 'Verification:' 'Confidence:' 'Follow-on:'
+    'Do not change:' 'Risk areas:' 'Blast radius:' 'Verification:' 'Confidence:' 'Follow-on:'
 }
 
 test_report_template_has_the_three_verdicts() {
@@ -431,6 +431,34 @@ test_the_design_concern_is_in_the_report_and_not_in_the_hand_off_block() {
     in_order "$REFS/report-template.md" 'Design concern:' '## Hand-off block'
 }
 
+# Blast-radius step (plan change 2): only when the fix touches a contract, schema, shared code or an external system.
+test_blast_radius_only_for_contract_schema_shared_code_or_external() {
+  local t="$REFS/report-template.md"
+  section_of "$SKILL" Output | grep -F '/agentd-blast-radius' | grep -i 'contract' | grep -i 'schema' |
+    grep -i 'shared code' | grep -qi 'external system' &&
+    section_of "$SKILL" Rules | grep -F '/agentd-blast-radius' | grep -qi 'shared code' &&
+    grep '^Blast radius:' "$t" | grep -qF 'needed:' &&
+    grep '^Blast radius:' "$t" | grep -qF 'not needed:' &&
+    section_of "$t" 'Hand-off block' | grep -qF 'When Blast radius is `needed:`, end with this line instead: Run `/agentd-blast-radius` and paste the hand-off block. Then run `/agentd-dev-rev` and paste the hand-off block and the blast-radius add-on block.' &&
+    section_of "$t" 'When the cause is not confirmed' | grep -qF 'or the `/agentd-blast-radius` line when Blast radius is `needed:`'
+}
+
+test_a_data_repair_needs_no_blast_radius() {
+  section_of "$REFS/report-template.md" 'Hand-off block' | grep -qF 'Blast radius: not needed: no code fix'
+}
+
+# Diagnose reuses a pasted intake comment in Frame.
+test_frame_reuses_an_intake_comment() {
+  local f
+  f=$(section_of "$SKILL" Flow | grep -E '^1\. \*\*Frame')
+  printf '%s\n' "$f" | grep -qF 'intake comment and its engineer block' &&
+    printf '%s\n' "$f" | grep -qi 'ask only for what they leave open' &&
+    printf '%s\n' "$f" | grep -qi 'leads to check, not findings' &&
+    printf '%s\n' "$f" | grep -qF 'Requirement: unconfirmed' &&
+    printf '%s\n' "$f" | grep -qi 'Stop condition into the hand-off block' &&
+    section_of "$SKILL" Prerequisite | grep -qi 'intake comment'
+}
+
 test_example_values_do_not_follow_the_data_pattern() {
   section_of "$SKILL" Rules | grep -qF 'a.person@example.invalid' && section_of "$SKILL" Rules | grep -qi 'naming scheme'
 }
@@ -498,6 +526,9 @@ check "the six stop signs sit in Flow" test_the_six_stop_signs_sit_in_flow
 check "the round 2 rules have their text" test_the_new_rules_have_their_text
 check "the Design concern is in the report and not in the hand-off block" test_the_design_concern_is_in_the_report_and_not_in_the_hand_off_block
 check "an example value does not follow the data's pattern" test_example_values_do_not_follow_the_data_pattern
+check "blast-radius only for a contract, schema, shared code or external system" test_blast_radius_only_for_contract_schema_shared_code_or_external
+check "a data repair needs no blast radius" test_a_data_repair_needs_no_blast_radius
+check "Frame reuses a pasted intake comment" test_frame_reuses_an_intake_comment
 
 echo
 echo "passed=$PASS failed=$FAIL"

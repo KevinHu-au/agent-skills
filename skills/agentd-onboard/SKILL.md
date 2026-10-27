@@ -12,7 +12,7 @@ It never writes to customer systems, never changes code, and never copies a secr
 
 ## Prerequisite
 
-Run `git rev-parse --show-toplevel`. If it fails, stop with one line: `agentd-onboard needs a git repository. Run it inside one.` Work from the repository root, even when started in a subfolder. Run `git rev-parse HEAD`. If it fails, the repository has no commits: stop with one line: `agentd-onboard needs at least one commit.` The skill must run with no input at all.
+Run `git rev-parse --show-toplevel`. If it fails, stop with one line: `agentd-onboard needs a git repository. Run it inside one.` Work from the repository root, even when started in a subfolder. Run `git rev-parse HEAD`. If it fails, the repository has no commits: stop with one line: `agentd-onboard needs at least one commit.` The skill must run with no input at all: every question is optional, and with no answer it carries on as Flow says.
 
 Check for a linked worktree: compare the output of `git rev-parse --path-format=absolute --git-dir` with that of `git rev-parse --path-format=absolute --git-common-dir`. The flag is needed because the common folder can print as a relative path from a subfolder. It needs git 2.31 or later; with an older git, resolve both paths with `cd` and `pwd -P`. If they differ, this is a linked worktree, and the repository root is the main checkout, not the worktree folder. Find the main checkout with `git worktree list --porcelain`: its first `worktree` entry. If that entry says `bare`, the main repository has no checkout to write to: stop with one line. Warn that output in a removed worktree is lost, then write to the main checkout, or ask which. If nobody can answer, write to the main checkout, and put the warning in your final reply and in `open-questions.md`. From then on, read the code, run git commands and write the pack in the main checkout, so the pack and the commit it records sit together.
 
@@ -48,7 +48,7 @@ The lists and the confirmation wording are in `references/safe-checks.md`.
 - `unknown:` not found. Say who to ask.
 - `inferred:` worked out from the code, not confirmed.
 - `changed:` updated in the last refresh.
-- `conflict:` two sources disagree. The code wins. List the stale source as a finding in Unknowns and in `open-questions.md`. A committed secret, or any problem with no second source, is a finding, not a `conflict:`. Put it in Risks and delivery and in Unknowns.
+- `conflict:` two sources disagree. The code wins. List the stale source as a finding in Unknowns and in `open-questions.md`. A committed secret, or any problem with no second source, is a finding, not a `conflict:`. Put it in Risks and delivery and in Unknowns. A search count (for example a grep of test attributes) is a reading of the code and is not a run. When it disagrees with a document, mark `conflict:` with both. The count is the code's value, so it wins, but write it as `inferred:` and name the command that would settle it.
 
 Cite sources as `path:line`.
 
@@ -56,7 +56,7 @@ Cite sources as `path:line`.
 
 Everything goes in `docs/onboarding/`.
 
-- `README.md` is the brief and the entry point. The headings are fixed in `references/brief-template.md`. Aim for about 2,000 words, about four pages. The header records the scanned commit, the date, and whether the working tree was clean or dirty. A checklist of the eight questions sits at the top. Each item links to its section or says `unknown:`. Each section ends with a `Sources:` line.
+- `README.md` is the brief and the entry point. The headings are fixed in `references/brief-template.md`. Aim for about 2,000 words, about four pages. The 2,000-word target is for `README.md` only. Side files hold only detail the brief summarises: keep the whole pack under about 5,000 words. The header records the scanned commit, the date, and whether the working tree was clean or dirty. A checklist of the eight questions sits at the top. Each item links to its section or says `unknown:`. Each section ends with a `Sources:` line.
 - `open-questions.md` is always written. It collects every gap, grouped by who to ask, with why each matters. Add the other side files, in the same folder, only when a section outgrows its share: `use-cases.md`, `data-model.md`, `integrations.md`, `glossary.md`. The brief keeps a short summary and a link. Each side file starts with the same `Scanned commit:` and `Scanned on:` lines as the brief.
 - Diagrams are small Mermaid blocks.
 

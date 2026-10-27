@@ -1,6 +1,6 @@
 # Explorer prompts
 
-Used in Flow step 2. Start one read-only sub-agent for each angle, in parallel. Give each sub-agent its angle prompt, the shared rules and report template, the repository root, and any handover notes the engineer gave. A sub-agent has none of this conversation, so every prompt stands alone. If you cannot start sub-agents, run the six angles one after another and keep each report to the same size.
+Used in Flow step 2. Start one read-only sub-agent for each angle, in parallel. Give each sub-agent its angle prompt, the shared rules and report template, the repository root, and any handover notes the engineer gave. A sub-agent has none of this conversation, so every prompt stands alone. If you cannot start sub-agents, run the six angles one after another and keep each report to the same size. After each angle, keep only its report: drop the files you read from your notes, and do not read a file again that an earlier report already covers. On a large repository (more than about 1,000 tracked files), read the entry points and one example of each pattern, not every file, and list what you skipped under Open Questions.
 
 ## Shared rules and report template
 
