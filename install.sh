@@ -17,6 +17,10 @@ Usage: ./install.sh [--apply] [--adopt] [--harness LIST]
                    are reported as CONFLICT and left alone.
   --harness LIST   Comma list: claude-code,copilot-cli (default: both).
 
+Environment:
+  CLAUDE_CONFIG_DIR  Link Claude Code skills and CLAUDE.md into this folder
+                     instead of ~/.claude. One folder per run.
+
 Nothing is ever deleted. Plugins are listed, never installed.
 Exit status: 0 = clean, 1 = conflicts remain, 2 = bad usage.
 EOF
