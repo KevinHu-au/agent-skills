@@ -49,7 +49,7 @@ Sources: <path:line, path:line>
 
 ## Data model
 
-> Budget: 0.5 page, about 250 words. The main entities and how they relate. Where the schema lives and how to change it safely: script naming, who applies it, and that an applied script is never edited. The stored procedures that matter. The environments and their access rules (read-only or not), or `unknown:` and who to ask. Move long detail to `data-model.md`.
+> Budget: 0.5 page, about 250 words. The main entities and how they relate. Where the schema lives and how to change it safely: script naming, who applies it, which scripts run once (never edited after they are applied) and which re-run on every deploy (edited in place). The stored procedures that matter. The environments and their access rules (read-only or not), or `unknown:` and who to ask. Move long detail to `data-model.md`.
 
 <text>
 

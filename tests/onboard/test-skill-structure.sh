@@ -414,6 +414,47 @@ check "a repository with no commits stops with one line" test_a_repository_with_
 check "EVAL.md makes a real shallow clone" test_eval_makes_a_real_shallow_clone
 check "every skill in the repository sets disable-model-invocation: true" test_every_skill_in_the_repository_is_manual_only
 
+# Skill-fit problems from the first real check (plan section 12).
+test_fit_existing_agents_md_sections_are_kept_and_pointed_to() {
+  has_all "$REFS/contract-fill.md" "has no \`## Project contract\`" "keep those sections as they are" "points to it"
+}
+
+test_fit_headless_run_leaves_the_proposed_contract_ready_to_paste() {
+  has_all "$REFS/contract-fill.md" "after the unconfirmed use cases" "proposed \`## Project contract\` section" "ready to paste"
+}
+
+test_fit_rerun_scripts_are_edited_in_place() {
+  local f
+  for f in "$TEMPLATE" "$REFS/contract-fill.md" "$REFS/brief-template.md"; do
+    has_all "$f" "run once" "re-run on every deploy" "edited in place" || return 1
+    ! grep -qiE 'the rule that (applied scripts are|an applied script is) never edited' "$f" || return 1
+  done
+}
+
+test_fit_sequential_fallback_keeps_output_small() {
+  has_all "$REFS/explorer-prompts.md" "one after another" "drop the files you read" "list what you skipped"
+}
+
+test_fit_a_search_count_is_inferred_not_a_run() {
+  has_all "$SKILL" "search count" "is not a run" "the command that would settle it"
+}
+
+test_fit_no_input_means_every_question_is_optional() {
+  has_all "$SKILL" "The skill must run with no input at all: every question is optional"
+}
+
+test_fit_the_word_target_covers_the_brief_only() {
+  has_all "$SKILL" "The 2,000-word target is for \`README.md\` only" "whole pack under about 5,000 words"
+}
+
+check "fit: existing AGENTS.md sections are kept and pointed to" test_fit_existing_agents_md_sections_are_kept_and_pointed_to
+check "fit: a headless run leaves the proposed contract ready to paste" test_fit_headless_run_leaves_the_proposed_contract_ready_to_paste
+check "fit: scripts that re-run on every deploy are edited in place" test_fit_rerun_scripts_are_edited_in_place
+check "fit: the sequential fallback keeps output small" test_fit_sequential_fallback_keeps_output_small
+check "fit: a search count is inferred, not a run" test_fit_a_search_count_is_inferred_not_a_run
+check "fit: no input means every question is optional" test_fit_no_input_means_every_question_is_optional
+check "fit: the word target covers the brief only" test_fit_the_word_target_covers_the_brief_only
+
 echo
 echo "passed=$PASS failed=$FAIL"
 echo "temp folders left in place:$TMPS"

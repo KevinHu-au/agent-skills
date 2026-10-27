@@ -16,7 +16,8 @@ over trust. Read the references named in the Flow when you reach that step.
   repository, carry on from the current folder, skip the branch lookup and ask for the work item number if the paste
   lacks it.
 - The input is the pasted work item, in the customer's words. If it is empty or is not a work item, ask for the work
-  item once, then stop. A pasted diagnose report is extra facts; the work item stays the main input.
+  item once, then stop. A pasted diagnose report, or an intake comment with its engineer block, is extra facts; the
+  work item stays the main input. When the engineer block says `Requirement: unconfirmed`, follow its Stop condition.
 - The work item number comes from the paste, else from the branch name. When neither has it, ask.
 - Sources, in this order: `docs/onboarding/README.md`, the project contract in `AGENTS.md` (Data access rules, Risk
   areas), then the code. If the pack or the contract is missing, say so once and carry on from the code.

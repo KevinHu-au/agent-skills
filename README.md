@@ -7,13 +7,13 @@ Claude Code and GitHub Copilot CLI on a new machine.
 
 ```
 skills/         General skills, one folder each. Each holds a SKILL.md.
-global/         The global guide (AGENTS.md) and the Claude Code CLAUDE.md that imports it.
+global/         The global guide (AGENTS.md), the Claude Code CLAUDE.md that imports it, and bin/rm-scratch.
 hooks/copilot/  Copilot CLI safety hooks. git-safety.json.tmpl is a template.
 harness/        One script per tool: claude-code.sh, copilot-cli.sh.
 lib/common.sh   Link, backup and conflict logic shared by the scripts.
 setup.manifest  Plugins and marketplaces to reinstall by hand.
 install.sh      The setup script. Dry run by default.
-tests/          test-install.sh runs the installer against throwaway home folders.
+tests/          test-install.sh runs the installer against throwaway home folders. One folder per skill.
 ```
 
 Skills in this repository are general. They work for any client and any stack.
@@ -64,17 +64,44 @@ Options:
 
 Exit status: `0` clean, `1` conflicts remain, `2` bad usage.
 
+Claude Code reads `$CLAUDE_CONFIG_DIR` when it is set. Some setups use a second
+folder, for example `~/.claude-work` for a company account. Set the same variable
+when you run the installer, once per folder:
+
+```bash
+CLAUDE_CONFIG_DIR=~/.claude-work ./install.sh --harness claude-code
+CLAUDE_CONFIG_DIR=~/.claude-work ./install.sh --harness claude-code --apply
+```
+
+Use an absolute path or one that starts with `~/`. The installer skips a relative path with a warning.
+Without the variable, the installer uses `~/.claude`. The folder must already
+exist; start Claude Code once with the variable set to create it.
+
 ## How the links work
 
 ```
 repo/skills/<name>  <-  ~/.agents/skills/<name>  <-  ~/.claude/skills/<name>
 repo/global/AGENTS.md  <-  ~/.agents/AGENTS.md  <-  ~/.copilot/copilot-instructions.md
 repo/global/claude/CLAUDE.md  <-  ~/.claude/CLAUDE.md   (imports ~/.agents/AGENTS.md)
+repo/global/bin/rm-scratch  <-  ~/.agents/bin/rm-scratch
 repo/hooks/copilot/block-dangerous-shell.sh  <-  ~/.copilot/hooks/block-dangerous-shell.sh
 repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   (rendered copy)
 ```
 
-- `~/.agents/skills` is the shared home. Copilot CLI reads it from version 1.0.11. Claude Code does not, so it gets links in `~/.claude/skills`.
+- `rm-scratch` removes one scratch file or folder that an agent made with `mktemp`, and refuses anything else: a
+  path outside the system temp folders, a symlink, or a path you do not own. The global guide tells agents to
+  remove an approved scratch path with this script and no other removal command. `--dry-run` runs every check
+  and removes nothing.
+- `block-dangerous-shell.sh` checks each Copilot shell command. It denies `git push`, `git reset --hard`, a
+  forced `git clean`, `git branch -D` or a forced branch delete, a forced `git checkout` or `git switch`, and
+  `git checkout .` or `git restore .`. It also catches forms such as `git -C "<path>" push`, `/usr/bin/git push`,
+  `(git push)`, `bash -c 'git push'` and a line continuation. It asks before `rm`, `rmdir`, `unlink`, `trash`,
+  `shred`, `find -delete`, and the PowerShell `Remove-Item`, `ri`, `del`, `erase` and `rd`. It prints nothing for
+  any other command, so Copilot applies its default. It denies when `jq` is missing or it cannot read the command.
+  A command word inside a quoted message can cause a false deny or ask, which is accepted as safe. A regex cannot
+  catch every shell form, so treat it as a guard rail, not a sandbox.
+
+- `~/.agents/skills` is the shared home. Copilot CLI reads it from version 1.0.11. Claude Code does not, so it gets links in `~/.claude/skills` (or `$CLAUDE_CONFIG_DIR/skills`).
 - `git-safety.json` holds an absolute path, so the script writes a rendered copy. It replaces `@HOME@` with your home folder.
 - Edit skills in this repository, not through the links. `git pull` then updates both tools.
 
@@ -93,8 +120,15 @@ tests/test-install.sh
 ```
 
 The test builds throwaway home folders, runs the installer in them, and checks the
-result. It never touches your real home. It deletes nothing, so it prints the temp
-folders it used. The operating system clears them later.
+result. It also checks the rules of the Copilot shell hook. It never touches your real home. It deletes nothing,
+so it prints the temp folders it used. The operating system clears them later.
+
+```bash
+tests/test-rm-scratch.sh
+```
+
+This test checks that `rm-scratch` removes only a scratch path that you own under a system temp folder, and
+refuses everything else.
 
 `shellcheck` is not run by the tests. Run it yourself if it is installed.
 
@@ -132,7 +166,7 @@ tests/blast-radius/test-skill-structure.sh
 tests/blast-radius/test-make-fixture.sh
 ```
 
-`tests/blast-radius/EVAL.md` (not written yet) will explain how to run the skill on the fixture and record the results.
+`tests/blast-radius/EVAL.md` explains how to run the skill on the fixture and records the results.
 
 The `agentd-intake` skill has its own tests in `tests/intake/`. They check the skill files and a fixture: the
 diagnose fixture plus a small onboarding pack, with five work items (an enhancement that asks for the wrong fix, a bug
@@ -263,7 +297,8 @@ Install them from that repository into `~/.agents/skills/`.
 onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
 
 explain: a side tool, run any time
-data-fix: after diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
+data-fix: after intake or diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
+blast-radius: only when the change touches a contract, schema, shared code or an external system
 ```
 
 In the flow, `verify` means the project skill `/verify-<app>`, which `agentd-verify-init` generates for a project.

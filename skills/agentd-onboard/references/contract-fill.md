@@ -8,7 +8,8 @@ The project contract is a section of the project's own `AGENTS.md`. It has five 
 - If `AGENTS.md` does not exist, ask before creating it.
 - If `CLAUDE.md` only imports `AGENTS.md` (it holds a line such as `@AGENTS.md` and little else), still write to `AGENTS.md`.
 - Ask before any edit. Show the proposed section, or the changes in update mode, and wait for a yes. Change nothing else in the file.
-- Headless, with nobody to ask: do not touch `AGENTS.md`. Put the facts in the brief, and list "contract not written, nobody to confirm" in `open-questions.md`, after the unconfirmed use cases.
+- If `AGENTS.md` already states contract facts under its own headings (for example a Commands or Architecture section) but has no `## Project contract`, keep those sections as they are. Add the contract section with all five headings. For a fact that is already there, write one line that points to it (`see AGENTS.md, <heading>`), and fill in only what is missing.
+- Headless, with nobody to ask: do not touch `AGENTS.md`. Put the facts in the brief, and list "contract not written, nobody to confirm" in `open-questions.md`, after the unconfirmed use cases. Below that line, add the proposed `## Project contract` section in a fenced block, ready to paste, so the facts you found are not lost.
 - In update mode, when `## Project contract` already exists, refresh the facts the code can check (commands, versions, paths, endpoints, script locations) and keep the rest: owners, access rules, and anything the engineer told you. If an earlier run did not write the contract and you can ask now, ask now.
 
 ## How to fill each fact
@@ -52,7 +53,7 @@ A table with one row for each environment. The columns are Environment, URL, Dat
 - **Network:** VPN, firewall rules, IP allow list.
 - **Query safely:** a read-only login, the tool, and how to avoid locks.
 - **Never do:** for example writes to Prod, or a reset against a shared database.
-- **Schema changes:** where the scripts live, their naming, and the rule that an applied script is never edited. Take this from the Data model section of the brief.
+- **Schema changes:** where the scripts live, their naming, and which scripts run once and which re-run on every deploy. A script that runs once is never edited after it is applied. A script the tool runs again on every deploy (for example a stored procedure kept as a create-or-alter script) is edited in place. Take this from the Data model section of the brief.
 - **Sensitive data:** personal or financial data, and masking rules.
 
 ### Risk areas
