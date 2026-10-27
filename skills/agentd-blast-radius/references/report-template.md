@@ -42,15 +42,38 @@ Keep the open and the confirmed risks, of any tier, in the Risks table. Keep the
 
 Write it when the verdict is Contained or Breaks. For Unproven, write it only after the engineer says to hand off anyway (see below). A fresh `/agentd-dev-rev` session gets everything it needs from this block and the diagnose hand-off block, so keep it self-contained. Inline any script it names, for example as a heredoc, and never name a path in the scratch folder: the folder is removed after the report. The engineer pastes it next to the diagnose block, when there is one.
 
-```
-Blast radius: Contained | Breaks | Unproven
-Safety fact: <claim>. Tier: <tier>. Proof: <inline script or command, and its result>
-Risks to cover: <how each one breaks, path:line, tier>
-Tests to write first: <the first one proves the safety fact; then one for each risk>
-Do not change: <contracts, columns, signatures and shapes that must stay as they are>
-Warn or coordinate: <owner, mobile release, DBA, and why>, or none
-Stop condition: <when dev-rev must stop and report back>, or none
-```
+Put the block in chat inside a fence of four backticks with the `markdown` tag, as below, so a script fence inside it stays whole and the engineer copies the block in one piece. Keep every heading, in this order. Write `none` under an empty one. Use a bullet for each item in a list, or a number where the template shows numbers, and one sentence per item. Give every `path:line` and command in backticks.
+
+````markdown
+# Blast-radius add-on block
+
+**Blast radius:** Contained | Breaks | Unproven
+
+## Safety fact
+<claim>, or `none: <why>`.
+- **Tier:** <tier>
+- **Proof:** the inline script or command, and its output:
+  ```
+  <script or command>
+  <output>
+  ```
+
+## Risks to cover
+- <how it breaks>, `path:line`. Tier: <tier>.
+
+## Tests to write first
+1. <the test that proves the safety fact>
+2. <one test for each risk>
+
+## Do not change
+- <contracts, columns, signatures and shapes that must stay as they are>
+
+## Warn or coordinate
+- <owner, mobile release, DBA, and why>, or none
+
+## Stop condition
+<when dev-rev must stop and report back>, or none
+````
 
 When the verdict is Contained or Breaks, end with this line after the block: Run `/agentd-dev-rev` and paste the diagnose hand-off block, when there is one, and this add-on block. The skill cannot start the next skill.
 
@@ -60,7 +83,7 @@ In Risks, write the evidence that would confirm or rule out each open risk, and 
 
 If the engineer says hand off anyway, write the block with these changes:
 
-- `Blast radius: Unproven` is the first line, so `agentd-dev-rev` reads it before anything else.
-- If no run confirmed the safety fact, write it as a claim that nobody has confirmed. Its tier is what you found (`supported`, `inferred:` or `unknown:`), never `confirmed`. A fact that a run confirmed keeps `confirmed`. With no safety fact, write `Safety fact: none: <why>`, tier `n/a`, proof `n/a`.
+- `**Blast radius:** Unproven` is the verdict line. It stays the first line after the `# Blast-radius add-on block` title, so `agentd-dev-rev` reads it before any section.
+- If no run confirmed the safety fact, write it as a claim that nobody has confirmed. Its tier is what you found (`supported`, `inferred:` or `unknown:`), never `confirmed`. A fact that a run confirmed keeps `confirmed`. With no safety fact, write `none: <why>` under Safety fact, tier `n/a`, and `**Proof:** n/a` with no fence.
 - The first test in Tests to write first must prove the fact. When the fact is confirmed or there is none, it covers the most severe open risk.
-- Stop condition: `If the first test cannot prove the fact or clear the most severe open risk, stop and report back. Do not ship the change.`
+- Under Stop condition: `If the first test cannot prove the fact or clear the most severe open risk, stop and report back. Do not ship the change.`

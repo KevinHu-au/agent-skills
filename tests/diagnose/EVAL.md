@@ -35,8 +35,8 @@ Run these after each skill run. `$FIX/shop` is the fixture, `$HEAD` is the hash 
 git -C "$FIX/shop" status --porcelain            # prints nothing
 git -C "$FIX/shop" rev-parse HEAD                # equals $HEAD
 grep -ciE 'user[0-9]{4}@' report.md              # prints 0 (no address from the database)
-grep -c '^Task:' report.md                       # 1 in scenarios 1 to 3, 0 in scenario 4
-grep -c 'Confidence: confirmed' report.md        # 1 in scenarios 1 to 3, 0 in scenario 4
+grep -c '^## Task$' report.md                    # 1 in scenarios 1 to 3, 0 in scenario 4
+grep -cF '**Confidence:** confirmed' report.md   # 1 in scenarios 1 to 3, 0 in scenario 4
 grep -c 'hand off anyway' report.md              # at least 1 in scenario 4
 ls -d "<the scratch folder named in the report>" # "No such file or directory", or the report says "Scratch folder: none"
 git -C "$FIX/shop" stash list                    # prints nothing
