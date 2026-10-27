@@ -46,8 +46,25 @@ has_all() {
 # h2_list <file>: the H2 headings of a markdown file, in order, one per line.
 h2_list() { grep -E '^## ' "$1" | sed 's/^## //; s/[[:space:]]*$//'; }
 
-# section_of <file> <heading>: the lines under one H2 heading.
-section_of() { awk -v h="## $2" '$0 == h { on = 1; next } /^## / { on = 0 } on' "$1"; }
+# section_of <file> <heading>: the lines under one H2 heading. A heading inside a fenced block does not start or end a
+# section. A fence closes only on a run of the same character, at least as long as the one that opened it.
+section_of() {
+  awk -v h="## $2" '
+    /^[ ]*(```|~~~)/ {
+      s = $0; sub(/^[ ]*/, "", s); c = substr(s, 1, 1); n = 0
+      while (substr(s, n + 1, 1) == c) n++
+      if (fl == 0) { fc = c; fl = n } else if (c == fc && n >= fl && substr(s, n + 1) ~ /^[ ]*$/) { fl = 0 }
+      if (on) print
+      next
+    }
+    fl == 0 && $0 == h { on = 1; next }
+    fl == 0 && /^## / { on = 0 }
+    on
+  ' "$1"
+}
+
+# add_on_block: the lines inside the four-backtick markdown fence of the report template, without the fence lines.
+add_on_block() { awk '$0 == "````" { on = 0 } on; $0 == "````markdown" { on = 1 }' "$REFS/report-template.md"; }
 
 # section_has <file> <heading> <text>...: the section contains every text, ignoring case.
 section_has() {
@@ -213,8 +230,13 @@ test_the_risk_table_has_how_where_likelihood_cost_tier_and_check() {
 }
 
 test_add_on_block_has_every_field_in_order() {
-  in_order "$REFS/report-template.md" 'Blast radius:' 'Safety fact:' 'Risks to cover:' 'Tests to write first:' \
-    'Do not change:' 'Warn or coordinate:' 'Stop condition:'
+  [ "$(add_on_block | head -1)" = '# Blast-radius add-on block' ] &&
+    [ "$(add_on_block | awk 'NF' | sed -n 2p)" = '**Blast radius:** Contained | Breaks | Unproven' ] &&
+    has_all "$REFS/report-template.md" 'It stays the first line after the `# Blast-radius add-on block` title' &&
+    [ "$(add_on_block | grep -E '^## ' | sed 's/^## //' | tr '\n' '|')" = \
+      "Safety fact|Risks to cover|Tests to write first|Do not change|Warn or coordinate|Stop condition|" ] &&
+    [ "$(grep -c '^````markdown$' "$REFS/report-template.md")" = 1 ] &&
+    section_of "$REFS/report-template.md" 'Add-on block' | grep -qF 'fence of four backticks with the `markdown` tag'
 }
 
 test_add_on_block_is_self_contained_and_names_no_scratch_path() {
@@ -222,7 +244,7 @@ test_add_on_block_is_self_contained_and_names_no_scratch_path() {
 }
 
 test_unproven_hand_off_anyway_changes_the_block() {
-  has_all "$REFS/report-template.md" 'Blast radius: Unproven' 'prove the fact' 'stop' 'Do not write the `/agentd-dev-rev` line'
+  has_all "$REFS/report-template.md" '**Blast radius:** Unproven' 'prove the fact' 'stop' 'Do not write the `/agentd-dev-rev` line'
 }
 
 # Rules added after the first agent runs (EVAL.md will record the iterations).
@@ -235,7 +257,7 @@ test_the_add_on_block_waits_for_the_answer_when_unproven() {
 test_staged_runs_the_no_fact_case_and_the_unproven_tier_rules_are_written() {
   section_has "$SKILL" "Running commands" 'Staged changes' 'git checkout-index' 'not in the working tree' &&
     section_has "$SKILL" Verdicts 'Cleared means' 'With no safety fact' &&
-    has_all "$REFS/report-template.md" 'Safety fact: none: <why>' 'never `confirmed`' 'most severe open risk' '<base>...<head>'
+    has_all "$REFS/report-template.md" 'write `none: <why>` under Safety fact' 'never `confirmed`' 'most severe open risk' '<base>...<head>'
 }
 
 test_with_no_scratch_folder_the_change_runs_in_memory() {
