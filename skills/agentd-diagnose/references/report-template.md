@@ -57,21 +57,24 @@ Failing test first: <where it goes; what it arranges; what it calls; what it ass
 Proposed fix: <the smallest change>
 Do not change: <what stays as it is>
 Risk areas: <contracts, schema, authorisation, generated files, callers>
+Blast radius: needed: <what the fix touches: a contract, schema, shared code or an external system, with path:line> | not needed: <why>
 Verification: <the reproduction command; the expected output before and after the fix>
 Follow-on: <the second kind of problem> | <a data repair: its scope and how bad rows are identified; then run `/agentd-data-fix` with the work item and paste this report and the hand-off block as extra facts> | none
 ```
 
-After the hand-off block, end with this line when the cause is confirmed: Run `/agentd-dev-rev` and paste the hand-off block. The skill cannot start the next skill. When Proposed fix is `none:`, first name any other Follow-on problem in one line. Then end with this line instead of `/agentd-dev-rev`: Run `/agentd-data-fix` with the work item, and paste this report and the hand-off block as extra facts (it writes T-SQL only).
+Blast radius is `needed:` when the fix changes a public contract (an API, a DTO, a serialised shape, a configuration key), the schema (a table, a column, a stored procedure signature), code that other features or projects share, or what an external system sends or reads. Use the contract's Risk areas and External systems and owners. Otherwise write `not needed:` and the reason. With no code fix, write `Blast radius: not needed: no code fix`.
+
+After the hand-off block, end with this line when the cause is confirmed: Run `/agentd-dev-rev` and paste the hand-off block. The skill cannot start the next skill. When Blast radius is `needed:`, end with this line instead: Run `/agentd-blast-radius` and paste the hand-off block. Then run `/agentd-dev-rev` and paste the hand-off block and the blast-radius add-on block. When Proposed fix is `none:`, first name any other Follow-on problem in one line. Then end with this line instead of `/agentd-dev-rev`: Run `/agentd-data-fix` with the work item, and paste this report and the hand-off block as extra facts (it writes T-SQL only).
 
 ## When the cause is not confirmed
 
-The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write a closing line (`/agentd-dev-rev` or `/agentd-data-fix`) until the engineer says to hand off.
+The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write a closing line (`/agentd-dev-rev`, `/agentd-blast-radius` or `/agentd-data-fix`) until the engineer says to hand off.
 
 If the engineer says hand off anyway, write the block with these changes:
 
 - `Confidence: hypothesis, not confirmed` replaces the first line, so `agentd-dev-rev` reads it before anything else.
 - The cause under Root cause is written as a hypothesis, with the open causes listed.
-- When Proposed fix is `none:`, leave out the `If the failing test cannot be made to fail` line, and end with the `/agentd-data-fix` line from the Hand-off block section. Otherwise end with the `/agentd-dev-rev` line.
+- When Proposed fix is `none:`, leave out the `If the failing test cannot be made to fail` line, and end with the `/agentd-data-fix` line from the Hand-off block section. Otherwise end with the `/agentd-dev-rev` line, or the `/agentd-blast-radius` line when Blast radius is `needed:`.
 - One more line at the end: `If the failing test cannot be made to fail for the stated reason, stop and report back. Do not ship the fix.`
 
 ## Performance reports

@@ -14,7 +14,7 @@ It reproduces first, collects evidence and names the root cause. It never edits 
 
 Run `git rev-parse --show-toplevel`. If it fails, stop with one line: `agentd-diagnose needs a git repository. Run it inside one.` Work from the repository root.
 
-The skill needs a problem statement: pasted ticket text or a description. If there is none, ask for it once.
+The skill needs a problem statement: pasted ticket text or a description. If there is none, ask for it once. A pasted intake comment with its engineer block counts as one (see Frame).
 
 Read these when they exist, and skip them when they do not:
 
@@ -35,7 +35,7 @@ For a .NET project also read `references/dotnet.md`. For an iOS (SwiftUI) projec
 
 ## Flow
 
-1. **Frame.** Restate the problem in one sentence: expected behaviour, actual behaviour, where it was seen (environment, user, data) and since when. Ask for what is missing in one short list. If nobody answers, carry on and mark the gap `unknown:`. Write down the ticket's own theory as a premise to test. It is a candidate, not a fact.
+1. **Frame.** Restate the problem in one sentence: expected behaviour, actual behaviour, where it was seen (environment, user, data) and since when. Ask for what is missing in one short list. If nobody answers, carry on and mark the gap `unknown:`. Write down the ticket's own theory as a premise to test. It is a candidate, not a fact. If the paste holds an intake comment and its engineer block, start from them and ask only for what they leave open: Today and Change give the actual and expected behaviour, Assumptions and the customer's answers are facts given, and the `Conflicts:` and `Investigation:` items are leads to check, not findings. When the block says `Requirement: unconfirmed`, copy its Stop condition into the hand-off block's Task.
 2. **Orient.** Load the mode reference. Find the use case and the code path that the symptom belongs to. Read `git log` and `git blame` for those files to spot a regression.
 3. **Run plan.** List every command you will run, the scratch folder, and that the folder is removed after the report. Ask for one confirmation. See Running commands.
 4. **Reproduce.** Make the problem happen where the ticket saw it. If it does not happen, tighten the conditions, build the trigger, or add instrumentation without editing the repository (see `references/bug.md`). If it still does not happen, say what blocked you and ask the engineer for the missing evidence: a log line, a row ID, a trace. Never guess.
@@ -82,7 +82,7 @@ The report and the hand-off block go in chat. Nothing is saved in the repository
 - Lead with the verdict: Confirmed, Not confirmed, or Not reproduced.
 - Paste the reproduction output verbatim, after you remove secrets and personal data.
 - Say plainly what you did not run or could not check.
-- The closing line depends on the verdict. When the cause is confirmed, it tells the engineer to run `/agentd-dev-rev` and paste the block, or, when Proposed fix is `none:`, `/agentd-data-fix` with the work item, and paste the report and the hand-off block as extra facts. The skill cannot start either. When it is not confirmed, the closing line is the question. If removing the scratch folder fails, say so in one line, then repeat the closing line.
+- The closing line depends on the verdict. When the cause is confirmed, it tells the engineer to run `/agentd-dev-rev` and paste the block, or, when Proposed fix is `none:`, `/agentd-data-fix` with the work item, and paste the report and the hand-off block as extra facts. When the fix touches a contract, schema, shared code or an external system, it tells the engineer to run `/agentd-blast-radius` first, then `/agentd-dev-rev`. The skill cannot start any of them. When it is not confirmed, the closing line is the question. If removing the scratch folder fails, say so in one line, then repeat the closing line.
 
 ## Rules
 
@@ -93,5 +93,5 @@ The report and the hand-off block go in chat. Nothing is saved in the repository
 - One repository per run. A part in another repository is `unknown:` plus who to ask.
 - The ticket's theory is a candidate. Do not confirm it because someone said it first.
 - Propose the smallest change the evidence supports. Do not propose a guard or a retry that hides the cause.
-- For the Risk areas line, use the contract's Risk areas and the callers you find by search. That is a check by search, not a full blast-radius analysis.
+- For the Risk areas line, use the contract's Risk areas and the callers you find by search. That is a check by search, not a full blast-radius analysis. When the fix touches a contract, schema, shared code or an external system, write `Blast radius: needed:` in the hand-off block, so the engineer runs `/agentd-blast-radius` before `/agentd-dev-rev`.
 - Do not claim confirmed without a run. Reading the code is inferred.
