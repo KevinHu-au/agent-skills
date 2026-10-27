@@ -36,7 +36,8 @@ new_home() {
   chmod +x "$H/bin/copilot"
 }
 
-run() { HOME=$H PATH="$H/bin:$PATH" "$REPO/install.sh" "$@"; }
+# env -u: a CLAUDE_CONFIG_DIR set in the caller's shell must not leak into the real config folder.
+run() { env -u CLAUDE_CONFIG_DIR HOME=$H PATH="$H/bin:$PATH" "$REPO/install.sh" "$@"; }
 
 echo "1. fresh machine"
 new_home
@@ -147,13 +148,88 @@ check "git-safety.json is valid JSON" jq -e . "$H/.copilot/hooks/git-safety.json
 check "git-safety.json holds the exact path" \
   test "$(jq -r '.hooks.preToolUse[0].bash' "$H/.copilot/hooks/git-safety.json")" = "$H/.copilot/hooks/block-dangerous-shell.sh"
 
-echo "6. block-dangerous-shell.sh today (characterisation, not a spec)"
-HOOK="$REPO/hooks/copilot/block-dangerous-shell.sh"
-hook() { printf '{"toolName":"bash","toolArgs":"{\\"command\\":\\"%s\\"}"}' "$1" | "$HOOK"; }
-check "git push is denied" has "$(hook 'git push')" 'deny'
-check "git reset --hard is denied" has "$(hook 'git reset --hard')" 'deny'
-check "rm asks" has "$(hook 'rm -f x')" 'ask'
-check "ls is allowed" has "$(hook 'ls -la')" 'allow'
+echo "6. block-dangerous-shell.sh"
+# TEST_HOOK may point at a draft copy, so a new hook is tested before it replaces the live one.
+TEST_HOOK=${TEST_HOOK:-$REPO/hooks/copilot/block-dangerous-shell.sh}
+hook() { jq -cn --arg c "$1" '{toolName:"bash",toolArgs:({command:$c}|tojson)}' | "$TEST_HOOK"; }
+decision() { printf '%s' "$1" | jq -r '.permissionDecision' 2>/dev/null; }
+is_deny() { [ "$(decision "$(hook "$1")")" = deny ]; }
+is_ask() { [ "$(decision "$(hook "$1")")" = ask ]; }
+is_silent() { [ -z "$(hook "$1")" ]; }
+for c in 'git push' 'git reset --hard' 'git push --force origin main' 'cd repo && git push' \
+  'git -C repo push' '/usr/bin/git push' '\git push' '(git push)' 'echo $(git push)' \
+  'git -c core.pager=cat push' 'git --git-dir=.git push' 'git --no-pager push' \
+  'git clean -f' 'git clean -fd' 'git clean -fdx' 'git clean -xdf' 'git clean --force' \
+  'git reset --soft HEAD~1 && git reset --hard' 'git -C repo reset --hard HEAD' \
+  'git branch -D topic' 'git branch -Dq topic' 'git checkout .' 'git checkout -- .' 'git restore .' \
+  'git -C "my repo" push --force' 'git -C "my repo" reset --hard' 'git -c "a=b c" push' "git --git-dir 'x y' push" \
+  "bash -c 'git push'" 'git push>out' 'git reset --hard>out' "$(printf 'git reset \\\n  --hard')" \
+  "$(printf 'git \\\npush')" 'git branch --delete --force topic' 'git branch -d -f topic' 'git checkout -f main' \
+  'git switch -f main' 'git switch --discard-changes main' 'git checkout -- ./' \
+  'git -C $(pwd) push' 'git --git-dir=$(pwd)/.git push' 'git -C $(git rev-parse --show-toplevel) push --force' \
+  'git checkout -B main origin/main' 'git switch -C main origin/main' 'git switch --force-create main' \
+  'git branch -M main' 'git --config-env a=B push' 'git --super-prefix x/ push' '"git" push' "'git' push" \
+  "$(printf 'git reset \\\r\n  --hard')"; do
+  check "denied: $c" is_deny "$c"
+done
+for c in 'rm -f x' '/bin/rm x' '\rm x' '(rm x)' 'xargs rm' 'rmdir d' 'unlink f' 'trash x' \
+  'find . -name x -delete' 'cd /tmp && find . -delete' 'bash -c "rm -rf x"' 'eval "rm x"' \
+  'Remove-Item -Recurse x' 'remove-item x' 'ri x' 'del x' 'erase x' 'rd x'; do
+  check "asks: $c" is_ask "$c"
+done
+for c in 'ls -la' 'git status' 'git log --oneline' 'git log --grep=push' 'git commit -m "fix login"' \
+  'git config --get remote.origin.pushurl' 'git clean -n' 'git branch -d topic' 'git checkout main' \
+  'git switch main' 'echo hello > out' 'Get-ChildItem -Recurse' \
+  'git checkout -b feat' 'git switch -c feat' 'git branch -m old new' 'git -C $(pwd) status' \
+  'grep -rn rmdir_helper .' 'npm run format' 'find . -name "*.md"'; do
+  check "no output: $c" is_silent "$c"
+done
+check "a tool that is not a shell gets no output" \
+  test -z "$(printf '{"toolName":"view","toolArgs":"{}"}' | "$TEST_HOOK")"
+check "input that is not JSON is denied" \
+  test "$(decision "$(printf 'not json' | "$TEST_HOOK")")" = deny
+check "a shell call whose command cannot be read is denied" \
+  test "$(decision "$(printf '{"toolName":"bash","toolArgs":"not json"}' | "$TEST_HOOK")")" = deny
+check "a missing jq is denied with a message" \
+  has "$(printf '{"toolName":"bash","toolArgs":"{}"}' | PATH=/nonexistent "$TEST_HOOK")" '"permissionDecision":"deny".*jq'
+
+echo "7. CLAUDE_CONFIG_DIR"
+new_home
+CD="$H/.claude-work"
+mkdir -p "$CD"
+runc() { HOME=$H PATH="$H/bin:$PATH" CLAUDE_CONFIG_DIR=$CD "$REPO/install.sh" "$@"; }
+OUT=$(runc --harness claude-code 2>&1); RC=$?
+check "dry run exits 0" [ "$RC" -eq 0 ]
+check "dry run plans links in the custom folder" has "$OUT" "$CD/skills/agentd-pr-prep"
+check "dry run creates nothing in the custom folder" [ ! -e "$CD/skills" ]
+OUT=$(runc --apply --harness claude-code 2>&1); RC=$?
+check "apply exits 0" [ "$RC" -eq 0 ]
+for s in agentd-dev-rev agentd-pr-prep agentd-prompt; do
+  check "custom claude link: $s" resolves_to "$CD/skills/$s" "$REPO/skills/$s"
+done
+check "custom CLAUDE.md linked" resolves_to "$CD/CLAUDE.md" "$REPO/global/claude/CLAUDE.md"
+check "default ~/.claude left alone" not test -e "$H/.claude/skills"
+check "default ~/.claude has no CLAUDE.md" not test -e "$H/.claude/CLAUDE.md"
+OUT=$(runc --apply --harness claude-code 2>&1)
+check "second apply changes nothing" has "$OUT" 'link/write=0'
+CD="$H/does-not-exist"
+OUT=$(runc --apply --harness claude-code 2>&1); RC=$?
+check "missing custom folder skips with a warning" has "$OUT" "$CD not found"
+check "missing custom folder is not created" [ ! -e "$CD" ]
+check "missing custom folder exits 0" [ "$RC" -eq 0 ]
+CD=""
+OUT=$(runc --apply --harness claude-code 2>&1)
+check "empty CLAUDE_CONFIG_DIR falls back to ~/.claude" resolves_to "$H/.claude/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+new_home
+mkdir -p "$H/.claude-work"
+CD='~/.claude-work'
+OUT=$(runc --apply --harness claude-code 2>&1); RC=$?
+check "a quoted leading ~ is expanded to HOME" resolves_to "$H/.claude-work/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+CD='.claude-work'
+OUT=$(cd "$H" && runc --apply --harness claude-code 2>&1); RC=$?
+check "a relative CLAUDE_CONFIG_DIR is refused with a warning" has "$OUT" 'must be an absolute path'
+check "a relative CLAUDE_CONFIG_DIR exits 0" [ "$RC" -eq 0 ]
+check "a relative CLAUDE_CONFIG_DIR links nothing in the default folder" not test -e "$H/.claude/skills"
 
 echo
 echo "passed=$PASS failed=$FAIL"
