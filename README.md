@@ -210,6 +210,19 @@ tests/verify-init/test-skill-structure.sh
 
 `tests/verify-init/EVAL.md` explains the real check of the generated skill and records a summary of the results.
 
+The `agentd-pr-review` skill has its own tests in `tests/pr-review/`. They check the skill files, this README and a
+synthetic Python fixture: a repository with one PR branch that leaves an acceptance criterion unmet, misses a screen
+that needs the same change, filters more statuses than the work item asks for, breaks one unit test, and keeps one old
+integration failure and a test command that runs 0 tests. They need `git` and Python 3, use throwaway folders in the
+system temp folder, and delete nothing. The structure test uses the same git-ignored name list as the explain test.
+
+```bash
+tests/pr-review/test-skill-structure.sh
+tests/pr-review/test-make-fixture.sh
+```
+
+`tests/pr-review/EVAL.md` explains how to run the skill on the fixture and on a real PR, and records the results.
+
 ## Add a skill
 
 1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
@@ -272,6 +285,7 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/` and fills the project contract in `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
+| `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Edits no code and posts nothing. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
 | `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. |
 
@@ -297,6 +311,7 @@ Install them from that repository into `~/.agents/skills/`.
 onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> verify -> pr-prep
 
 explain: a side tool, run any time
+pr-review: a side tool, run when you are the approver of a teammate's PR
 data-fix: after intake or diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
 blast-radius: only when the change touches a contract, schema, shared code or an external system
 ```
