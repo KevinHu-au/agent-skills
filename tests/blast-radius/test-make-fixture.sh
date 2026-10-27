@@ -403,12 +403,14 @@ test_the_three_change_inputs_exist_and_do_not_name_the_answers() {
   local f line
   for f in 01-rename 02-casefold 03-partner-dates; do [ -s "$HERE/changes/$f.md" ] || return 1; done
   for f in 01-rename 03-partner-dates; do
-    grep -qx 'Confidence: confirmed' "$HERE/changes/$f.md" || return 1
-    for line in Task 'Root cause' 'Failing test first' 'Proposed fix' 'Do not change' 'Risk areas' Verification Follow-on; do
-      [ "$(grep -c "^$line: " "$HERE/changes/$f.md")" -eq 1 ] || return 1
-    done
+    grep -qxF '**Confidence:** confirmed' "$HERE/changes/$f.md" || return 1
+    [ "$(grep -E '^## ' "$HERE/changes/$f.md" | sed 's/^## //' | tr '\n' '|')" = \
+      "Task|Root cause|Failing test first|Proposed fix|Do not change|Risk areas|Blast radius|Verification|Follow-on|" ] ||
+      return 1
   done
-  grep -qxF 'Risk areas: callers of order_to_dict: shop/api.py and tests/test_api.py' "$HERE/changes/01-rename.md" &&
+  ! awk '/^## Blast radius$/ { getline; print }' "$HERE/changes/01-rename.md" "$HERE/changes/03-partner-dates.md" |
+    grep -qiE 'another system|external|api|reads' &&
+    grep -qxF -- '- callers of `order_to_dict`: `shop/api.py` and `tests/test_api.py`' "$HERE/changes/01-rename.md" &&
     grep -qF 'migrations/0004_rename_total.sql' "$HERE/changes/01-rename.md" &&
     grep -qF 'ALTER TABLE orders RENAME COLUMN total TO grand_total' "$HERE/changes/01-rename.md" &&
     ! grep -qiE 'mobile|clients/|reports/|export_revenue|run_report|monthly_revenue' "$HERE/changes/01-rename.md" &&

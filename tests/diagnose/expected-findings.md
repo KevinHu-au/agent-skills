@@ -70,7 +70,7 @@ Verdict: Confirmed (reproduced slow).
 - **The ticket's theory is false:** an index exists on `order_items(order_id)` (`shop/db.py`), and
   `products.id` is the primary key. `EXPLAIN QUERY PLAN` uses them. An index would not help.
 - **Mantra:** do it less. One query that joins the items and the products, or two bulk queries.
-- **Hand-off:** the baseline command and number in the Verification line, so the run after the fix compares.
+- **Hand-off:** the baseline command and number in the Verification section, so the run after the fix compares.
 
 Traps:
 

@@ -45,4 +45,4 @@ Lead with one of: reproduced slow, not reproducible, inconclusive. In the report
 
 ## Hand-off
 
-The failing test for `agentd-dev-rev` should guard the cost you found, not the clock. Prefer an assertion on a statement count, a number of calls or an allocation count. A time limit works only when it is set well above the noise. If no cheap test can do it, say why, and give the baseline command and number as the check. The Verification line repeats the baseline command and number, so the run after the fix is comparable.
+The failing test for `agentd-dev-rev` should guard the cost you found, not the clock. Prefer an assertion on a statement count, a number of calls or an allocation count. A time limit works only when it is set well above the noise. If no cheap test can do it, say why, and give the baseline command and number as the check. The Verification section repeats the baseline command and number, so the run after the fix is comparable.

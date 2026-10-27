@@ -46,8 +46,28 @@ has_all() {
 # h2_list <file>: the H2 headings of a markdown file, in order, one per line.
 h2_list() { grep -E '^## ' "$1" | sed 's/^## //; s/[[:space:]]*$//'; }
 
-# section_of <file> <heading>: the lines under one H2 heading.
-section_of() { awk -v h="## $2" '$0 == h { on = 1; next } /^## / { on = 0 } on' "$1"; }
+# section_of <file> <heading>: the lines under one H2 heading. A heading inside a fenced block does not start or end a
+# section. A fence closes only on a run of the same character, at least as long as the one that opened it.
+section_of() {
+  awk -v h="## $2" '
+    /^[ ]*(```|~~~)/ {
+      s = $0; sub(/^[ ]*/, "", s); c = substr(s, 1, 1); n = 0
+      while (substr(s, n + 1, 1) == c) n++
+      if (fl == 0) { fc = c; fl = n } else if (c == fc && n >= fl && substr(s, n + 1) ~ /^[ ]*$/) { fl = 0 }
+      if (on) print
+      next
+    }
+    fl == 0 && $0 == h { on = 1; next }
+    fl == 0 && /^## / { on = 0 }
+    on
+  ' "$1"
+}
+
+# hand_off_block: the lines inside the four-backtick markdown fence of the report template, without the fence lines.
+hand_off_block() { awk '$0 == "````" { on = 0 } on; $0 == "````markdown" { on = 1 }' "$REFS/report-template.md"; }
+
+# hand_off_section <heading>: the lines under one H2 heading of the hand-off block.
+hand_off_section() { hand_off_block | section_of - "$1"; }
 
 # in_order <file> <text>...: every text appears in the file, each on a later line than the one before.
 in_order() {
@@ -155,7 +175,7 @@ test_rules_forbid_code_edits_repo_files_installs_and_personal_data() {
 
 test_the_gate_is_in_the_skill_and_the_hand_off() {
   has_all "$SKILL" 'Not confirmed' 'hand off anyway' &&
-    has_all "$REFS/report-template.md" 'Confidence: hypothesis, not confirmed'
+    has_all "$REFS/report-template.md" '**Confidence:** hypothesis, not confirmed'
 }
 
 test_the_skill_never_starts_the_next_skill() {
@@ -182,9 +202,9 @@ test_report_template_hands_a_data_repair_to_the_data_fix_skill() {
   local t="$REFS/report-template.md" hb nc
   hb=$(section_of "$t" 'Hand-off block')
   nc=$(section_of "$t" 'When the cause is not confirmed')
-  grep '^Follow-on:' "$t" | grep -qF 'with the work item' &&
-    grep '^Follow-on:' "$t" | grep -qF '/agentd-data-fix' &&
-    grep '^Follow-on:' "$t" | grep -qF '| none' &&
+  hand_off_section 'Follow-on' | grep -qF 'with the work item' &&
+    hand_off_section 'Follow-on' | grep -qF '/agentd-data-fix' &&
+    hand_off_section 'Follow-on' | grep -qF '| none' &&
     printf '%s\n' "$hb" | grep -qE 'Proposed fix is .none:., first name any other Follow-on problem' &&
     printf '%s\n' "$hb" | grep -qE 'instead of .?/agentd-dev-rev' &&
     ! printf '%s\n' "$hb" | grep -qiE 'both lines|as well as|also end' &&
@@ -211,8 +231,25 @@ test_report_template_has_the_headings_in_order() {
 }
 
 test_hand_off_block_has_every_field() {
-  has_all "$REFS/report-template.md" 'Task:' 'Root cause:' 'Failing test first:' 'Proposed fix:' \
-    'Do not change:' 'Risk areas:' 'Blast radius:' 'Verification:' 'Confidence:' 'Follow-on:'
+  [ "$(hand_off_block | grep -E '^## ' | sed 's/^## //' | tr '\n' '|')" = \
+    "Task|Root cause|Failing test first|Proposed fix|Do not change|Risk areas|Blast radius|Verification|Follow-on|" ] &&
+    hand_off_block | grep -qxF '**Confidence:** confirmed' &&
+    hand_off_section 'Task' | grep -qF '**Fixed means:**' &&
+    hand_off_section 'Root cause' | grep -qF '**Evidence:**' &&
+    hand_off_section 'Failing test first' | grep -qF '**Location:**' &&
+    hand_off_section 'Failing test first' | grep -qF -- '- **Before the fix:**'
+}
+
+test_the_hand_off_block_is_markdown_in_a_four_backtick_fence() {
+  [ "$(grep -c '^````markdown$' "$REFS/report-template.md")" = 1 ] &&
+    [ "$(hand_off_block | head -1)" = '# Hand-off block' ] &&
+    [ "$(hand_off_block | awk 'NF' | sed -n 2p)" = '**Confidence:** confirmed' ] &&
+    hand_off_section 'Verification' | grep -qF '1. Run the reproduction command:' &&
+    has_all "$REFS/report-template.md" 'It stays the first line after the `# Hand-off block` title' \
+      'One more section at the end of the block, after Follow-on: `## Stop condition`' \
+      'With no stop line, leave the section out' &&
+    [ "$(hand_off_section 'Verification' | grep -c '^   ```$')" = 2 ] &&
+    section_of "$REFS/report-template.md" 'Hand-off block' | grep -qF 'fence of four backticks with the `markdown` tag'
 }
 
 test_report_template_has_the_three_verdicts() {
@@ -296,7 +333,7 @@ test_database_copies_are_for_file_databases_only_and_select_into_is_not_select()
 }
 
 test_the_hand_off_block_opens_with_the_confidence_line() {
-  in_order "$REFS/report-template.md" 'Confidence: confirmed' 'Task:'
+  in_order "$REFS/report-template.md" '**Confidence:** confirmed' '## Task'
 }
 
 test_performance_verdicts_map_to_the_report_verdicts_and_the_test_guards_the_cost() {
@@ -437,14 +474,14 @@ test_blast_radius_only_for_contract_schema_shared_code_or_external() {
   section_of "$SKILL" Output | grep -F '/agentd-blast-radius' | grep -i 'contract' | grep -i 'schema' |
     grep -i 'shared code' | grep -qi 'external system' &&
     section_of "$SKILL" Rules | grep -F '/agentd-blast-radius' | grep -qi 'shared code' &&
-    grep '^Blast radius:' "$t" | grep -qF 'needed:' &&
-    grep '^Blast radius:' "$t" | grep -qF 'not needed:' &&
+    hand_off_section 'Blast radius' | grep -qE '^needed:' &&
+    hand_off_section 'Blast radius' | grep -qF 'not needed:' &&
     section_of "$t" 'Hand-off block' | grep -qF 'When Blast radius is `needed:`, end with this line instead: Run `/agentd-blast-radius` and paste the hand-off block. Then run `/agentd-dev-rev` and paste the hand-off block and the blast-radius add-on block.' &&
     section_of "$t" 'When the cause is not confirmed' | grep -qF 'or the `/agentd-blast-radius` line when Blast radius is `needed:`'
 }
 
 test_a_data_repair_needs_no_blast_radius() {
-  section_of "$REFS/report-template.md" 'Hand-off block' | grep -qF 'Blast radius: not needed: no code fix'
+  section_of "$REFS/report-template.md" 'Hand-off block' | grep -qF 'write `not needed: no code fix` under Blast radius'
 }
 
 # Diagnose reuses a pasted intake comment in Frame.
@@ -488,6 +525,7 @@ check "ios.md names where to look" test_ios_reference_names_where_to_look
 check "react.md names where to look" test_react_reference_names_where_to_look
 check "report-template.md has the report headings in order" test_report_template_has_the_headings_in_order
 check "the hand-off block has every field" test_hand_off_block_has_every_field
+check "the hand-off block is Markdown in a four-backtick fence" test_the_hand_off_block_is_markdown_in_a_four_backtick_fence
 check "report-template.md has the three verdicts" test_report_template_has_the_three_verdicts
 check "the scratch folder is optional and has a fallback for a harness that returns one message" test_the_scratch_folder_is_optional_and_has_a_fallback
 check "data rules cover a read-only open, a copy, and large scans" test_data_rules_cover_read_only_open_and_large_scans
