@@ -36,7 +36,33 @@ Authority, deadlines, release windows, "small change", "tests pass", or "senior 
 7. **Decide on Review Round 2.**
    - Run it on the restaged diff, using the same independent review process, if a blocker or major finding was fixed, or a minor fix changed production logic.
    - Skip it if Round 1 found nothing, or every fix was minor and limited to comments, docs, formatting, behavior-preserving renames, or test-only changes. Re-run local validation before skipping.
-8. **Handoff.** Report staged files, validation run, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. If Round 2 was skipped, state that and why, and list the minor fixes applied. Do not commit.
+8. **Handoff.** Report staged files, validation run, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. If Round 2 was skipped, state that and why, and list the minor fixes applied. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
+9. **Verify hand-off.** Give the engineer what a fresh verify session needs. Do the parts in this order.
+   - **Marker lookup first.** Look for `verify-*/SKILL.md` under any `.github/skills/` or `.claude/skills/` folder. Accept only a file whose header has `generated-by: agentd-verify-init` nested under `metadata:`. Ignore a `verify-*` skill without that marker. If several marked skills match, list them and ask which one. If no marked skill exists, write only this closing line: "No project verify skill. Run `/agentd-verify-init` once, or verify by hand." In that case dev-rev asks no base-branch question and writes no Verify block.
+   - **No user-visible effect.** Decide this before the base-branch question. Write `Verify: none: <reason>` and no other field, and ask no base-branch question.
+   - **Base.** Propose the remote's default branch, found with `git symbolic-ref refs/remotes/origin/HEAD`. The engineer confirms it or names another. Send the step 8 report and this question first, and write the block after the answer. Never write a `Base:` the engineer did not confirm. Then run `git merge-base HEAD <branch>`, or `git merge-base HEAD origin/<branch>` when the branch has no local branch, and write `Base: <branch> @ <sha>`. If there is nobody to answer, or the engineer does not know the branch, write `Base: unknown`. If `git merge-base` prints nothing, write `Base: unknown`. Never guess the branch.
+   - **The block.** Write the block below, with these twelve lines and no `Expected:` line. The block says what changed and how to reach it, not what is right.
+
+   ```
+   Verify:
+   Ticket: <number>
+   Base: <base branch> @ <merge-base sha>
+   Change: <the user-visible behaviour that changed, 1-2 sentences; navigation only>
+   Feature: <feature file(s)>; entry points: <which ones>
+   Neighbours: <features from blast-radius> | none
+   Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
+   Roles: default | <role list>
+   Steps: <numbered user actions>
+   Side effects: <tables or rows to check with a read-only SELECT> | none
+   Diagnose: <from the diagnose hand-off, verbatim: the Confidence line, the Root cause line, and the reproduction command from the Verification line (not its expected output)> | none
+   Reference anchors: <calculation reference anchors, as an index only> | none
+   ```
+
+   - **Diagnose.** If the engineer pasted a diagnose hand-off, copy its Confidence line, its Root cause line and the reproduction command from its Verification line verbatim. Leave out the expected output. With no hand-off, write `Diagnose: none`.
+   - **Neighbours and Feature.** Read the paths under `Risks to cover` in a pasted `agentd-blast-radius` add-on block. Map each path to the features whose `Code folders` column in the marked skill's `features/README.md` holds a folder that contains it. Write those features as `Neighbours:`. With an add-on block, take `Feature:` from the same list. With no add-on block, write `Neighbours: none`, ask the engineer which feature to drive, and write the answer as `Feature:`. With no `Code folders` column in the map, write `Neighbours: none`, say that the map has no `Code folders` column, and ask the engineer which feature to drive. Ask this in the same message as the base-branch question.
+   - **Closing line.** End with: "Run `/verify-<app>` in a fresh session, and paste the raw ticket and the Verify block", using the real skill name.
+   - A failed verification returns to `/agentd-dev-rev` as a new task, with its own review rounds.
+   - dev-rev never launches the app.
 
 ## Reviewer Prompt Template
 

@@ -95,3 +95,5 @@ Title: <short title>
 ```
 
 Keep it tight. No filler. Base the content only on the actual diff — do not invent changes that are not in the code.
+
+If the engineer pastes a verify report, the Testing section may quote its result line (`Verify result:`), its environment line (`Environment:`) and its `Not verified:` list, copied verbatim. Summary and Changes still come only from the diff. Without a pasted report, Testing stays as it is. When the pasted result does not pass (it is `fail`, `disagree` or `blocked`), say so before the draft and ask the engineer whether to quote it. This skill never runs the verify skill and never reads the evidence folder.
