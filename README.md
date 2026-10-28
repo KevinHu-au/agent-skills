@@ -1,7 +1,9 @@
 # agent-skills
 
-My personal agent skills, global guide and safety hooks. One repository sets up
-Claude Code and GitHub Copilot CLI on a new machine.
+Agent skills, a global guide and safety hooks. The skills are suitable for digital
+application support developers or engineers to do application maintenance and bug fixes
+with confidence. One repository sets up Claude Code and GitHub Copilot CLI on a new
+machine.
 
 ## What is here
 
@@ -273,6 +275,13 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 - Client project knowledge, such as `docs/onboarding/`. That lives in each client repository.
 - The `copilot` shell alias that adds `--allow-all`. It removes permission prompts, so set it up on purpose on each machine.
 
+## Credits
+
+Many ideas in these skills come from two sources: pstack (the Cursor official plugin)
+and the Superpowers plugin skills. We borrowed their patterns, such as the structure of
+the skills and the habit of reproducing before fixing. We wrote the skill text in our
+own words. Superpowers is also listed in `setup.manifest`.
+
 ## Skills
 
 | Skill | Purpose |
@@ -301,7 +310,7 @@ flagged skill. Claude Code runs a flagged skill.
 So the flagged skills in this repository do not load in Copilot CLI 1.0.102. Use them in Claude Code. The generated
 project skill `verify-<app>` is written without the field for this reason.
 
-Skills that belong to my separate AgentKit repository are not stored here.
+Skills that belong to the separate AgentKit repository are not stored here.
 `setup.manifest` lists them as reminders, and `install.sh` prints the reminder.
 Install them from that repository into `~/.agents/skills/`.
 
