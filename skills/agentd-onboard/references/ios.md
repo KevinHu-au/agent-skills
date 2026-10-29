@@ -19,6 +19,8 @@ Load this file when the repository has a `*.xcodeproj` or `*.xcworkspace`, or a 
 | Screens | Types that conform to `View`; `NavigationStack`, `NavigationSplitView`, `TabView`, `.sheet`, `.fullScreenCover`; `.navigationDestination(for:)`. UIKit screens appear as `UIViewControllerRepresentable` or storyboards. |
 | Navigation state | A router or coordinator type; `NavigationPath`; an auth-state type that decides the first screen |
 | State and view models | `@Observable` (iOS 17+) or `ObservableObject` with `@Published` and `@StateObject`; `@Environment`, `@EnvironmentObject`. Note which style each screen uses. |
+| Data loading | `.task` loaders, `@Query`, and service types that fetch or read the local store |
+| Calculations | Services and view-model computed properties that compute a value before it is shown |
 | Business rules | Service, validation and extension types that view models call, not the views |
 | Permissions and roles | Claims in the sign-in token; code that hides or disables a control by role. The server is the real gate: `unknown: ask the API owner`. |
 | Background work | `BGTaskScheduler`, background `URLSession`, push handlers in the app delegate, `Task` started from `.task` or `.onAppear` |
