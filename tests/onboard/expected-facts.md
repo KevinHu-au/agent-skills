@@ -93,6 +93,19 @@ One system: the legacy order bus.
 - `unknown:` who approves a Prod deployment (approvals live on the Azure DevOps environment, not in the
   repository), the ticket source, the branch and pull request rules, and who owns the project.
 
+## Q9 Where does each feature live, layer by layer?
+
+- The layer chain is controller, service, bus client. There is no UI layer. The data scripts and
+  procedures are not on the request path.
+- Submit: data loads and rules sit in `OrdersController.Submit` and `OrderSubmissionService.Submit`. The
+  order goes to `LegacyBusClient.PostOrderAsync`.
+- Invoice: `OrdersController.Invoice`, `InvoiceService.Fetch`, then `LegacyBusClient.GetInvoiceAsync`. The
+  invoice amount is computed outside the repository: `unknown: ask the bus owner`.
+- The search term "order value" (`docs/userGuide/orders.md`) maps to `Total` and to `GetOrderTotals`,
+  marked `inferred: no caller found`. The user guide says the invoice shows the order value, but the
+  invoice amount comes from the bus (`unknown: ask the bus owner`).
+- The key concept is the order status (`src/Shop.Data/Scripts/003_add_order_status.sql`, `inferred:`).
+
 ## Traps a correct brief must handle
 
 1. The `.NET 6` versus `net8.0` conflict (Q3).
@@ -101,6 +114,9 @@ One system: the legacy order bus.
 4. `CustomersController` and `POST /api/orders` are not listed as bus dependants (Q6).
 5. The nightly claim is not made as fact (Q6).
 6. No claim that the project builds or that tests pass (Q3).
+7. A brief that invents a UI layer is wrong (Q9). The fixture has no UI.
+8. A brief that claims `GetOrderTotals` computes the invoice amount is wrong (Q9). The procedure has no
+   caller, and the invoice comes from the bus.
 
 ## After --v2
 
@@ -122,3 +138,4 @@ The second commit adds order cancellation and moves to `net9.0`. After a refresh
 - `Unknowns` and `open-questions.md` change only to add the new questions (the cancel use case, whether a
   controller may call the client directly, the four bus calls) and to say `net9.0` where they named
   `net8.0`.
+- Adds a `feature-to-code.md` block for the cancel use case, marked `changed:`.

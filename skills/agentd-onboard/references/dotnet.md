@@ -19,6 +19,8 @@ Load this file when the repository has `*.sln` or `*.csproj` files. It says wher
 | Screens | `*.cshtml`, Razor pages, Blazor `@page`, or a single-page app's router |
 | Roles and policies | `[Authorize(Roles = ...)]`, `[Authorize(Policy = ...)]`, `AddAuthorization`, claims |
 | Background work | `IHostedService`, `BackgroundService`, Hangfire or Quartz jobs, Azure Functions with timer or queue triggers |
+| Data loading | Query handlers, repositories, and the `SELECT` logic in stored procedures |
+| Calculations | Calculation classes, validators, and the stored procedures or query handlers that compute a value before it is returned |
 | Business rules | Service classes that controllers call, validators, calculation classes |
 
 ## Data

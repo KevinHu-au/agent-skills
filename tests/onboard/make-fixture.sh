@@ -132,6 +132,8 @@ EOF
 
 Open a submitted order and choose Invoice to see its invoice.
 
+The invoice shows the order value for each order.
+
 ## When submitting fails
 
 Try again later. If it keeps failing, ask the bus team.

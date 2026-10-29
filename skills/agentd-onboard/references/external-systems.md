@@ -16,7 +16,7 @@ An external system is anything outside this repository that the application call
 - If you cannot detect inbound calls, ask the engineer. Do not claim there are none.
 - The other side of the boundary is not in this repository. Write `unknown: ask the <system> owner` for anything you cannot read here.
 - A part that lives in another repository is `unknown:` plus the path or name to ask for.
-- Open a configuration file to find key names and addresses. Never copy a secret value, and never write one into the pack. A committed secret is itself a finding: name the key and the file.
+- Open a configuration file to find key names and addresses. Never copy a secret value, and never write one into the pack. A committed secret is itself a finding: name the key and the file, and put it in Unknowns and in `open-questions.md`, not in Risks and delivery.
 
 ## Record for each system
 

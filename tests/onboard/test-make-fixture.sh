@@ -220,8 +220,14 @@ test_v2_changes_are_the_expected_ones() {
 test_expected_facts_covers_every_question() {
   local n f="$HERE/expected-facts.md"
   [ -f "$f" ] || return 1
-  for n in 1 2 3 4 5 6 7 8; do grep -q "^## Q$n " "$f" || return 1; done
+  for n in 1 2 3 4 5 6 7 8 9; do grep -q "^## Q$n " "$f" || return 1; done
   grep -q '^## After --v2' "$f"
+}
+
+test_user_guide_term_differs_from_code_name() {
+  build
+  grep -qi 'order value' "$F/docs/userGuide/orders.md" &&
+    ! grep -rqi 'order value' "$F/src"
 }
 
 echo "make-fixture.sh"
@@ -243,7 +249,8 @@ check ".NET 6 in the README conflicts with net8.0 in the csproj" test_runtime_co
 check "the fake secret and the LegacyBus endpoint key are in appsettings.json" test_secret_and_endpoint_key_are_planted
 check "the pipeline has Build and three Deploy stages" test_pipeline_has_four_stages
 check "--v2 changes only the four expected files" test_v2_changes_are_the_expected_ones
-check "expected-facts.md covers questions 1 to 8 and the --v2 changes" test_expected_facts_covers_every_question
+check "expected-facts.md covers questions 1 to 9 and the --v2 changes" test_expected_facts_covers_every_question
+check "the user guide says order value, and no file under src/ does" test_user_guide_term_differs_from_code_name
 
 echo
 echo "passed=$PASS failed=$FAIL"
