@@ -20,6 +20,8 @@ Load this file when a `package.json` in the repository, including one in a works
 | Navigation guards | A protected-route component or a route loader that redirects when no user is signed in |
 | State | `useState` and `useReducer` in the page; `createContext` and its provider; Redux slices, Zustand stores, React Query `useQuery` keys. Note which style each screen uses. |
 | Forms | `react-hook-form`, Formik, or controlled inputs; the validation schema (`zod`, `yup`) and the submit handler |
+| Data loading | Hooks that fetch (`useQuery`, `useEffect`), services or API clients, and route loaders |
+| Calculations | Selectors or helpers that compute grid or total values, and `useMemo` blocks |
 | Business rules | Hooks (`use*`), `utils/` and selector functions that compute a value before it is shown. The server is the real gate for rules. |
 | Permissions and roles | Claims in the sign-in token; code that hides or disables a control by role. The server is the real gate: `unknown: ask the API owner`. |
 | Background work | Polling with `setInterval` or a React Query `refetchInterval`; WebSocket or SignalR connections; service workers |
