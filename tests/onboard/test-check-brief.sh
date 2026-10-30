@@ -38,7 +38,8 @@ write_brief() {
     printf '# Shop onboarding brief\n\n'
     printf 'Scanned commit: 0123456789abcdef0123456789abcdef01234567\n'
     printf 'Scanned on: 2026-10-21\n'
-    printf 'Working tree: clean\n\n'
+    printf 'Working tree: clean\n'
+    printf 'Repo policy: tools both; files local only\n\n'
     for s in "$@"; do
       printf '## %s\n\n' "$s"
       case "$s" in
@@ -74,6 +75,118 @@ write_brief() {
   } >"$dir/README.md"
   printf '# Use cases\n' >"$dir/use-cases.md"
   printf '# Feature to code\n\nScan: src/Shop.Api/Controllers/OrdersController.cs\nScan: src/Shop.Core/Order.cs\n' >"$dir/feature-to-code.md"
+  [ "${NO_CONTRACT:-}" = 1 ] || write_contract "$dir" "read-only, told by the DBA"
+}
+
+# write_contract <dir> <access rule>: a contract.md with the five headings and one Data access row.
+write_contract() {
+  {
+    printf '## Project contract\n\n### Commands\n\n- **Build:** inferred: from the pipeline\n\n### Verify\n\n'
+    printf -- '- **Start the app:** unknown: ask the lead\n\n### Data access\n\n'
+    printf '| Environment | URL | Database | Access rule | Who approves access |\n|---|---|---|---|---|\n'
+    printf '| Dev | none | shop_dev | %s | the DBA |\n\n' "$2"
+    printf '### Risk areas\n\n- **Database:** unknown: ask the DBA\n\n### External systems and owners\n\n- none\n'
+  } >"$1/contract.md"
+}
+
+# R13
+test_missing_repo_policy_warns() {
+  new_dir
+  write_brief "$D"
+  edit_readme "$D" '/^Repo policy:/d'
+  run_checker "$D"
+  warn_only R13 "missing or malformed"
+}
+
+test_bad_repo_policy_warns() {
+  new_dir
+  write_brief "$D"
+  edit_readme "$D" 's/^Repo policy: .*/Repo policy: tools Cursor; files maybe/'
+  run_checker "$D"
+  warn_only R13 "missing or malformed"
+}
+
+# R14
+test_missing_contract_warns() {
+  new_dir
+  NO_CONTRACT=1 write_brief "$D"
+  run_checker "$D"
+  warn_only R14 "does not exist"
+}
+
+test_contract_headings_out_of_order_warn() {
+  new_dir
+  write_brief "$D"
+  printf '## Project contract\n\n### Verify\n\n### Commands\n\n### Data access\n\n### Risk areas\n\n### External systems and owners\n' \
+    >"$D/contract.md"
+  run_checker "$D"
+  warn_only R14 "headings"
+}
+
+# R15
+test_inferred_access_rule_fails() {
+  new_dir
+  write_brief "$D"
+  write_contract "$D" "inferred: read-only, the login name says reader"
+  fails_only "$D" R15
+}
+
+test_access_rule_without_source_warns() {
+  new_dir
+  write_brief "$D"
+  write_contract "$D" "read-only"
+  run_checker "$D"
+  warn_only R15 "cites no source"
+}
+
+# A backticked rule word is not a source. A backticked path is.
+test_backticked_rule_word_warns() {
+  new_dir
+  write_brief "$D"
+  write_contract "$D" '`read-only`'
+  run_checker "$D"
+  warn_only R15 "cites no source"
+}
+
+test_capitalised_rule_without_source_warns() {
+  new_dir
+  write_brief "$D"
+  write_contract "$D" "Read only"
+  run_checker "$D"
+  warn_only R15 "cites no source"
+}
+
+# The rule column is found by its header, so a table in another column order is still checked.
+test_inferred_rule_in_another_column_order_fails() {
+  new_dir
+  write_brief "$D"
+  {
+    printf '## Project contract\n\n### Commands\n\n### Verify\n\n### Data access\n\n'
+    printf '| Access rule | Environment | Who approves access |\n|---|---|---|\n'
+    printf '| inferred: read-only | Prod | the DBA |\n\n'
+    printf '### Risk areas\n\n### External systems and owners\n'
+  } >"$D/contract.md"
+  fails_only "$D" R15
+}
+
+# An H4 under a heading is allowed.
+test_contract_sub_heading_passes() {
+  new_dir
+  write_brief "$D"
+  {
+    printf '## Project contract\n\n### Commands\n\n### Verify\n\n### Data access\n\n#### Prod notes\n\n'
+    printf '| Environment | URL | Database | Access rule | Who approves access |\n|---|---|---|---|---|\n'
+    printf '| Prod | none | shop | none, told by the DBA | the DBA |\n\n'
+    printf '### Risk areas\n\n### External systems and owners\n'
+  } >"$D/contract.md"
+  passes_clean "$D"
+}
+
+test_access_rule_with_a_document_passes() {
+  new_dir
+  write_brief "$D"
+  write_contract "$D" 'read-only, `docs/access.md:3`'
+  passes_clean "$D"
 }
 
 # run_checker <dir>: sets OUT and RC.
@@ -1104,6 +1217,17 @@ check "an exported CDPATH does not break the root" test_exported_cdpath_does_not
 check "an empty root argument exits 2" test_empty_root_argument_exits_2
 check "a root in another letter case works, and a refused root says why" test_root_in_another_letter_case_works
 check "a line number over 9 digits fails R9 with no shell error" test_huge_line_number_fails_without_a_shell_error
+check "a missing Repo policy line warns R13" test_missing_repo_policy_warns
+check "a malformed Repo policy line warns R13" test_bad_repo_policy_warns
+check "a missing contract.md warns R14" test_missing_contract_warns
+check "contract.md headings out of order warn R14" test_contract_headings_out_of_order_warn
+check "an access rule marked inferred: fails R15" test_inferred_access_rule_fails
+check "an access rule with no source warns R15" test_access_rule_without_source_warns
+check "a backticked rule word alone warns R15" test_backticked_rule_word_warns
+check "an access rule that cites a document passes" test_access_rule_with_a_document_passes
+check "a capitalised rule word with no source warns R15" test_capitalised_rule_without_source_warns
+check "an inferred: rule in another column order fails R15" test_inferred_rule_in_another_column_order_fails
+check "an H4 sub-heading in contract.md does not warn" test_contract_sub_heading_passes
 
 echo
 echo "passed=$PASS failed=$FAIL"

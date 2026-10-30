@@ -14,8 +14,15 @@ skill never verifies a ticket itself. Read the references and templates named in
 ## Prerequisite
 
 - The current folder is inside a git repository. Find its root with `git rev-parse --show-toplevel`.
-- Sources, in this order: `docs/onboarding/README.md`, the project contract in `AGENTS.md`, then the code. If the pack
-  or the contract is missing, say so once and carry on from the code.
+- **Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists.
+  Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the
+  engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer
+  gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is
+  the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree,
+  use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a
+  document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+- Sources, in this order: the pack's `README.md`, the project contract, then the code. If the pack or the contract is
+  missing, say so once and carry on from the code.
 - Find the harness: how the app starts, the ports it uses, how a user signs in, and which scripting language the
   repository already uses. Helpers are written in that language.
 - The engineer should be at the keyboard. The proof run in Flow step 7 needs a person to sign in.
@@ -35,9 +42,12 @@ skill never verifies a ticket itself. Read the references and templates named in
 
 1. **Read the project.** Read the sources and find the harness. Note the stack. With no
    reference for the stack, ask the engineer and mark each drive recipe `inferred:`.
-2. **Ask where the skill lives.** Ask for the customer's allowed tool (Copilot, Claude, or both) and whether the files
-   may be committed. Copilot only goes in `.github/skills/`. Claude only, or both, goes in `.claude/skills/`. Not
-   committed: add the folder to `.git/info/exclude` (the file `git rev-parse --git-path info/exclude` prints), never
+2. **Ask where the skill lives.** Read the `Repo policy:` line in the pack's `README.md` first, and ask only for a
+   part it does not give or gives as `unknown`: the customer's allowed tool (Copilot, Claude, or both) and whether the
+   files may be committed. With `files none`, stop with one line: this skill writes the project skill into the
+   repository, and that policy allows no file there. Copilot only goes in `.github/skills/`. Claude only, or both,
+   goes in `.claude/skills/`. Not committed: add the folder to `.git/info/exclude` (the file
+   `git rev-parse --git-path info/exclude` prints), never
    `.gitignore`.
 3. **Pick the features.** Find the features from routes, menus and user documents. Rank them by recent change. Always
    include the entry feature. Show about five with a reason each. The engineer confirms, swaps or adds. Load `references/feature-map.md` for the rules
