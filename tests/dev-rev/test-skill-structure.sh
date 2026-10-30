@@ -128,7 +128,16 @@ test_step_1_reads_the_inputs() {
 test_validation_rules() {
   section_has Workflow "Take every command from the contract's Commands heading" 'Never guess a command' \
     'ran 0 tests' 'never as a pass' 'pass, fail and skip counts' 'Docker is not running' 'never report it as passed' \
-    'Base re-run' 'git archive' 'mktemp -d' 'is `unknown:`' 'old breakage' 'rm-scratch' 'Lint'
+    'Base re-run' 'git archive' 'mktemp -d' 'is `unknown:`' 'old breakage' 'rm-scratch' 'Lint' \
+    'git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base HEAD' 'submodule update --init' \
+    'turns off the repository' 'ask the engineer once before you run' 'With nobody to answer, skip it and mark the base `unknown:`' \
+    "writes entries into the repository's \`.git/config\`" 'Say in the hand-off what you did' \
+    'do not fall back to `git archive` then' 'Only if the `git worktree` command is unavailable or unsupported' \
+    'The same reason means the same error text once paths, line numbers, timestamps and IDs are removed' \
+    'Never run `git worktree prune`' &&
+    [ "$(grep -o 'git worktree prune' "$SKILL" | wc -l)" -eq "$(grep -o 'Never run `git worktree prune`' "$SKILL" | wc -l)" ] &&
+    # The worktree is removed before the scratch folder.
+    grep -F 'Run `git worktree remove --force <scratch>/wt-base` on the worktree you added, then remove the scratch folder' "$SKILL" >/dev/null
 }
 
 test_no_tests_means_characterization_tests() {

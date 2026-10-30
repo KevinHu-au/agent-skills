@@ -22,11 +22,11 @@ inside one.` Work from the repository root.
   item, ask for it once. If none comes, stop. Do not review against the diff alone.
 - **The base.** Propose the remote's default branch from `git symbolic-ref refs/remotes/origin/HEAD`. The engineer
   confirms it or names the PR's target branch. Never guess the base. Read the change with `git diff <base>...HEAD`.
-- **Branch state.** If the working tree has uncommitted changes, say they are not part of the PR and ask the engineer
-  to stash them before the run plan (`git stash -u` when untracked files matter). Until then, read files with
-  `git show HEAD:<path>` and run no tests; if they stay, say the tests were not run. If the branch is behind
-  `origin/<branch>` as last fetched, say so and give the command. Never run `git fetch`, `git pull`, `git checkout` or
-  `git switch`.
+- **Branch state.** If the working tree has uncommitted changes, say they are not part of the PR. Do not ask the engineer
+  to stash them. Read files with `git show HEAD:<path>`, and run the build and tests in a worktree at `HEAD`,
+  `<scratch>/wt-head` (see Base re-run), so the changes stay as they are. Name the branch and the commit that `HEAD`
+  is on. If it is not the PR's branch, ask. If the branch is behind `origin/<branch>` as last fetched, say so and give
+  the command. Never run `git fetch`, `git pull`, `git checkout`, `git switch` or `git stash`.
 - **Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists.
   Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the
   engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer
@@ -60,7 +60,7 @@ inside one.` Work from the repository root.
    5 and 6; each returns a short summary with `path:line` evidence.
 7. **Run plan.** List the commands, as Running commands says, and ask for one confirmation.
 8. **Run the tests.** Run them, read every result, and compare failures with the base.
-9. **Report.** Write the output with `references/report-template.md`. Then remove the scratch folder.
+9. **Report.** Write the output with `references/report-template.md`. Then remove the worktrees and the scratch folder (see Scratch folder).
 
 ## Severity
 
@@ -95,23 +95,33 @@ the repository states (a README, a script, a pipeline file), and mark the rest `
 no confirmation.
 
 - **Run plan.** List the build, each test suite, `docker info` when a suite needs Docker, the base re-run, the lint
-  check and the scratch folder. Ask for one confirmation. A command not on the confirmed list needs its own.
+  check, the scratch folder, each `git worktree add`, the submodule update and each `git worktree remove --force` on
+  `wt-head` or `wt-base`. Ask for one confirmation. A command not on the confirmed list needs its own.
 - **Which tests.** The unit tests and the automation tests. Automation tests means the subcutaneous or integration
   suites, not UI automation against a running app.
 - **Docker.** If Docker is not running, skip that suite, say so, and never report it as passed.
 - **Counts.** Check the test count, not only the exit code. A command that ran 0 tests is reported as "ran 0 tests",
   never as a pass. Report pass, fail and skip counts per suite.
 - **Base re-run.** Re-run the failing suites on the merge base (`git merge-base <base> HEAD`) with the same contract
-  command. Export it with `git archive` into a `mktemp -d` scratch folder; never check it out in the repository. The
-  copy may restore the packages the project declares, from its lock file. If the restore fails, the base result is
-  `unknown:`. If the copy runs 0 tests, the base result is `unknown:` too. Either way the finding is at most Major.
-- **Verdict on a failure.** A test that fails only on the PR branch is Block. A test that fails on both is old
-  breakage: list it for the engineer, but it is not a finding.
+  command. Add worktrees in a `mktemp -d` scratch folder: `git -c core.hooksPath=/dev/null worktree add --detach
+  <scratch>/wt-base <merge-base>`, and, when the tree is dirty, `<scratch>/wt-head` the same way at `HEAD`. The option
+  turns off the repository's hooks. Never check them out in the repository. The add writes a record under
+  `.git/worktrees/`. With a `.gitmodules` file, also run `git -C <worktree> submodule update --init`: it writes entries
+  into `.git/config` and may need the network. Without `git-lfs`, large files stay pointers: say so. Only if the `git
+  worktree` command is unavailable, use `git archive` into the folder (no submodules, LFS content or `.git`). The copy
+  may restore the packages the project declares, from its lock file. If the restore, the add or the submodule update
+  fails, or the copy fails at setup (a git-ignored local settings file is missing), or runs 0 tests, the base result is
+  `unknown:`, and the finding is at most Major; do not fall back to `git archive` then. A setup failure on both sides
+  is not old breakage. A suite that cannot start in `wt-head` was not run: never report it as passed.
+- **Verdict on a failure.** A test that fails only on the PR branch is Block. Compare the failing test names and error
+  text on both sides, with paths, line numbers, timestamps and IDs removed. A test that fails on both for the same
+  reason is old breakage: list it for the engineer, but it is not a finding. A different or extra failure is the PR's,
+  so it is Block. A suite that cannot compile or start on either side is `unknown:`, not the same.
 - **Lint.** Run the contract's lint or format check, when it has one. Report only problems on lines the PR changed.
 - **Check in the UI.** Add this list only when a claim can be settled only in the running app. You do not start the
   app; the engineer does. If the engineer reports what they saw, update that finding's tier and severity.
 - **Never:** write to a shared environment, change data, call an outside system, or install or upgrade a package.
-- **Scratch folder.** After the report, remove it with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where it is.
+- **Scratch folder.** After the report, run `git worktree remove --force` on `<scratch>/wt-head` and `<scratch>/wt-base`, whichever you added, then remove the folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where it is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
 
 ## Output
 

@@ -187,7 +187,17 @@ test_running_commands_never_writes_to_a_shared_environment_or_installs() {
 }
 
 test_a_proposed_change_runs_on_a_copy_and_a_branch_is_exported_not_checked_out() {
-  section_has "$SKILL" "Running commands" 'apply the change to the copy' 'git archive' 'never check it out' &&
+  section_has "$SKILL" "Running commands" 'apply the change to the copy' 'git archive' 'never check it out' \
+    'git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-head HEAD' \
+    'git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-branch <branch>' \
+    'submodule update --init' 'turns off the repository' \
+    "writes the submodule entries into the repository's \`.git/config\`" \
+    'list each `git worktree add`, the submodule update and each `git worktree remove --force <scratch>/wt-head` (or `wt-branch`)' \
+    'Never run `git worktree prune`' 'Never remove any other worktree' 'fails at setup' \
+    'do not fall back to `git archive` then' 'Only if the `git worktree` command is unavailable or unsupported' &&
+    # Each worktree is removed before the scratch folder, and prune is never an instruction to run.
+    section_has "$SKILL" "Running commands" 'run `git worktree remove --force` on each worktree you added, by its path in the scratch folder, then remove the scratch folder' &&
+    [ "$(grep -o 'git worktree prune' "$SKILL" | wc -l)" -eq "$(grep -o 'Never run `git worktree prune`' "$SKILL" | wc -l)" ] &&
     section_has "$SKILL" Prerequisite 'do not switch branches'
 }
 

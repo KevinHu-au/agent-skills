@@ -170,8 +170,8 @@ test_skill_is_manual_only() {
 
 # Raised from 120 to 130 for the shared "Find the project facts" paragraph, which every skill that reads the pack
 # carries word for word (see tests/test-shared-text.sh).
-test_skill_is_at_most_130_lines() {
-  [ -s "$SKILL" ] && [ "$(wc -l <"$SKILL")" -le 130 ]
+test_skill_is_at_most_140_lines() {
+  [ -s "$SKILL" ] && [ "$(wc -l <"$SKILL")" -le 140 ]
 }
 
 test_required_h2_sections_in_order() {
@@ -213,11 +213,14 @@ test_base_branch_is_confirmed() {
 
 test_dirty_tree_warns() {
   has_all "$SKILL" "uncommitted changes" "not part of the PR" \
-    "ask the engineer to stash them before the run plan" 'git show HEAD:<path>' "and run no tests"
+    "Do not ask the engineer to stash them" 'git show HEAD:<path>' 'in a worktree at `HEAD`' \
+    '`<scratch>/wt-head`' "so the changes stay as they are" "Name the branch and the commit that" \
+    "If it is not the PR's branch, ask" &&
+    ! has_all "$SKILL" "and run no tests" && ! has_all "$SKILL" "ask the engineer to stash them before the run plan"
 }
 
 test_stale_branch_warns_and_never_fetches() {
-  has_all "$SKILL" "behind" 'Never run `git fetch`, `git pull`, `git checkout` or `git switch`.'
+  has_all "$SKILL" "behind" 'Never run `git fetch`, `git pull`, `git checkout`, `git switch` or `git stash`.'
 }
 
 test_sibling_search_uses_code_not_work_item() {
@@ -252,9 +255,17 @@ test_test_count_not_exit_code() {
 }
 
 test_base_rerun_in_scratch() {
-  section_has "$SKILL" "Running commands" "git archive" "mktemp -d" "the failing suites" "lock file" \
-    '"$HOME/.agents/bin/rm-scratch"' 'git merge-base <base> HEAD' "never check it out in the repository" \
-    "the same contract command" "If the copy runs 0 tests, the base result is"
+  section_has "$SKILL" "Running commands" 'git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base <merge-base>' \
+    '`<scratch>/wt-head` the same way at `HEAD`' 'turns off the repository' 'writes entries into `.git/config`' \
+    'submodule update' 'Only if the `git worktree` command is unavailable, use `git archive`' \
+    'do not fall back to `git archive` then' 'Never run `git worktree prune`' \
+    'each `git worktree add`, the submodule update and each `git worktree remove --force` on `wt-head` or `wt-base`' \
+    'A setup failure on both sides is not old breakage' 'never report it as passed' \
+    'with paths, line numbers, timestamps and IDs removed' 'cannot compile or start on either side is `unknown:`' \
+    'run `git worktree remove --force` on `<scratch>/wt-head` and `<scratch>/wt-base`, whichever you added, then remove the folder with' \
+    "git archive" "mktemp -d" "the failing suites" "lock file" \
+    '"$HOME/.agents/bin/rm-scratch"' 'git merge-base <base> HEAD' "never check them out in the repository" \
+    "the same contract command" "or runs 0 tests, the base result is"
 }
 
 test_docker_check_is_on_the_run_plan() {
@@ -262,12 +273,14 @@ test_docker_check_is_on_the_run_plan() {
 }
 
 test_failed_restore_is_unknown() {
-  has_all "$SKILL" "If the restore fails" "unknown:" "at most Major"
+  has_all "$SKILL" "If the restore, the add or the submodule update fails" "or the copy fails at setup" "unknown:" "at most Major"
 }
 
 test_new_failure_is_block_old_failure_is_listed() {
-  has_all "$SKILL" "A test that fails only on the PR branch is Block." "A test that fails on both is old breakage" \
-    "it is not a finding" && ! has_all "$SKILL" "fails on both is Block"
+  has_all "$SKILL" "A test that fails only on the PR branch is Block." \
+    "Compare the failing test names and error text on both sides" \
+    "A test that fails on both for the same reason is old breakage" "is not a finding" \
+    "A different or extra failure is the PR's, so it is Block" && ! has_all "$SKILL" "fails on both is Block"
 }
 
 test_lint_on_changed_lines_only() {
@@ -312,9 +325,9 @@ test_exact_running_rules() {
   has_all "$SKILL" 'A command that ran 0 tests is reported as "ran 0 tests", never as a pass.' \
     "Report pass, fail and skip counts per suite." \
     "If Docker is not running, skip that suite, say so, and never report it as passed." \
-    "Either way the finding is at most Major." "Never invent a path, a caller or an API." \
+    "and the finding is at most Major; do not fall back to" "Never invent a path, a caller or an API." \
     "**Never:** write to a shared environment, change data, call an outside system, or install or upgrade a package." \
-    "Then remove the scratch folder."
+    "Then remove the worktrees and the scratch folder (see Scratch folder)."
 }
 
 test_running_commands_never_switch_branches() {
@@ -322,8 +335,8 @@ test_running_commands_never_switch_branches() {
 }
 
 test_dirty_tree_asks_to_stash_not_commit() {
-  has_all "$SKILL" "ask the engineer to stash them before the run plan" '`git stash -u`' &&
-    ! has_all "$SKILL" "stash or commit"
+  has_all "$SKILL" "Do not ask the engineer to stash them" 'Never run `git fetch`' '`git stash`' &&
+    ! has_all "$SKILL" "stash or commit" && ! has_all "$SKILL" '`git stash -u`'
 }
 
 test_vote_line_is_outside_the_paste() {
@@ -492,7 +505,7 @@ check "line_has needs every text on one line" test_line_has_needs_one_line
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
-check "SKILL.md is at most 130 lines" test_skill_is_at_most_130_lines
+check "SKILL.md is at most 140 lines" test_skill_is_at_most_140_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "Flow has nine numbered steps in order" test_flow_has_nine_numbered_steps_in_order
 check "a missing paste asks once" test_missing_paste_asks_once
