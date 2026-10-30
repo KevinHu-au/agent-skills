@@ -525,6 +525,28 @@ test_missing_path_fails_r9() {
   printf '%s\n' "$OUT" | grep -q "^FAIL R9: feature-to-code.md: 'src/nope.txt' "
 }
 
+# The columns after the layer are named by the pack's author. R9 reads every one of them, however many there are.
+set_f2c_columns() {
+  {
+    printf '# Feature to code\n\nScanned commit: 0123456789abcdef0123456789abcdef01234567\nScanned on: 2026-10-21\n\n'
+    printf '## Submit order\n\n%s\n%s\n%s\n\n' "$2" "$3" "$4"
+    printf '### Search terms\n\n| Business term | api | db |\n|---|---|---|\n| order value | `shp_dt` | none |\n\nSources: src/app.txt:1\n'
+  } >"$1/feature-to-code.md"
+}
+
+test_one_path_column_with_any_title_passes_r9() {
+  new_repo
+  set_f2c_columns "$PACK" '| Layer | Entry point |' '|---|---|' '| api | `src/app.txt:1` |'
+  passes_root
+}
+
+test_path_in_a_fourth_column_is_checked_by_r9() {
+  new_repo
+  set_f2c_columns "$PACK" '| Layer | Entry point | Key business logic | Tests |' '|---|---|---|---|' '| api | `src/app.txt:1` | none | `src/nope.txt` |'
+  root_fails_only R9 || return 1
+  printf '%s\n' "$OUT" | grep -q "^FAIL R9: feature-to-code.md: 'src/nope.txt' "
+}
+
 test_missing_start_here_path_fails_r9() {
   new_repo
   add_start_line "$PACK" 'Pattern: `src/nope.txt`'
@@ -1044,6 +1066,8 @@ check "one argument skips R9 and R10 with a NOTE" test_one_argument_skips_repo_c
 check "good paths and terms pass with a root" test_good_paths_and_terms_pass_with_a_root
 check "a missing feature-to-code.md path fails R9" test_missing_path_fails_r9
 check "a missing Start here path fails R9" test_missing_start_here_path_fails_r9
+check "one path column with any title passes R9" test_one_path_column_with_any_title_passes_r9
+check "a path in a fourth column is checked by R9" test_path_in_a_fourth_column_is_checked_by_r9
 check "a line past the end of the file fails R9" test_line_past_end_of_file_fails_r9
 check "a line range is checked by its end" test_line_range_is_checked_by_its_end
 check "a folder passes without a line number" test_folder_path_passes_without_a_line_number

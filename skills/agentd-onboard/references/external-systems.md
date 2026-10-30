@@ -31,4 +31,4 @@ An external system is anything outside this repository that the application call
 - **Local test possible:** a stub, a sandbox, a test environment, or none. `unknown:` if not found.
 - **Sources:** the files the record came from.
 
-This record feeds the `External systems` section of the brief and the `External systems and owners` table in the project contract.
+This record feeds the `External systems` section of the brief.
