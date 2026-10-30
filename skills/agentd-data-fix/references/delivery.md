@@ -5,7 +5,7 @@ place to start, not a guarantee: the project's own code decides. Cite `path:line
 
 ## Find the tool
 
-Look in this order: the onboarding pack, the contract (`AGENTS.md`), then the code. The code shows a DbUp project, an
+Look in this order: the onboarding pack, the contract (`AGENTS.md`, or `contract.md` in the pack), then the code. The code shows a DbUp project, an
 EF migrations folder, a custom migration runner, or a folder of scripts.
 
 - When the project has two ways, copy the newest earlier data fix: its folder, its name pattern, its layout. A schema

@@ -153,6 +153,46 @@ if h2_names | grep -qx 'Start here'; then
     fail R12 "'Start here' has no link to feature-to-code.md"
 fi
 
+# R13: the Repo policy header line. A warning, so a pack from before the line existed still passes until a refresh.
+grep -Eq '^Repo policy: tools (Claude Code|Copilot CLI|both|unknown); files (committed|local only|none|unknown)[[:space:]]*$' \
+  "$README" || warn R13 "header line 'Repo policy: tools <Claude Code|Copilot CLI|both|unknown>; files <committed|local only|none|unknown>' is missing or malformed"
+
+# R14: contract.md, with the H2 "Project contract" and the five H3 headings in order. A warning, for older packs.
+# R15: an access rule in its Data access table. "inferred:" fails, because other skills must never treat a guess as
+# permission. A rule word with no source warns. A source is "told by", "unknown:", a URL, or a backticked path (a
+# value with a '/' or a '.', such as `docs/access.md:3`). A backticked rule word alone, such as `read-only`, is not one.
+CONTRACT="$DIR/contract.md"
+if [ -f "$CONTRACT" ]; then
+  # Only H2 and H3 count, so a sub-heading (H4 or deeper) under a heading is allowed.
+  got=$(awk '/^(```|~~~)/ { f = !f; next } !f && /^###? / { sub(/[[:space:]]+$/, ""); print }' "$CONTRACT" | tr '\n' '|')
+  want="## Project contract|### Commands|### Verify|### Data access|### Risk areas|### External systems and owners|"
+  [ "$got" = "$want" ] ||
+    warn R14 "contract.md headings are not '## Project contract' and the five H3 headings in order"
+  # The rule column is the one whose header reads "Access rule", in any letter case and position. Rule words are
+  # matched in any letter case: read-write, read-only, read write, read only, rw, ro and none.
+  path_re='`[^`]*[/.][^`]*`'
+  word_re='read[- ]?(write|only)|(^|[^a-z])(rw|ro|none)([^a-z]|$)'
+  while IFS= read -r rule; do
+    rule=$(printf '%s' "$rule" | tr '[:upper:]' '[:lower:]')
+    case "$rule" in
+      *inferred:*) fail R15 "contract.md: an access rule is marked inferred:; write the source or unknown:" ;;
+      *"told by"* | *unknown:* | *http://* | *https://*) ;;
+      *)
+        if [[ $rule =~ $word_re ]] && ! [[ $rule =~ $path_re ]]; then
+          warn R15 "contract.md: an access rule cites no source (told by <role> or a document)"
+        fi
+        ;;
+    esac
+  done < <(awk -F '|' '
+    /^### / { on = ($0 ~ /^### Data access[[:space:]]*$/); col = 0; next }
+    !on || $0 !~ /^\|/ || $0 ~ /^\|[-|: ]+\|?[[:space:]]*$/ { next }
+    col == 0 { for (i = 2; i <= NF; i++) if (tolower($i) ~ /access rule/) col = i; next }
+    { print $col }
+  ' "$CONTRACT")
+else
+  warn R14 "contract.md does not exist"
+fi
+
 # R8
 words=$(wc -w <"$README" | tr -d ' ')
 [ "$words" -le 2400 ] || warn R8 "README.md has $words words; the soft target is about 2000"

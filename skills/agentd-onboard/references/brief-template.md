@@ -1,6 +1,6 @@
 # <Project name> onboarding brief
 
-> Template for `docs/onboarding/README.md`. Keep the header lines, the headings and their order exactly. A refresh and the checks depend on them. Replace every `<...>`. Delete every guidance line that starts with `>`. Aim for about 2,000 words in total (about four pages, 500 words a page). Keep the whole pack under about 5,000 words, not counting `open-questions.md`.
+> Template for `README.md` in the pack folder (`docs/onboarding/`, or a folder outside the repository). Keep the header lines, the headings and their order exactly. A refresh and the checks depend on them. Replace every `<...>`. Delete every guidance line that starts with `>`. Aim for about 2,000 words in total (about four pages, 500 words a page). Keep the whole pack under about 5,000 words, not counting `open-questions.md`.
 >
 > Markers: `unknown:` not found, and who to ask. `inferred:` worked out, not confirmed. `changed:` updated in the last refresh. `conflict:` two sources disagree, and the code wins. Cite sources as `path:line`. Never write a secret value. Name the key only.
 >
@@ -9,6 +9,7 @@
 Scanned commit: <the full output of git rev-parse HEAD>
 Scanned on: <YYYY-MM-DD>
 Working tree: <clean or dirty>
+Repo policy: tools <Claude Code | Copilot CLI | both | unknown>; files <committed | local only | none | unknown>
 
 ## First-ticket checklist
 
@@ -98,7 +99,7 @@ Sources: <path:line, path:line>
 
 ## Run and verify
 
-> Budget: about 200 words. How to build, run, sign in, load test data and check a change. Put the commands here in full, each with its source (a project file, the README or the pipeline). Do not write them to `AGENTS.md`. Mark a command you did not run `inferred:`.
+> Budget: about 200 words. How to build, run, sign in, load test data and check a change. Put the commands here in full, each with its source (a project file, the README or the pipeline). The same commands go under Commands in `contract.md`. Do not write them to `AGENTS.md`. Mark a command you did not run `inferred:`.
 
 <text>
 

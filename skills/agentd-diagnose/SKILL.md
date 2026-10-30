@@ -16,10 +16,12 @@ Run `git rev-parse --show-toplevel`. If it fails, stop with one line: `agentd-di
 
 The skill needs a problem statement: pasted ticket text or a description. If there is none, ask for it once. A pasted intake comment with its engineer block counts as one (see Frame).
 
+**Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists. Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree, use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+
 Read these when they exist, and skip them when they do not:
 
-1. `AGENTS.md`, the project contract: Commands, Verify, Data access, Risk areas, External systems and owners.
-2. `docs/onboarding/README.md`, as a map of the use cases and code paths. Treat it as a hint. When it disagrees with the code, the code wins.
+1. The project contract: Commands, Verify, Data access, Risk areas, External systems and owners.
+2. The pack's `README.md`, as a map of the use cases and code paths. Treat it as a hint. When it disagrees with the code, the code wins.
 
 With no project contract, run safe checks only (see Running commands) and mark what you could not run `unknown:`.
 
@@ -56,7 +58,7 @@ For a .NET project also read `references/dotnet.md`. For an iOS (SwiftUI) projec
 
 The skill runs commands to reproduce and to measure. It lists them first and asks for one confirmation per run. A command that is not on the confirmed list needs its own confirmation. With nobody to confirm, it must be a safe check.
 
-- **Read-only inspection:** reading files, searching, `git log`, `git blame`, `git show` and `uptime` need no confirmation and are not on the run plan.
+- **Read-only inspection:** reading files, searching, `git log`, `git blame`, `git show`, `uptime` and `"$HOME/.agents/bin/onboarding-pack" find` need no confirmation and are not on the run plan.
 - **Safe checks:** a build, and listing or running existing unit tests. A build may restore the packages that the project has declared: say so in the run plan. A unit test that writes only to its own temp folder is safe. Skip a test that uses a configured database or the network, even when it is called a unit test. Safe checks only is the rule when there is no project contract, and when nobody can confirm (a headless run). Mark what you did not run `unknown:` or `inferred:`.
 - **With the contract:** also what its Commands and Verify headings allow on the engineer's machine, such as starting the local app or running integration tests against local containers.
 - **Data:** SELECT only, and only on an environment that the Data access heading marks read-only. A statement that writes or locks is not SELECT: this covers `SELECT ... INTO`, `SELECT ... FOR UPDATE`, lock hints, and functions or sequences with side effects. Open the database read-only. If an application command would open a file database read-write, run that command on a copy in the scratch folder. Never copy or dump a server database to the engineer's machine. With no scratch folder, call the same code through a read-only connection. Size a table from its catalog statistics or an indexed key (for example the largest ID), not with a full count, because a count can scan the table. Print counts, aggregates or a few sample rows. For a sample, select the ID and non-personal columns only. Ask before a query that scans a large table (more than about 100,000 rows, or one you have not sized) or may lock it: `LIMIT` shortens the output, not the scan. Run a stored procedure only when you know it does not write.

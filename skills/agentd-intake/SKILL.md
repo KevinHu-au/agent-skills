@@ -17,8 +17,15 @@ the output.
 - The current folder is inside a git repository. Work from its root.
 - The input is the work item as pasted: title, description, repro steps, acceptance criteria, comments. Do not read
   Azure DevOps. If the paste is empty or is not a work item, ask for the work item once, then stop.
-- Read `docs/onboarding/README.md` if it exists, and the glossary it holds or links to. The glossary maps the
-  customer's words to the code. Read the project contract in `AGENTS.md`: Risk areas, and External systems and
+- **Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists.
+  Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the
+  engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer
+  gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is
+  the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree,
+  use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a
+  document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+- Read the pack's `README.md` if it exists, and the glossary it holds or links to. The glossary maps the
+  customer's words to the code. Read the project contract: Risk areas, and External systems and
   owners. If the onboarding pack or the contract is missing, say so once in chat and mark what depends on it
   `unknown:`.
 - Work item number: take it from the paste (its title line, such as `Bug 87003:`, or a `_workitems/edit/87003` URL),
@@ -98,8 +105,8 @@ Use the shapes in `references/comment-template.md`.
 
 ## Rules
 
-- Read-only: read files, search, `git log`, `git branch --show-current`. No build, no tests, no app, no database, and
-  no file written. Do not read Azure DevOps.
+- Read-only: read files, search, `git log`, `git branch --show-current`, `"$HOME/.agents/bin/onboarding-pack" find`.
+  No build, no tests, no app, no database, and no file written. Do not read Azure DevOps.
 - Never ask a person what the code can answer.
 - Markers: `unknown:` (not found), `inferred:` (worked out, not confirmed), `conflict:` (the work item and the code
   disagree). Cite `path:line`. Intake runs nothing, so it grades no evidence.
