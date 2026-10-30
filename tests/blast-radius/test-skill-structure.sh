@@ -293,6 +293,41 @@ test_surfaces_reference_covers_every_surface() {
     'unknown: ask' 'encode the old behaviour'
 }
 
+test_surfaces_reference_covers_persisted_names_deploy_order_and_performance() {
+  section_has "$REFS/surfaces.md" "Persisted names" 'stored as data' 'old stored item' 'references/dotnet.md' &&
+    section_has "$REFS/surfaces.md" "Deploy order and rollback" 'rolling deploy' 'slot swap' 'add first, remove later' \
+      'rolled back' 'cannot be undone' 'A removal goes code first' &&
+    section_has "$REFS/surfaces.md" "Performance reach" 'stop an index' 'implicit type conversion' 'lock a table' \
+      'production plan and timings'
+}
+
+# not_in_section <file> <heading> <text>...: the section holds none of the texts, ignoring case.
+not_in_section() {
+  local f=$1 h=$2 s t
+  shift 2
+  s=$(section_of "$f" "$h")
+  [ -n "$s" ] || return 1
+  for t in "$@"; do ! printf '%s\n' "$s" | grep -qiF -- "$t" || return 1; done
+}
+
+test_dotnet_reference_splits_framework_and_core() {
+  local d="$REFS/dotnet.md" fw=".NET Framework (ASP.NET MVC and Web API 2)" core=".NET Core and later"
+  # SKILL.md sends the reader to the right part.
+  grep -qF 'the common part, and the part for .NET Framework or .NET Core' "$SKILL" &&
+    section_has "$d" "Which kind of project" 'TargetFrameworkVersion' 'TargetFramework' 'net48' 'netcoreapp3.1' 'net8.0-windows' \
+      'TargetFrameworks' 'netstandard2.0' 'Windows service' &&
+    section_has "$d" "Common to both" 'Hangfire' 'Quartz' 'NServiceBus' 'MassTransit' 'TypeNameHandling' 'BinaryFormatter' \
+      'ContextKey' 'PropertyNamingPolicy' 'sys.partitions' 'ToQueryString' 'sys.sql_modules' &&
+    section_has "$d" "$fw" 'Global.asax' 'web.config' 'packages.config' 'App_Start' 'Entity Framework 6' '__MigrationHistory' \
+      'Autofac' 'JsonFormatter.SerializerSettings' 'application pool' 'machineKey' &&
+    section_has "$d" "$core" 'Program.cs' 'ModelSnapshot' 'appsettings' 'AddNewtonsoftJson' 'data protection key ring' \
+      'ASP.NET Core Module' &&
+    # Guidance that belongs to one host only stays out of the other host's part and out of the common part.
+    not_in_section "$d" "$core" 'Global.asax' 'packages.config' 'machineKey' &&
+    not_in_section "$d" "$fw" 'AddNewtonsoftJson' 'data protection key ring' &&
+    not_in_section "$d" "Common to both" 'Global.asax' 'machineKey' 'AddNewtonsoftJson'
+}
+
 test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked() {
   has_all "$REFS/dotnet.md" 'JsonPropertyName' 'Program.cs' 'model snapshot' 'sys.sql_modules' 'general knowledge' \
     'not yet checked'
@@ -361,6 +396,8 @@ check "a search that finds no caller is supported and never confirmed" test_a_se
 check "staged runs, the no-fact case and the Unproven tier rules are written" test_staged_runs_the_no_fact_case_and_the_unproven_tier_rules_are_written
 check "surfaces.md covers every surface" test_surfaces_reference_covers_every_surface
 check "dotnet.md names where to look and says it is unchecked" test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked
+check "surfaces.md covers persisted names, deploy order and rollback, and performance reach" test_surfaces_reference_covers_persisted_names_deploy_order_and_performance
+check "dotnet.md splits .NET Framework and .NET Core" test_dotnet_reference_splits_framework_and_core
 check "ios.md names where to look and says it is unchecked" test_ios_reference_names_where_to_look_and_says_it_is_unchecked
 check "react.md names where to look and says it is unchecked" test_react_reference_names_where_to_look_and_says_it_is_unchecked
 check "no phrase is copied from the pstack original" test_no_phrase_is_copied_from_pstack

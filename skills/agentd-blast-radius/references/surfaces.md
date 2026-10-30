@@ -30,6 +30,29 @@ The JSON, XML or CSV that the application sends to a caller you do not control.
 - Calls that search does not see: dependency injection registrations, reflection and assembly scanning, events, queues and message handlers, convention-based routing, attributes, and names built from strings.
 - A call you cannot trace is `inferred:`.
 
+## Persisted names
+
+- A type, method or message name that is stored as data, and read back later by code that may have changed. Look at job queues and schedulers, message buses and workflow state, serialised objects that carry type names, and caches and sessions. The .NET stores are in `references/dotnet.md`.
+- A rename, a namespace change, a move to another assembly or a changed signature can make an old stored item fail to load or run. The item was written before the change and is read after it.
+- Look at what is stored now, not at what the new code would write. A queue or table can hold days or months of old items.
+- Prove it with a run that reads an old-shaped item with the new code. If the store is a shared environment, ask the owner for a sample with the secrets and personal data removed.
+
+## Deploy order and rollback
+
+- During a rolling deploy or a slot swap, old and new code run at the same time against the same database, queue and cache. Say what each side does with the other side's data.
+- A schema change must work with the old code and the new code (add first, remove later). A change that works only after every instance is updated is a risk.
+- Can the change be rolled back once data exists in the new shape? A dropped column, a rewritten value or a migration that cannot be undone says no.
+- List the steps in the order that is safe for this change, and say why. An addition usually goes schema first, then code. Not when old code breaks on it: a `NOT NULL` column with no default, a new constraint or a trigger makes the old code's inserts fail. A removal goes code first, then schema. A rename is add, copy the old rows into the new name, write both until every instance is updated, move the reads, then remove. Put configuration and flags in the list too. State which step needs a gap, and what breaks if the order is wrong.
+- A mobile app or a partner system cannot be rolled back with the server. See Wire shapes.
+- The deploy tool and the release steps are not in this repository unless the contract says so. Write `unknown: ask <owner>` for what you cannot read.
+
+## Performance reach
+
+- A changed predicate, join or sort can stop an index from being used. A function on a column, an implicit type conversion, a leading wildcard and a parameter with another type are the usual causes.
+- A migration can lock a table or run for a long time: `ALTER` on a large table, an index build that is not online, a backfill in one transaction. Size the table first (see Data in Running commands).
+- A new call in a loop, or a new query on a hot path, changes the cost for every caller.
+- A local copy has other data and other statistics than production. A run there shows the query shape, not the production cost. The production plan and timings are `unknown: ask <owner>`.
+
 ## Timing and state
 
 - Transactions and their order, a cache that holds the old shape, a background job that retries, a handler that must be idempotent, a teardown that runs after the thing it cleans up is gone.
