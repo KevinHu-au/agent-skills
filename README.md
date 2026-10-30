@@ -145,11 +145,20 @@ refuses everything else.
 ```bash
 tests/test-onboarding-pack.sh
 tests/test-shared-text.sh
+tests/test-handoff-contract.sh
 ```
 
 The first checks the keys, `find` and `set` of `onboarding-pack` in a throwaway home folder, so your real registry is
 never read or written. The second checks that the "Find the project facts" paragraph is word for word the same in
-every skill that reads the onboarding pack. It reads files and writes nothing.
+every skill that reads the onboarding pack. The third checks that `agentd-dev-rev` names every heading of the diagnose
+hand-off block and the blast-radius add-on block, and the fields of the intake engineer block. They read files and
+write nothing.
+
+The `agentd-dev-rev` skill has a structure test in `tests/dev-rev/`. It reads the skill file and writes nothing.
+
+```bash
+tests/dev-rev/test-skill-structure.sh
+```
 
 `shellcheck` is not run by the tests. Run it yourself if it is installed.
 
@@ -330,7 +339,7 @@ own words. Superpowers is also listed in `setup.manifest`.
 |---|---|
 | `agentd-blast-radius` | Find what else one change could break, including what search misses. Proves the one fact the change is safe because of by running code, edits no code, and ends with an add-on block for `agentd-dev-rev`. |
 | `agentd-data-fix` | Turn a work item into a safe, re-runnable data fix: look queries, a guarded script, a capture query, a reverse script and check queries, all written in chat. Never runs anything against a database; edits no code. |
-| `agentd-dev-rev` | Build a change with TDD, stage it, and get two independent review rounds. Never commits. |
+| `agentd-dev-rev` | Build a change with TDD, stage it, and get up to two independent review rounds. Reads the diagnose, blast-radius and intake blocks when pasted, and asks a few questions when run alone. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |

@@ -13,7 +13,7 @@ Run development work through a strict implement → stage → independent review
 1. **Never commit.** Do not run `git commit`, create commits, amend commits, push, or open a PR. Only stage the task-owned changes.
 2. **Do not self-review.** Your own diff read, checklist, tests, or summary never counts as review.
 3. **Use a separate review agent.** Review must be performed by an independent agent on the staged diff.
-4. **Reviewer model floor is mandatory.** Use Opus 5.5 or GPT-6 with high effort. If the harness cannot set that model/effort, or no separate review agent is available, stop and tell the engineer. Do not substitute a cheaper model, your own review, or "review later."
+4. **Reviewer model floor is mandatory.** Use the strongest model the harness offers, at high effort, and name the model in the report. If the harness cannot set the model or the effort, or has no separate review agent, stop and tell the engineer. Do not use a cheaper model, your own review, or "review later."
 5. **Two review rounds maximum.** Round 1 reviews the staged diff. Run Round 2 only if a Round 1 fix was blocker or major, or a minor fix changed production logic. Otherwise skip it. After Round 2, stop and report any unresolved claims.
 6. **Preserve unrelated work.** Stage only files that belong to the task. Never use broad staging when unrelated dirty files exist.
 7. **Dependency approval gate.** Before adding, removing, or upgrading a package, ask the engineer for approval. Do not proceed silently.
@@ -22,13 +22,67 @@ Run development work through a strict implement → stage → independent review
 
 Authority, deadlines, release windows, "small change", "tests pass", or "senior said it is fine" do not override these rules.
 
+## Project facts
+
+**Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists. Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree, use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+
+Read these when they exist, and skip them when they do not:
+
+1. The project contract: Commands (build, tests, lint), Verify, Risk areas.
+2. The pack's `README.md`, as a map of the use cases and code paths. Treat it as a hint. When it disagrees with the code, the code wins.
+
+With no project contract, run only a command the repository states (a README, a script, a pipeline file). Mark what you could not run `unknown:` in the hand-off.
+
+## Inputs
+
+The engineer may paste blocks from earlier skills. Read every field below. A `Do not change` item is a hard limit: change none of it without the engineer's yes. A stop condition ends the work: stop, report, and do not ship the change. When you get two blocks, check that they describe the same change: the same task, work item number and `path:line` references. If they do not, ask the engineer.
+
+**Diagnose hand-off** (`# Hand-off block`):
+
+- `**Confidence:**` `confirmed` means carry on. `hypothesis, not confirmed` means the first failing test must fail for the stated reason. If it does not, stop and report.
+- `## Task`, `## Root cause` and `## Proposed fix` are the requirement and the smallest change.
+- `## Failing test first`: write these tests first.
+- `## Do not change`: a hard limit.
+- `## Risk areas`: backcompat gate (rule 8) applies to each. Give them to the reviewer.
+- `## Blast radius`: `needed:` with no add-on block pasted means ask the engineer whether to run `/agentd-blast-radius` first. `not needed:` means carry on.
+- `## Verification`: run the reproduction command before the change and after it, and compare with the expected output. Run it yourself only when it is a local test or script. A query, or a call to a system outside the repository, needs the engineer's yes and the contract's Data access rule.
+- `## Failing test first` or `## Proposed fix` that says `none: <reason>` means there is no code fix, for example a data repair. Stop, tell the engineer, and point to `## Follow-on` (`/agentd-data-fix`).
+- `## Follow-on`: not part of this task. Repeat it in the hand-off report.
+- `## Stop condition` (present only when the diagnose skill wrote one): follow it.
+
+**Blast-radius add-on** (`# Blast-radius add-on block`):
+
+- `**Blast radius:**` is `Contained`, `Breaks` or `Unproven`. `Breaks` means each risk under `## Risks to cover` is a real break: apply the backcompat gate (rule 8) to each one, and ask the engineer before you build anything the task does not require. `Unproven` makes the stop condition binding.
+- `## Safety fact`: the first test must prove it.
+- `## Risks to cover`: write one test for each risk.
+- `## Tests to write first`: write these first.
+- `## Do not change`: a hard limit.
+- `## Warn or coordinate`: say it in the hand-off report. Do not act on it.
+- `## Stop condition`: follow it.
+
+**Intake engineer block** (`Requirement:`):
+
+- `Requirement: unconfirmed` means follow its `Stop condition:`. Usually that is: stop and ask before you build.
+- `Requirement: none (support question)` means no code change. Stop and tell the engineer.
+- `Assumptions:` are facts the engineer gave.
+
+**Standalone use.** When no block is pasted, you have only a description:
+
+1. Restate the task in two sentences: what should happen, where, and what must stay as it is.
+2. Ask at most five questions. Give each question a default. Ask only what changes the code you write. Wait for the engineer's yes.
+3. With nobody to answer, take the defaults. List them under `Assumptions` in the hand-off report. Never change a contract, schema or external input on a default. If a default would need one, stop, build nothing, and report the question.
+
 ## Workflow
 
-1. **Understand the task and repo.** Read the target files, neighboring patterns, callers, and tests. Identify existing helpers before adding new logic.
-2. **Implement with TDD and coverage.** Prefer a red → green → refactor flow: write the focused failing test, verify the expected failure, implement the minimal fix/change, then keep tests green. Changed or fixed behavior should have automated coverage. If TDD or coverage is infeasible, explain why before review.
-3. **Validate locally.** Run the smallest meaningful tests/checks for the change. Fix failures caused by the task.
+1. **Understand the task and repo.** Read the target files, neighboring patterns, callers, and tests. Identify existing helpers before adding new logic. Then follow Inputs: read the pasted blocks, or restate the task and ask.
+2. **Implement with TDD and coverage.** Prefer a red → green → refactor flow: write the focused failing test, verify the expected failure, implement the minimal fix/change, then keep tests green. Write the tests that a pasted block names first. Changed or fixed behavior should have automated coverage. If TDD or coverage is infeasible, explain why before review. If the code has no test project or no seam for the change, say so before you edit. Then write characterization tests of today's behavior first, or name the closest executable check (a script, a query, a manual step) in the hand-off. Never skip tests without saying so.
+3. **Validate locally.** Take every command from the contract's Commands heading. Never guess a command. Run the build, the unit tests and the lint check. Fix failures caused by the task.
+   - **Counts.** Check the test count, not only the exit code. A command that ran 0 tests is reported as "ran 0 tests", never as a pass. Report pass, fail and skip counts per suite.
+   - **Docker.** If a suite needs Docker and Docker is not running, skip that suite, say so, and never report it as passed.
+   - **Base re-run.** Re-run each failing suite on the code before your change, with the same command. Export `HEAD` with `git archive` into a `mktemp -d` scratch folder; never check it out in the repository. The copy may restore the packages the project declares, from its lock file. If the restore fails or the copy runs 0 tests, the base result is `unknown:`. Compare the failing test names and the error text. A suite is old breakage only when the same tests fail for the same reason on both. A different or extra failure is yours. If the copy fails at setup, for example because a git-ignored local settings file is missing, the base result is `unknown:`. List old breakage in the hand-off. Remove the scratch folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where it is.
+   - **Lint.** Report only problems on lines you changed.
 4. **Stage only task changes.** Inspect status first. Stage only files that belong to the task.
-5. **Review Round 1.** Spawn a separate reviewer using Opus 5.5 or GPT-6 with high effort. The reviewer must inspect the staged diff, not your narrative.
+5. **Review Round 1.** Spawn a separate reviewer using the strongest model the harness offers, at high effort. Fill the prompt below with the task, the pasted blocks and the contract's Risk areas. The reviewer must inspect the staged diff, not your narrative.
 6. **Triage findings.**
    - Agree: fix surgically, validate, and restage.
    - Disagree: keep the change, but record the exact claim and your evidence-based reason.
@@ -36,7 +90,7 @@ Authority, deadlines, release windows, "small change", "tests pass", or "senior 
 7. **Decide on Review Round 2.**
    - Run it on the restaged diff, using the same independent review process, if a blocker or major finding was fixed, or a minor fix changed production logic.
    - Skip it if Round 1 found nothing, or every fix was minor and limited to comments, docs, formatting, behavior-preserving renames, or test-only changes. Re-run local validation before skipping.
-8. **Handoff.** Report staged files, validation run, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. If Round 2 was skipped, state that and why, and list the minor fixes applied. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
+8. **Handoff.** Report staged files, validation run (with test counts), the reviewer model, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
 9. **Verify hand-off.** Give the engineer what a fresh verify session needs. Do the parts in this order.
    - **Marker lookup first.** Look for `verify-*/SKILL.md` under any `.github/skills/` or `.claude/skills/` folder. Accept only a file whose header has `generated-by: agentd-verify-init` nested under `metadata:`. Ignore a `verify-*` skill without that marker. If several marked skills match, list them and ask which one. If no marked skill exists, write only this closing line: "No project verify skill. Run `/agentd-verify-init` once, or verify by hand." In that case dev-rev asks no base-branch question and writes no Verify block.
    - **No user-visible effect.** Decide this before the base-branch question. Write `Verify: none: <reason>` and no other field, and ask no base-branch question.
@@ -77,6 +131,25 @@ Review the staged diff for this task:
 
 <task details>
 
+The engineer pasted these blocks. Copy them in verbatim, or write "none":
+
+<diagnose hand-off block>
+<blast-radius add-on block>
+<intake engineer block>
+
+Assumptions taken because nobody answered (or "none"):
+
+<assumptions>
+
+Risk areas from the project contract (or "none"):
+
+<risk areas>
+
+Check these first:
+- Every `Do not change` item in the blocks. A change to one without the engineer's approval is a blocker.
+- Every stop condition in the blocks. If the work should have stopped, say so.
+- Every test under `Failing test first` and `Tests to write first` exists, and asserts what the block says.
+
 Focus areas:
 - TDD/coverage: changed/fixed behavior has tests, preferably written before implementation.
 - Logic correctness: implementation meets the task requirements.
@@ -107,8 +180,8 @@ Output:
 
 | Harness | How to review |
 | --- | --- |
-| Claude Code | Use a separate Task/review agent if available, explicitly selecting Opus 5.5 or GPT-6 and high effort. |
-| Copilot CLI | Use a separate review-capable task agent with `model: claude-opus-5.5` or a GPT-6 model and high reasoning effort when the tool supports it. |
+| Claude Code | Use a separate Task/review agent if available. Select the strongest model it offers and high effort. |
+| Copilot CLI | Use a separate review-capable task agent. Select the strongest model it offers and high reasoning effort, when the tool supports it. |
 | Other harness | Use its independent-agent mechanism only if it can enforce the model floor and effort. Otherwise stop and report the blocker. |
 
 The key invariant is independence plus model floor. "Fast reviewer", "same-agent review", "manual inspection", and "review after commit" are not equivalent.
@@ -152,3 +225,5 @@ Any red flag means stop and return to the hard rules.
 | Treating low-capability review as acceptable fallback | Stop and report the missing required reviewer. |
 | Silently accepting product/backcompat decisions | Ask the engineer. |
 | Hiding disagreed claims | Report them with evidence. |
+| Changing a `Do not change` item, or going past a stop condition, from a pasted block | Stop and report to the engineer. |
+| Reporting a run of 0 tests as a pass | Report "ran 0 tests". It is not a pass. |
