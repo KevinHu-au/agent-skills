@@ -38,7 +38,7 @@ The engineer sends the report: from Xcode Organizer, from the Crashlytics or Sen
 
 - The data lives on the device or on a server. Find which: the local store, the sync code that writes it, and the API it syncs with.
 - Find the writers of a local model: the sync service, the view models that edit it, import code, and migration code. Find the readers too.
-- Server rows written by the app: find the request that writes them, then the server's handler. The server code is often in another repository: `unknown: ask the <system> owner`.
+- Server rows written by the app: find the request that writes them, then the server's handler. The server code is often in another repository: `unknown: ask the <system> owner`, or ask the engineer for its path and read it as SKILL.md, Rules, says.
 - Do not read a customer's device or a production store. Reproduce with a synthetic store in the simulator only if the contract's Commands or Verify heading allows starting the app. Otherwise mark the fact `unknown:` and give the engineer the steps. A store copied from a device holds personal data.
 - Logs can hold personal data. Read only what the ticket needs, and quote none of it.
 
