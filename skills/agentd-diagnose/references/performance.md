@@ -23,6 +23,19 @@ To compare, find a fast case: a smaller input, an earlier commit or release, or 
 
 Ask what else the number could be measuring: failed requests, cached or skipped work, a code path that never ran, or the load tool itself. Count the failures and the non-success responses. Check that the work really happened.
 
+## Production evidence
+
+Production data cannot run on the engineer's machine, and you never run anything against production. When the slowness shows only there, ask the engineer or a DBA for these, and say which one you need:
+
+- **The actual execution plan** of the slow query, saved as a `.sqlplan` file or pasted as text, from the same environment and with the same parameter values. An estimated plan is not enough: it has no row counts.
+- **A Query Store result** for the query: the runtime statistics over a time window, with the plan IDs, so a plan change shows. Write the read-only query for the DBA.
+- **Counts:** rows in each table the query reads, taken from catalog statistics, and the index list of those tables.
+- **Telemetry:** the duration percentiles and the request count of the slow operation by day, from the log or APM platform. Write the query. Ask for the release number, so a regression shows.
+
+**Redaction:** an actual plan holds the parameter values (`ParameterCompiledValue`, `ParameterRuntimeValue`) and predicate literals. Tell the engineer to remove or replace them with placeholders before pasting. If a paste still holds personal data, do not repeat it in the report.
+
+**Tier:** a plan-level claim, such as a key lookup over 40 million actual rows or a plan change between two Query Store plan IDs, is `confirmed` when the actual plan comes from the same environment and the same parameters as the slow case, holds actual row counts, and its actual time or rows account for the reported slowness (a large row count on an operator that takes little time does not). A claim about why the plan was chosen, or about the whole path, is `supported` until a local measurement on production-like data shows it. Never copy a production database to build that data. The verdict is Confirmed when a confirmed plan-level claim names the limiter. Otherwise it is Not confirmed: say which evidence is missing.
+
 ## Mantras
 
 Try them in this order, cheapest first. Stop at the first one that meets the target.
