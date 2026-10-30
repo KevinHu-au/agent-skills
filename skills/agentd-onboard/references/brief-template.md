@@ -4,7 +4,7 @@
 >
 > Markers: `unknown:` not found, and who to ask. `inferred:` worked out, not confirmed. `changed:` updated in the last refresh. `conflict:` two sources disagree, and the code wins. Cite sources as `path:line`. Never write a secret value. Name the key only.
 >
-> Run from the repository root, the working tree is `dirty` when `git status --porcelain -- . ':(exclude)docs/onboarding'` prints anything. The pack itself never counts. A change to `AGENTS.md` inside its `## Project contract` section and build output from safe checks do not count. If it is dirty, list the changed files in `Unknowns`. Write any other commit id in 7 to 12 characters. Only the `Scanned commit:` line holds a full hash.
+> Run from the repository root, the working tree is `dirty` when `git status --porcelain -- . ':(exclude)docs/onboarding'` prints anything. The pack itself never counts. Build output from safe checks does not count. If it is dirty, list the changed files in `Unknowns`. Write any other commit id in 7 to 12 characters. Only the `Scanned commit:` line holds a full hash.
 
 Scanned commit: <the full output of git rev-parse HEAD>
 Scanned on: <YYYY-MM-DD>
@@ -45,7 +45,7 @@ Sources: <path:line, path:line>
 > Budget: about 300 words, including the diagram. Three parts, in this order. Nothing here is specific to one stack.
 >
 > 1. Key concept: one short paragraph and one small Mermaid block (a lifecycle, a state machine, a sync flow, a data pipeline or an entity diagram) for the one idea that most main use cases pass through. Use exactly one ```mermaid block. When no concept stands out, write one line instead: `Key concept: unknown:` and who to ask. Mark a concept nobody confirmed with `inferred:`.
-> 2. Layers: one short block for each layer the project has, in request order. Each block has three lines, `Open:` the first files, `Run:` the first command (or `unknown:`), and `Pattern:` one example file to copy. Backtick only paths on `Open:` and `Pattern:` lines and in the two path columns; write any note without backticks. The two path columns are the Data loads in and Calculations and rules in columns of `feature-to-code.md`. A `Run:` line holds a command, never checked as a path.
+> 2. Layers: one short block for each layer the project has, in request order. Each block has three lines, `Open:` the first files, `Run:` the first command (or `unknown:`), and `Pattern:` one example file to copy. Backtick only paths on `Open:` and `Pattern:` lines and in the path columns; write any note without backticks. The path columns are every column after the first (Layer) in the use case tables of `feature-to-code.md`. A `Run:` line holds a command, never checked as a path.
 > 3. Find the code for a feature: the four steps below, then the link and the `Sources:` line. The `Sources:` line lists every path the block cites.
 
 Key concept: <one short paragraph: the idea, and why it matters for a change>
@@ -98,7 +98,7 @@ Sources: <path:line, path:line>
 
 ## Run and verify
 
-> Budget: about 200 words. How to build, run, sign in, load test data and check a change. The commands live in the project contract in `AGENTS.md`. Summarise them here and say where they are. If the project contract was not written, put the commands here in full. Mark a command you did not run `inferred:`.
+> Budget: about 200 words. How to build, run, sign in, load test data and check a change. Put the commands here in full, each with its source (a project file, the README or the pipeline). Do not write them to `AGENTS.md`. Mark a command you did not run `inferred:`.
 
 <text>
 
