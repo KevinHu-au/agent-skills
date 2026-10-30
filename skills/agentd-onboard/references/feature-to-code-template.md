@@ -6,9 +6,9 @@
 >
 > Use the layer names from `## Start here` in `README.md`. A cell is `none`, `unknown:` and who to ask, `inferred:` and a note, or a backticked value. Put one value in each backtick pair, so a checker can read it.
 >
-> In the "Data loads in" and "Calculations and rules in" columns, a value is a path in the form `path`, `path:N` or `path:N-M`. In the two path columns, backtick only the path; write any note without backticks. In a "Search terms" table, the "Business term" column is plain text: the words a user uses. The backticked cells in the layer columns are exact search strings, never paths. Check each string with a search before you write it. The `Sources:` line lists every path the block cites. The checker accepts a path that exists on disk even when git ignores it, but it finds a search term only in files that git tracks or could track, so a term that appears only in an ignored file is a miss.
+> The first column is "Layer". Every column after it is a path column: a value is a path in the form `path`, `path:N` or `path:N-M`. In the path columns, backtick only the path; write any note without backticks. Choose the path columns and their titles for each use case, one to three of them, so the titles fit what that use case does. Examples: "Entry point", "Data loads in", "Key business logic", "Calculations and rules in". Do not give every use case the same columns. Drop a column that has nothing real to say for this use case, for example a calculation column for an onboarding form that only saves what the user types. Never keep a column only to fill the table. In a "Search terms" table, the "Business term" column is plain text: the words a user uses. The backticked cells in the layer columns are exact search strings, never paths. Check each string with a search before you write it. The `Sources:` line lists every path the block cites. The checker accepts a path that exists on disk even when git ignores it, but it finds a search term only in files that git tracks or could track, so a term that appears only in an ignored file is a miss.
 >
-> A procedure or query with no caller found is written `inferred: no caller found`. Where one value is calculated in more than one layer, say which layer owns it. When the project has no user-facing use cases (a library, say), write only the scan lines and one line: `unknown: no user-facing use cases found`, and who to ask.
+> A procedure or query with no caller found is written `inferred: no caller found`. Where one value is calculated in more than one layer, add one line `Owner of the calculation: <layer>` under the table. Otherwise write no such line. When the project has no user-facing use cases (a library, say), write only the scan lines and one line: `unknown: no user-facing use cases found`, and who to ask.
 >
 > Markers: `unknown:` not found, and who to ask. `inferred:` worked out, not confirmed. `changed:` updated in the last refresh. `conflict:` two sources disagree, and the code wins. Never write a secret value. Name the key only.
 
@@ -17,12 +17,12 @@ Scanned on: <YYYY-MM-DD>
 
 ## <Use case name, as in README.md>
 
-| Layer | Data loads in | Calculations and rules in |
+| Layer | <column title that fits this use case> | <another title, or drop this column> |
 |---|---|---|
 | <layer> | `<path:line>` | `<path:line>` or none |
 | <layer> | `<path:line>` | inferred: no caller found |
 
-Owner of the calculation: <layer>, or none when one layer calculates it.
+Owner of the calculation: <layer>
 
 ### Search terms
 

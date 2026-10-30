@@ -201,8 +201,9 @@ start_paths() {
   section_text "Start here" | awk "$TICKS_AWK"'/^([-*][ \t]+)?(\*\*)?(Open|Pattern)(:\*\*|\*\*:|:)/ { ticks($0, "README.md\t") }'
 }
 
-# f2c_values <path|term>: backticked values in feature-to-code.md. Paths: the second and third cells of the data
-# rows under each H2, except under "### Search terms". Terms: cells from the second onward under "### Search terms".
+# f2c_values <path|term>: backticked values in feature-to-code.md. Paths: every cell after the first (the layer) of
+# the data rows under each H2, except under "### Search terms". The columns after the layer are named by the pack's
+# author, so there is no fixed count. Terms: cells from the second onward under "### Search terms".
 f2c_values() {
   awk -v want="$1" "$TICKS_AWK"'
     { gsub(/\r/, "") }
@@ -219,8 +220,7 @@ f2c_values() {
       # An escaped pipe stays inside its cell, and is the rendered text, a plain pipe.
       gsub(/\\\|/, "\001")
       n = split($0, c, "|")
-      last = (want == "path") ? 4 : n
-      for (i = 3; i <= last && i <= n; i++) {
+      for (i = 3; i <= n; i++) {
         cell = trim(c[i])
         gsub(/\001/, "|", cell)
         head = cell
