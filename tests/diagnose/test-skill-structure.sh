@@ -500,6 +500,112 @@ test_example_values_do_not_follow_the_data_pattern() {
   section_of "$SKILL" Rules | grep -qF 'a.person@example.invalid' && section_of "$SKILL" Rules | grep -qi 'naming scheme'
 }
 
+# Production evidence: a person runs the query and pastes the result. The skill runs nothing against production.
+test_production_evidence_is_run_by_a_person() {
+  section_of "$SKILL" 'Running commands' | grep -qF 'never runs anything against production' &&
+    section_of "$SKILL" 'Running commands' | grep -qi 'DBA' &&
+    has_all "$REFS/bug.md" '## Production evidence' 'KQL' 'DBA' 'correlation ID' 'Redaction' 'crash report or dump'
+}
+
+test_production_evidence_alone_is_supported() {
+  local ev
+  ev=$(section_of "$SKILL" Evidence)
+  # The `confirmed:` bullet holds the one definition, with both exceptions and their conditions.
+  local c s
+  c=$(printf '%s\n' "$ev" | grep -F -- '- **confirmed:**')
+  s=$(printf '%s\n' "$ev" | grep -F -- '- **supported:**')
+  for t in 'counts for the fact it shows' 'A root cause is confirmed by a run that shows the ticket' \
+    'Two cases need no local run' 'that state is on the path of the failing call' \
+    "the first failure in the log fits it" 'actual row counts' 'account for the reported slowness' \
+    '`references/data.md`, Confirmation'; do
+    printf '%s\n' "$c" | grep -qF -- "$t" || return 1
+  done
+  printf '%s\n' "$s" | grep -qF 'is `supported` at most for the root cause' &&
+    printf '%s\n' "$s" | grep -qF 'a pasted SQL result that shows only a symptom' &&
+    # Gate and Reproduce point to Evidence, so the wording lives in one place.
+    section_of "$SKILL" Flow | grep -qF 'see Evidence for what confirms' &&
+    section_of "$SKILL" Flow | grep -qF 'or a case under `confirmed` in Evidence' &&
+    section_of "$SKILL" Flow | grep -qF 'give the verdict Not confirmed and stop' &&
+    has_all "$REFS/bug.md" 'Production evidence alone is `supported` for the root cause' \
+      'A code cause is `confirmed` only when a local run' 'under the conditions in SKILL.md, Evidence' &&
+    has_all "$REFS/performance.md" 'plan-level claim' 'is `confirmed` when the actual plan comes from the same environment' \
+      'account for the reported slowness' 'Never copy a production database' 'names the limiter'
+}
+
+# Every mode reaches the production evidence and environment sections, and production is never queried by the skill.
+test_every_mode_reaches_production_evidence_and_never_queries_production() {
+  section_of "$SKILL" Modes | grep -qF 'In every mode' &&
+    section_of "$SKILL" Modes | grep -qF 'Environment differences' &&
+    section_of "$SKILL" 'Running commands' | grep -qF 'includes a read replica' &&
+    section_of "$SKILL" 'Running commands' | grep -qF 'Never production' &&
+    has_all "$REFS/data.md" 'Never run a query on production, including a read replica' '`references/bug.md`, Production evidence'
+}
+
+test_environment_differences_are_candidates() {
+  local s
+  s=$(section_of "$REFS/bug.md" 'Environment differences')
+  for t in '- Certificates:' '- DNS, proxy, firewall or TLS version.' '- Permissions:' '- Versions:' 'feature flag' \
+    'server time zone' '- Resources:' '- Data: a row or a volume that only production has.'; do
+    printf '%s\n' "$s" | grep -qF -- "$t" || return 1
+  done
+}
+
+test_performance_accepts_a_pasted_plan() {
+  local s
+  s=$(section_of "$REFS/performance.md" 'Production evidence')
+  for t in 'actual execution plan' 'estimated plan is not enough' 'Query Store' 'DBA' '**Redaction:**' \
+    'ParameterRuntimeValue'; do
+    printf '%s\n' "$s" | grep -qF -- "$t" || return 1
+  done
+}
+
+test_dump_and_ips_steps_exist() {
+  has_all "$REFS/dotnet.md" '## Production dumps' 'dotnet-dump analyze' 'Install nothing' \
+    'only after you remove names, emails, IDs and user paths' &&
+    has_all "$REFS/ios.md" 'two JSON documents' 'usedImages[imageIndex]' 'is not an `.ips` file' 'dwarfdump --uuid' \
+      'atos' 'Install nothing'
+}
+
+# Escape is a report line (it feeds the failing test and the log-line suggestion), not a hand-off block line.
+# It is filled in every mode, and a report that is not Confirmed says why it has no reason.
+test_escape_line_is_in_the_report_only() {
+  grep -qF 'Escape:' "$REFS/report-template.md" &&
+    ! hand_off_block | grep -qF 'Escape:' &&
+    has_all "$REFS/bug.md" '`Escape:` line' 'feeds the failing test' &&
+    has_all "$REFS/report-template.md" 'Fill `Escape:` in every mode' 'Data: why the bad rows were not noticed' \
+      'Performance: why no test' 'Escape: none: cause not confirmed' 'The last two carry no tier' 'never guess a reason'
+}
+
+# A confirmed environment cause has no code fix: the template says so and routes the engineer to the owner.
+test_environment_cause_has_a_no_code_fix_hand_off() {
+  has_all "$REFS/report-template.md" 'none: environment change' 'name the change and its owner under Follow-on' \
+    'give the change to the owner' &&
+    section_of "$SKILL" Output | grep -qF 'For an environment change, it tells the engineer to give the change to its owner'
+}
+
+# A fix in a second repository gets its own block, and the closing line names the repository.
+test_second_repository_hand_off() {
+  has_all "$REFS/report-template.md" 'If the cause or the fix sits in a second repository' 'name the repository under Task' \
+    'Run /agentd-dev-rev in <repository>' 'One block for each repository'
+}
+
+# The SQL written for a DBA keeps the no-lock, no-write and no-full-count rules.
+test_dba_sql_keeps_the_safe_query_rules() {
+  has_all "$REFS/bug.md" 'SKILL.md, Running commands, Data apply to the text of the query' 'SELECT ... INTO' 'FOR UPDATE' \
+    'no full count of a large table'
+}
+
+test_second_repository_is_read_only() {
+  local r
+  r=$(section_of "$SKILL" Rules)
+  printf '%s\n' "$r" | grep -qF 'One repository per run' &&
+    printf '%s\n' "$r" | grep -qi 'path of a second repository' &&
+    printf '%s\n' "$r" | grep -qF 'read it too, read only, and put its name before each `path:line`' &&
+    printf '%s\n' "$r" | grep -qF 'Run no code, build or test there' &&
+    printf '%s\n' "$r" | grep -qF 'Read-only `git log` and `git blame` are allowed' &&
+    printf '%s\n' "$r" | grep -qF 'run `/agentd-dev-rev` in that repository'
+}
+
 echo "agentd-diagnose skill structure"
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with 'Use when' and covers root cause, bug, data and slow" test_description_starts_with_use_when_and_covers_the_jobs
@@ -567,6 +673,17 @@ check "an example value does not follow the data's pattern" test_example_values_
 check "blast-radius only for a contract, schema, shared code or external system" test_blast_radius_only_for_contract_schema_shared_code_or_external
 check "a data repair needs no blast radius" test_a_data_repair_needs_no_blast_radius
 check "Frame reuses a pasted intake comment" test_frame_reuses_an_intake_comment
+check "production evidence: the engineer or a DBA runs the query and nothing runs against production" test_production_evidence_is_run_by_a_person
+check "production evidence alone is supported and confirmed needs a local reproduction" test_production_evidence_alone_is_supported
+check "every mode reaches production evidence, and the skill never queries production" test_every_mode_reaches_production_evidence_and_never_queries_production
+check "environment differences are standard candidates" test_environment_differences_are_candidates
+check "performance accepts a pasted plan and says what to ask the DBA for" test_performance_accepts_a_pasted_plan
+check "the .NET dump and the iOS .ips steps are in the references" test_dump_and_ips_steps_exist
+check "the Escape line is in the report and not in the hand-off block" test_escape_line_is_in_the_report_only
+check "a second repository is read only with its name before each path" test_second_repository_is_read_only
+check "a confirmed environment cause has a no-code-fix hand-off" test_environment_cause_has_a_no_code_fix_hand_off
+check "a fix in a second repository gets its own block" test_second_repository_hand_off
+check "the SQL written for a DBA keeps the safe query rules" test_dba_sql_keeps_the_safe_query_rules
 
 echo
 echo "passed=$PASS failed=$FAIL"

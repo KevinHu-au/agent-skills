@@ -24,6 +24,16 @@ Where to look in an iOS app. These notes come from general knowledge of the plat
 - Environment: the Debug, Test and Production schemes read different plist files. Name the key, never the value.
 - Device: iPad and iPhone layouts differ, Dynamic Type, dark mode, orientation, and the iOS version. An API available on a newer iOS crashes an older device. Look at the deployment target.
 
+## Crash reports (`.ips`)
+
+The engineer sends the report: from Xcode Organizer, from the Crashlytics or Sentry console, or from a device. Install nothing. Read the file as text. A report can hold a device name, an account and paths: do not repeat them. These steps come from general knowledge. They were not run.
+
+- A crash `.ips` file from iOS 15 or later holds two JSON documents: a one-line header, then the body. Parse them one at a time. In the body read: the app version and build, the OS version, the device model, the exception type and codes, the crashed thread, and its frames (`imageIndex` and `imageOffset` for each). `usedImages[imageIndex]` gives the image's `base` (its load address), its `name` and its `uuid`. A Crashlytics or Sentry export is not an `.ips` file and has its own shape: read its stack and its version fields, and ask for the raw `.ips` if you need the offsets.
+- A frame shows a name only when the report is symbolicated. Otherwise it needs the dSYM of the same build. Check that the UUID in the report matches `dwarfdump --uuid <App.app.dSYM>`. A dSYM from another build gives wrong names. If it is missing, ask for it, from the build pipeline or from App Store Connect.
+- To symbolicate a frame, the engineer runs `atos -arch arm64 -o <App.app.dSYM>/Contents/Resources/DWARF/<App> -l <load address of the image> <frame address>`. The load address is `usedImages[imageIndex].base`. The frame address is that base plus `imageOffset`.
+- Write down the exception type, the top app frames with `path:line` once symbolicated, the app and OS versions, and whether the crash needs a state, such as a signed-in user or an upgrade from an older version.
+- **Tier:** a crash report shows where the app stopped. It is `supported` until a local run, a test or a simulator run built from the same inputs produces the crash.
+
 ## Data candidates
 
 - The data lives on the device or on a server. Find which: the local store, the sync code that writes it, and the API it syncs with.
