@@ -25,7 +25,7 @@ check() {
   fi
 }
 
-REFERENCES="brief-template.md contract-fill.md dotnet.md explorer-prompts.md feature-to-code-template.md external-systems.md ios.md react.md safe-checks.md update-mode.md"
+REFERENCES="brief-template.md dotnet.md explorer-prompts.md feature-to-code-template.md external-systems.md ios.md react.md safe-checks.md update-mode.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -71,7 +71,7 @@ test_reference_file_label_matches_the_list() {
   n=$(set -- $REFERENCES; echo $#)
   on_disk=$(ls "$REFS" | grep -c '\.md$')
   [ "$n" -eq "$on_disk" ] || return 1
-  case "$n" in 10) word=ten ;; 11) word=eleven ;; 12) word=twelve ;; *) return 1 ;; esac
+  case "$n" in 9) word=nine ;; 10) word=ten ;; 11) word=eleven ;; 12) word=twelve ;; *) return 1 ;; esac
   grep -qF "check \"SKILL.md names the $word reference files" "$0"
 }
 
@@ -234,40 +234,12 @@ test_update_mode_last_refreshed_line_passes_the_checker() {
   grep -q '^Last refreshed: ' "$d/README.md" && "$HERE/check-brief.sh" "$d"
 }
 
-TEMPLATE="$REPO/templates/project-contract.md"
-
-test_contract_headings_match_template() {
-  [ -s "$REFS/contract-fill.md" ] && [ -s "$TEMPLATE" ] &&
-    [ "$(grep '^### ' "$REFS/contract-fill.md" | tr '\n' '|')" = "$(grep '^### ' "$TEMPLATE" | tr '\n' '|')" ] &&
-    [ "$(grep -c '^### ' "$TEMPLATE")" -eq 5 ]
-}
-
-test_contract_fields_match_template() {
-  local name
-  [ -s "$REFS/contract-fill.md" ] && [ -s "$TEMPLATE" ] || return 1
-  grep -q '^- \*\*' "$TEMPLATE" || return 1
-  grep '^- \*\*' "$TEMPLATE" | sed 's/^- \*\*\([^*]*\)\*\*.*/\1/; s/:$//' | while IFS= read -r name; do
-    grep -qF -- "**$name" "$REFS/contract-fill.md" || { echo "missing field: $name" >&2; exit 1; }
-  done
-}
-
-test_contract_fill_rules_cover_where_and_when_to_ask() {
-  has_all "$REFS/contract-fill.md" "AGENTS.md" "CLAUDE.md" "ask before" "does not exist" "imports" "update mode" \
-    "unknown: ask" "inferred:" "conflict:" "secret" "headless"
-}
-
 test_the_pack_folder_is_excluded_from_changes_and_dirty_check() {
   local exclude="':(exclude)docs/onboarding'"
   has_all "$REFS/update-mode.md" "git diff --name-only --no-renames <commit>..HEAD -- . $exclude" \
     "git status --porcelain --no-renames --untracked-files=all -- . $exclude" "the pack itself" &&
     has_all "$REFS/brief-template.md" "git status --porcelain -- . $exclude" &&
     has_all "$SKILL" 'outside `docs/onboarding/`'
-}
-
-# Wording fixes found by the evaluation runs (EVAL.md, iteration 1).
-test_one_rule_for_what_comes_first_in_open_questions() {
-  has_all "$REFS/contract-fill.md" "after the unconfirmed use cases" &&
-    ! grep -qi 'first in `open-questions.md`' "$REFS/contract-fill.md"
 }
 
 test_commit_id_lengths_are_not_ambiguous() {
@@ -280,8 +252,8 @@ test_worktree_check_is_robust_and_has_a_headless_fallback() {
     "the repository root is the main checkout"
 }
 
-test_template_has_a_home_for_contract_facts_and_partial_gaps() {
-  has_all "$REFS/brief-template.md" "If the project contract was not written" "access rules" \
+test_template_has_a_home_for_access_facts_and_partial_gaps() {
+  has_all "$REFS/brief-template.md" "access rules" \
     "add a short \`unknown:\` note" "list the changed files"
 }
 
@@ -319,9 +291,8 @@ test_side_files_carry_the_scan_lines_and_update_refreshes_them() {
     has_all "$REFS/update-mode.md" "each side file"
 }
 
-test_update_mode_handles_full_recheck_and_the_unwritten_contract() {
-  has_all "$REFS/update-mode.md" "For a full re-check" &&
-    has_all "$REFS/contract-fill.md" "If an earlier run did not write the contract and you can ask now, ask now"
+test_update_mode_handles_a_full_recheck() {
+  has_all "$REFS/update-mode.md" "For a full re-check"
 }
 
 test_a_finding_is_not_a_conflict() {
@@ -332,16 +303,17 @@ test_update_mode_names_the_flow_step_it_means() {
   has_all "$SKILL" 'Run the check in Flow step 5 (the nine questions) on the sections you changed'
 }
 
-# Fixes from the code review, round 1.
-test_update_mode_reaches_the_contract() {
-  has_all "$SKILL" 'Refresh the project contract as Flow step 4 says' &&
-    has_all "$REFS/update-mode.md" "contract-fill.md" '## Project contract' "if an earlier run did not write it"
+test_the_skills_own_output_is_not_a_change() {
+  has_all "$REFS/update-mode.md" "what this skill wrote itself" 'bin/' &&
+    has_all "$REFS/brief-template.md" "Build output from safe checks does not count" &&
+    has_all "$SKILL" "The pack itself and build output from safe checks never count"
 }
 
-test_the_skills_own_output_is_not_a_change() {
-  has_all "$REFS/update-mode.md" "what this skill wrote itself" 'bin/' "git diff -U0" "hunk" &&
-    has_all "$REFS/brief-template.md" "inside its \`## Project contract\` section" "do not count" &&
-    has_all "$SKILL" "the contract section this skill wrote, and build output from safe checks never count"
+# The skill never writes to AGENTS.md or CLAUDE.md, and never proposes a contract section for them.
+test_the_skill_never_writes_agents_md() {
+  [ ! -e "$REFS/contract-fill.md" ] &&
+    has_all "$SKILL" 'Never create or edit `AGENTS.md` or `CLAUDE.md`, and never propose a section for them' &&
+    ! grep -rqi 'project contract' "$SKILL" "$REFS"
 }
 
 test_git_commands_run_from_the_root_and_read_their_output_correctly() {
@@ -400,8 +372,8 @@ echo "agentd-onboard skill structure"
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with 'Use when' and covers onboarding, taking over support and refreshing" test_description_starts_with_use_when_and_covers_the_jobs
 check "SKILL.md is at most 160 lines" test_skill_is_at_most_160_lines
-check "SKILL.md names the ten reference files and each exists" test_every_referenced_file_exists
-check "the reference-file label says ten, the number in REFERENCES" test_reference_file_label_matches_the_list
+check "SKILL.md names the nine reference files and each exists" test_every_referenced_file_exists
+check "the reference-file label says nine, the number in REFERENCES" test_reference_file_label_matches_the_list
 check "the seven H2 sections appear in order" test_required_h2_sections_in_order
 check "SKILL.md has no absolute home paths" test_skill_has_no_absolute_home_paths
 check "brief-template.md H2 sections equal the checker's required sections" test_brief_template_h2s_match_checker
@@ -419,14 +391,10 @@ check "update-mode.md covers a scanned commit that does not exist" test_update_m
 check "update-mode.md has the no-op rule" test_update_mode_has_noop_rule
 check "update-mode.md uses git diff --name-only and git status --porcelain" test_update_mode_uses_git_diff_name_only
 check "the Last refreshed example line passes check-brief.sh" test_update_mode_last_refreshed_line_passes_the_checker
-check "contract-fill.md headings equal the template's five headings" test_contract_headings_match_template
-check "contract-fill.md names every field in the template" test_contract_fields_match_template
-check "contract-fill.md says which file to write and when to ask" test_contract_fill_rules_cover_where_and_when_to_ask
 check "the pack folder is excluded from the change list and the dirty check" test_the_pack_folder_is_excluded_from_changes_and_dirty_check
-check "one rule for what comes first in open-questions.md" test_one_rule_for_what_comes_first_in_open_questions
 check "commit id lengths are not ambiguous" test_commit_id_lengths_are_not_ambiguous
 check "worktree check uses absolute paths and has a headless fallback" test_worktree_check_is_robust_and_has_a_headless_fallback
-check "template has a home for contract facts and partial gaps" test_template_has_a_home_for_contract_facts_and_partial_gaps
+check "template has a home for access facts and partial gaps" test_template_has_a_home_for_access_facts_and_partial_gaps
 check "use cases stay inferred until the engineer confirms" test_use_cases_stay_inferred_until_the_engineer_confirms
 check "references cover missing project files and committed secrets" test_references_cover_missing_project_files_and_committed_secrets
 check "open-questions.md is always written" test_open_questions_is_always_written
@@ -434,11 +402,11 @@ check "a worktree run reads, runs git and writes in the main checkout" test_work
 check "stale-source findings go to Unknowns and open-questions.md" test_findings_go_to_unknowns_and_open_questions
 check "Modes say which Flow steps update mode replaces" test_modes_say_which_flow_steps_apply_in_update_mode
 check "side files carry the scan lines and update mode refreshes them" test_side_files_carry_the_scan_lines_and_update_refreshes_them
-check "update mode covers a full re-check and the unwritten contract" test_update_mode_handles_full_recheck_and_the_unwritten_contract
+check "update mode covers a full re-check" test_update_mode_handles_a_full_recheck
 check "a finding is not a conflict" test_a_finding_is_not_a_conflict
 check "Modes name the Flow step they mean, not a bare step number" test_update_mode_names_the_flow_step_it_means
-check "update mode reaches the project contract" test_update_mode_reaches_the_contract
 check "the skill's own output is not counted as a change" test_the_skills_own_output_is_not_a_change
+check "the skill never writes AGENTS.md or proposes a contract section" test_the_skill_never_writes_agents_md
 check "git commands run from the root and their output is read correctly" test_git_commands_run_from_the_root_and_read_their_output_correctly
 check "a user guide for a feature maps to Use cases" test_a_user_guide_for_a_feature_maps_to_use_cases
 check "update mode step 4 does not contradict itself" test_update_mode_step_4_does_not_contradict_itself
@@ -452,18 +420,9 @@ check "a repository with no commits stops with one line" test_a_repository_with_
 check "EVAL.md makes a real shallow clone" test_eval_makes_a_real_shallow_clone
 check "every skill in the repository sets disable-model-invocation: true" test_every_skill_in_the_repository_is_manual_only
 
-# Skill-fit problems from the first real check (plan section 12).
-test_fit_existing_agents_md_sections_are_kept_and_pointed_to() {
-  has_all "$REFS/contract-fill.md" "has no \`## Project contract\`" "keep those sections as they are" "points to it"
-}
-
-test_fit_headless_run_leaves_the_proposed_contract_ready_to_paste() {
-  has_all "$REFS/contract-fill.md" "after the unconfirmed use cases" "proposed \`## Project contract\` section" "ready to paste"
-}
-
 test_fit_rerun_scripts_are_edited_in_place() {
   local f
-  for f in "$TEMPLATE" "$REFS/contract-fill.md" "$REFS/brief-template.md"; do
+  for f in "$REFS/brief-template.md"; do
     has_all "$f" "run once" "re-run on every deploy" "edited in place" || return 1
     ! grep -qiE 'the rule that (applied scripts are|an applied script is) never edited' "$f" || return 1
   done
@@ -485,8 +444,6 @@ test_fit_the_word_target_covers_the_brief_only() {
   has_all "$SKILL" "The 2,000-word target is for \`README.md\` only" "whole pack under about 5,000 words"
 }
 
-check "fit: existing AGENTS.md sections are kept and pointed to" test_fit_existing_agents_md_sections_are_kept_and_pointed_to
-check "fit: a headless run leaves the proposed contract ready to paste" test_fit_headless_run_leaves_the_proposed_contract_ready_to_paste
 check "fit: scripts that re-run on every deploy are edited in place" test_fit_rerun_scripts_are_edited_in_place
 check "fit: the sequential fallback keeps output small" test_fit_sequential_fallback_keeps_output_small
 check "fit: a search count is inferred, not a run" test_fit_a_search_count_is_inferred_not_a_run
@@ -512,9 +469,10 @@ test_checklist_has_nine_items() {
     has_all "$f" "Nine items" && ! grep -qF "Eight items" "$f"
 }
 
-test_feature_to_code_template_has_the_fixed_tables() {
-  has_all "$REFS/feature-to-code-template.md" "Data loads in" "Calculations and rules in" "### Search terms" \
-    "Business term" "Scanned commit:" "Scanned on:" "inferred: no caller found"
+test_feature_to_code_template_has_free_path_columns() {
+  has_all "$REFS/feature-to-code-template.md" "### Search terms" "Business term" "Scanned commit:" "Scanned on:" \
+    "inferred: no caller found" "Choose the path columns and their titles for each use case" \
+    "Do not give every use case the same columns" "Drop a column"
 }
 
 test_start_here_template_has_the_fixed_lines() {
@@ -537,7 +495,7 @@ test_findings_do_not_go_in_risks_and_delivery() {
 
 check "success test has nine questions in order" test_success_test_has_nine_questions
 check "checklist has nine items" test_checklist_has_nine_items
-check "feature-to-code-template.md has the fixed tables" test_feature_to_code_template_has_the_fixed_tables
+check "feature-to-code-template.md lets the author choose the path columns" test_feature_to_code_template_has_free_path_columns
 check "Start here template has the fixed lines" test_start_here_template_has_the_fixed_lines
 check "word target leaves out open-questions.md" test_word_target_leaves_out_open_questions
 check "findings do not go in Risks and delivery" test_findings_do_not_go_in_risks_and_delivery
@@ -735,8 +693,8 @@ check "the forbidden-phrase scan covers every file, handles CRLF words and fails
 check "skill templates stay generic (no stack words, no forbidden phrases)" test_skill_stays_generic
 
 test_templates_say_only_paths_are_backticked() {
-  grep -qF -- 'Backtick only paths on `Open:` and `Pattern:` lines and in the two path columns; write any note without backticks.' "$REFS/brief-template.md" || return 1
-  grep -qF -- 'In the two path columns, backtick only the path; write any note without backticks.' "$REFS/feature-to-code-template.md"
+  grep -qF -- 'Backtick only paths on `Open:` and `Pattern:` lines and in the path columns; write any note without backticks.' "$REFS/brief-template.md" || return 1
+  grep -qF -- 'In the path columns, backtick only the path; write any note without backticks.' "$REFS/feature-to-code-template.md"
 }
 
 check "templates say only paths are backticked on Open/Pattern lines and in the path columns" test_templates_say_only_paths_are_backticked
@@ -771,12 +729,12 @@ test_older_layout_wording_is_in_step_4_and_step_8_says_guard() {
     printf '%s\n' "$s8" | grep -qF 'only a guard'
 }
 
-# S3: the backtick rule is stated once, the two path columns are explained, the Risks guidance is short.
+# S3: the backtick rule is stated once, the path columns are explained, the Risks guidance is short.
 test_brief_template_states_the_backtick_rule_once_and_stays_short() {
   local f="$REFS/brief-template.md" risks
   [ "$(grep -cF 'Backtick only paths on `Open:` and `Pattern:` lines' "$f")" -eq 1 ] || return 1
   ! grep -qF 'Put backticked paths on' "$f" || return 1
-  grep -qF 'The two path columns are the Data loads in and Calculations and rules in columns of `feature-to-code.md`.' "$f" || return 1
+  grep -qF 'The path columns are every column after the first (Layer) in the use case tables of `feature-to-code.md`.' "$f" || return 1
   risks=$(section_of "$f" "Risks and delivery" | grep -m1 '^> ')
   [ "$(printf '%s\n' "$risks" | wc -w | tr -d ' ')" -le 62 ] &&
     printf '%s\n' "$risks" | grep -qF 'standing rules' &&
