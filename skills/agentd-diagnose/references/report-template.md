@@ -21,6 +21,7 @@ If it did not reproduce: what blocked it, and the evidence needed from the engin
 
 ### Root cause
 <the mechanism in one or two sentences>, `path:line`. Tier: confirmed | supported | inferred.
+Escape: <why tests, review or monitoring missed it: the missing test, the unchecked input or the missing alert>. Tier: supported | inferred. Or `unknown:` and who to ask. Or `none: cause not confirmed`. The last two carry no tier.
 
 ### Evidence
 | Claim | Tier | Source (path:line, command or query) |
@@ -43,11 +44,13 @@ Design concern: <the shared state or coupling, and why one small fix may not be 
 Scratch folder: `<path>`, removed after this report. Or: `Scratch folder: none`.
 ```
 
+Fill `Escape:` in every mode. Bug: the missing test, the unchecked input or the alert that did not exist (see `references/bug.md`). Data: why the bad rows were not noticed, such as a missing constraint, a check or a report. Performance: why no test, load check or alert caught the cost. When the verdict is not Confirmed, write `Escape: none: cause not confirmed`, and never guess a reason.
+
 With a Design concern, still propose the smallest fix for the ticket's failure, and add the design choice to Decisions needed from the engineer.
 
 ## Hand-off block
 
-Write it when the cause is confirmed. A fresh `/agentd-dev-rev` session gets everything it needs from this block, so keep it self-contained. Inline any script it names, for example as a heredoc, and never name a path in the scratch folder: the folder is removed after the report. If there is no code fix (a one-off data problem), write `none: <reason>` under Failing test first and under Proposed fix, and put the repair under Follow-on.
+Write it when the cause is confirmed. A fresh `/agentd-dev-rev` session gets everything it needs from this block, so keep it self-contained. Inline any script it names, for example as a heredoc, and never name a path in the scratch folder: the folder is removed after the report. If there is no code fix (a one-off data problem), write `none: <reason>` under Failing test first and under Proposed fix, and put the repair under Follow-on. If the cause is in the environment (a certificate, a role, a setting), there is no code fix either: write `none: environment change` under Failing test first and under Proposed fix, name the change and its owner under Follow-on, and write `not needed: no code fix` under Blast radius. Then end the report with one line that tells the engineer to give the change to the owner, instead of a `/agentd-dev-rev` line. If the cause or the fix sits in a second repository, write the block for that repository: give its `path:line` without the repository name, name the repository under Task, read its project contract when it has one (mark the facts `unknown:` when it has none), and end with the line `Run /agentd-dev-rev in <repository> and paste the hand-off block.` One block for each repository when the fix spans both.
 
 Put the block in chat inside a fence of four backticks with the `markdown` tag, as below, so a command fence inside it stays whole and the engineer copies the block in one piece. Keep every heading, in this order. Write `none` under an empty one. Use a bullet for each item in a list, or a number where the template shows numbers, and one sentence per item. Give every `path:line` and command in backticks.
 
@@ -111,7 +114,7 @@ After the hand-off block, end with this line when the cause is confirmed: Run `/
 
 ## When the cause is not confirmed
 
-The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write a closing line (`/agentd-dev-rev`, `/agentd-blast-radius` or `/agentd-data-fix`) until the engineer says to hand off.
+The verdict is Not confirmed, or Not reproduced. Not reproduced: you tried, and the ticket's failure did not happen. Not confirmed: you have candidate causes, but cannot show which one produces the ticket's failure. In Proposed fix, write "Next evidence needed" instead of a fix. Keep the Decisions needed and Design concern lines. For each open cause, name the evidence that would confirm or rule it out, and who has it. For a problem seen only in production, write the queries to run under Next evidence needed, each with the environment and who runs it. A pasted result goes in the Evidence table with the source `pasted by <role>`. End the report with the question, and nothing after it: keep investigating, or hand off anyway? Do not write a closing line (`/agentd-dev-rev`, `/agentd-blast-radius` or `/agentd-data-fix`) until the engineer says to hand off.
 
 If the engineer says hand off anyway, write the block with these changes:
 

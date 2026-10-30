@@ -12,6 +12,29 @@ Read the whole error first, in the ticket and in your own runs: the full stack t
 4. If the ticket names an ID or a record that the test data does not have, you cannot reproduce with it. Say so. A "not found" for that ID is missing data, not the failure in the ticket, unless the ticket reports the same message. Ask for the real error text.
 5. Run it many times (for example 20) and count the failures. If none fail, go on with step 3. If some fail, record what differs between a pass and a fail: order, timing, data, concurrency. Never use a fixed sleep to wait for a state. Wait on a condition (a state, a signal, a count), because a sleep hides the race. The failing test in the hand-off forces the failing order, for example with a latch, so it fails every time before the fix.
 
+## Production evidence
+
+Use this when the ticket's failure was seen only in production, or does not happen on the engineer's machine. You never run anything against production. You write the query and say what to paste back. The engineer, or a DBA, runs it and pastes the result.
+
+- **Log or APM query:** write it for the platform the project uses (for example Application Insights KQL). Name the table, the time window, the filter that finds the failing request or user, and the columns to keep. Ask for the correlation ID, the full exception with inner exceptions, the request path and the build or release number. Ask for counts by hour or day, so you can see when it started.
+- **Read-only SQL:** write it for a DBA, even when the Data access heading has no rule for production, because a person runs it. SELECT only, a bounded row count, IDs and non-personal columns. Say which environment it is for. The rules in SKILL.md, Running commands, Data apply to the text of the query: nothing that writes or locks (no `SELECT ... INTO`, `FOR UPDATE` or lock hints), no full count of a large table (size it from catalog statistics or an indexed key), and no personal columns. So do the rules in `references/data.md`.
+- **Crash report or dump:** ask for the report or the stack, the app version, the OS or runtime version, and the time. For a .NET dump see `references/dotnet.md`. For an iOS `.ips` report see `references/ios.md`.
+- **Redaction:** tell the engineer to remove names, emails, tokens and keys before pasting. If a paste still holds them, do not repeat them in the report.
+- **Tier:** a result that a person ran and pasted back is `confirmed` for the fact it shows. Production evidence alone is `supported` for the root cause. A code cause is `confirmed` only when a local run, built from the inputs the logs show, produces the ticket's failure. An environment cause is `confirmed` under the conditions in SKILL.md, Evidence: a person's read-only check shows the differing state (for example the certificate's expiry date), that state is on the path of the failing call, and the first failure in the log fits it. If you can do neither, the verdict is Not confirmed. Say which input or check is missing. When the cause is in the environment, the hand-off has no code fix: see `references/report-template.md`.
+
+## Environment differences
+
+When the failure happens in one environment and not in another, list these as candidate causes next to the code causes. Check each one, and report what you could not check as `unknown:` plus who to ask.
+
+- Certificates: expired, not trusted on that host, or a different chain.
+- DNS, proxy, firewall or TLS version.
+- Permissions: the account the service runs as, file and folder rights, a missing role or grant.
+- Versions: the runtime, the operating system, a dependency, the database engine, a client that is still old.
+- Configuration: a feature flag, an app setting or a connection string that differs. Name the key, never the value.
+- Time: the server time zone, the clock, daylight saving, culture settings.
+- Resources: memory, disk space, connection pool, thread pool, rate limits, a quota.
+- Data: a row or a volume that only production has.
+
 ## Find the cause
 
 - List the candidate causes before you test any. Include the ticket's theory.
@@ -27,6 +50,7 @@ Read the whole error first, in the ticket and in your own runs: the full stack t
 - When two theories built on the same premise have failed, write the premise in one sentence. Then find a check whose result would differ if the premise were wrong, and run it. Do not try a third theory first.
 - When you find the cause, search for the same fault elsewhere: other callers, copies of the pattern. List every place.
 - If the key fact was hard to find, suggest a log line or an assertion that would make it easy to find next time.
+- Ask why the bug escaped: why tests, review or monitoring did not catch it. Write the answer on the report's `Escape:` line. Name the missing test, the unchecked input or the alert that did not exist. Mark a guess `inferred:`. The missing test feeds the failing test in the hand-off. A missing log line is the suggestion above.
 
 ## Propose
 
