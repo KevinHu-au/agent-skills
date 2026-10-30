@@ -27,8 +27,15 @@ inside one.` Work from the repository root.
   `git show HEAD:<path>` and run no tests; if they stay, say the tests were not run. If the branch is behind
   `origin/<branch>` as last fetched, say so and give the command. Never run `git fetch`, `git pull`, `git checkout` or
   `git switch`.
-- **The project contract.** Read `AGENTS.md` (Commands, Risk areas, External systems and owners) and
-  `docs/onboarding/README.md` when they exist. When the onboarding pack disagrees with the code, the code wins.
+- **Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists.
+  Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the
+  engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer
+  gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is
+  the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree,
+  use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a
+  document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+- **What to read there.** The contract's Commands, Risk areas, and External systems and owners, and the pack's
+  `README.md`. When the pack disagrees with the code, the code wins.
 
 ## Flow
 
@@ -84,7 +91,8 @@ Every finding cites `path:line` and sits in one tier. Never invent a path, a cal
 
 Take every command from the contract's Commands heading. Never guess a command. With no contract, run only a command
 the repository states (a README, a script, a pipeline file), and mark the rest `unknown:`. Read-only inspection
-(reading, searching, `git log`, `git diff`, `git show`, `git blame`) needs no confirmation.
+(reading, searching, `git log`, `git diff`, `git show`, `git blame`, `"$HOME/.agents/bin/onboarding-pack" find`) needs
+no confirmation.
 
 - **Run plan.** List the build, each test suite, `docker info` when a suite needs Docker, the base re-run, the lint
   check and the scratch folder. Ask for one confirmation. A command not on the confirmed list needs its own.

@@ -9,7 +9,7 @@ machine.
 
 ```
 skills/         General skills, one folder each. Each holds a SKILL.md.
-global/         The global guide (AGENTS.md), the Claude Code CLAUDE.md that imports it, and bin/rm-scratch.
+global/         The global guide (AGENTS.md), the Claude Code CLAUDE.md that imports it, bin/rm-scratch and bin/onboarding-pack.
 hooks/copilot/  Copilot CLI safety hooks. git-safety.json.tmpl is a template.
 harness/        One script per tool: claude-code.sh, copilot-cli.sh.
 lib/common.sh   Link, backup and conflict logic shared by the scripts.
@@ -86,6 +86,7 @@ repo/skills/<name>  <-  ~/.agents/skills/<name>  <-  ~/.claude/skills/<name>
 repo/global/AGENTS.md  <-  ~/.agents/AGENTS.md  <-  ~/.copilot/copilot-instructions.md
 repo/global/claude/CLAUDE.md  <-  ~/.claude/CLAUDE.md   (imports ~/.agents/AGENTS.md)
 repo/global/bin/rm-scratch  <-  ~/.agents/bin/rm-scratch
+repo/global/bin/onboarding-pack  <-  ~/.agents/bin/onboarding-pack
 repo/hooks/copilot/block-dangerous-shell.sh  <-  ~/.copilot/hooks/block-dangerous-shell.sh
 repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   (rendered copy)
 ```
@@ -94,6 +95,15 @@ repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   
   path outside the system temp folders, a symlink, or a path you do not own. The global guide tells agents to
   remove an approved scratch path with this script and no other removal command. `--dry-run` runs every check
   and removes nothing.
+- `onboarding-pack` records where a repository's onboarding pack lives when the customer allows no file in the
+  repository (see [Where the onboarding pack lives](#where-the-onboarding-pack-lives)). `set <folder>` writes one line
+  to `~/.agents/onboarding-packs.tsv`, keyed by the repository's origin URL in one normal form, or by the path of its
+  main checkout when it has no origin. `find` prints the folder, `key` prints the key, and `suggest` prints a default
+  folder made from the key and a short hash of it, so two repositories do not share one. `set` refuses a relative
+  path, a folder that does not exist, a folder inside any working tree of the repository (in any letter case), and a
+  folder that another repository has recorded. It cannot see a separate clone of the same repository, so do not point
+  it at a folder inside one. Exit
+  status: 0 success, 1 no pack recorded, 2 bad usage, 3 the recorded folder is gone, 4 refused.
 - `block-dangerous-shell.sh` checks each Copilot shell command. It denies `git push`, `git reset --hard`, a
   forced `git clean`, `git branch -D` or a forced branch delete, a forced `git checkout` or `git switch`, and
   `git checkout .` or `git restore .`. It also catches forms such as `git -C "<path>" push`, `/usr/bin/git push`,
@@ -131,6 +141,15 @@ tests/test-rm-scratch.sh
 
 This test checks that `rm-scratch` removes only a scratch path that you own under a system temp folder, and
 refuses everything else.
+
+```bash
+tests/test-onboarding-pack.sh
+tests/test-shared-text.sh
+```
+
+The first checks the keys, `find` and `set` of `onboarding-pack` in a throwaway home folder, so your real registry is
+never read or written. The second checks that the "Find the project facts" paragraph is word for word the same in
+every skill that reads the onboarding pack. It reads files and writes nothing.
 
 `shellcheck` is not run by the tests. Run it yourself if it is installed.
 
@@ -239,10 +258,11 @@ Some customers allow only Copilot, some allow Claude Code, and some do not want
 extra files in their repository. Skills that generate project skills (such as
 `agentd-verify-init`) must ask before they write.
 
-Ask these two questions once per project:
+`agentd-onboard` asks these two questions once per project. It records the answers in the brief header as the
+`Repo policy:` line, so a later session reads them and does not ask again:
 
 1. Which tools does the customer allow? Claude Code, Copilot CLI, or both.
-2. May the skills be committed to the customer repository?
+2. Which agent files may sit in the customer repository? Committed, local only (never committed), or none.
 
 Then write to the matching folder. Tested on Copilot CLI 1.0.101:
 
@@ -262,9 +282,30 @@ echo '.github/skills/' >> .git/info/exclude
 `.git/info/exclude` is private to your clone and cannot be committed by accident.
 A shared `.gitignore` tells the whole team the folder exists.
 
-A local-only skill is lost when you clone again on a new machine. If the project
-keeps `docs/onboarding/`, regenerate the project skills from it. Record the two
-answers above in `docs/onboarding/` so a later session does not ask again.
+A local-only skill is lost when you clone again on a new machine. Regenerate the
+project skills from the onboarding pack.
+
+`agentd-verify-init` does not support the policy `none` yet: it writes the project skill into the repository.
+
+### Where the onboarding pack lives
+
+The second answer sets the pack folder. The pack holds the brief (`README.md`), the project contract (`contract.md`),
+`feature-to-code.md`, `open-questions.md` and any side files.
+
+| Files allowed in the repository | Pack folder | How other skills find it |
+|---|---|---|
+| Committed | `docs/onboarding/`, committed through the normal pull request | They look for `docs/onboarding/README.md`. |
+| Local only | `docs/onboarding/`, listed in `.git/info/exclude` | The same. |
+| None | A folder outside the repository, by default the one `onboarding-pack suggest` prints | `onboarding-pack find` prints the folder that `onboarding-pack set` recorded. |
+
+With the policy `none`, nothing is written into the repository, not even `.git/info/exclude`. The registry line lives
+in `~/.agents/onboarding-packs.tsv` on your machine. A second clone of the same repository finds the same pack. On a
+new machine, a skill that finds no pack asks you for the folder once and tells you the `onboarding-pack set` command.
+A clone by SSH and a clone by HTTPS of an Azure DevOps repository can get two different keys, because the two URLs
+have different paths. Record the folder once for each.
+
+Known limit: a repository on a network mount (for example a Windows drive mounted on a Mac) may need git to run on
+the other machine. The skills run git where they start. Follow that repository's own `AGENTS.md` for its git rules.
 
 ## What stays out of this repository
 
@@ -272,7 +313,8 @@ answers above in `docs/onboarding/` so a later session does not ask again.
 - Plugin cache folders. Reinstall from `setup.manifest`.
 - Session history and per-project memory.
 - Live settings files such as `~/.claude/settings.json` and `~/.copilot/config.json`. They can hold machine paths and permissions.
-- Client project knowledge, such as `docs/onboarding/`. That lives in each client repository.
+- Client project knowledge, such as the onboarding pack. That lives in each client repository, or in a folder outside
+  it that `onboarding-pack` records in `~/.agents/onboarding-packs.tsv`.
 - The `copilot` shell alias that adds `--allow-all`. It removes permission prompts, so set it up on purpose on each machine.
 
 ## Credits
@@ -292,7 +334,7 @@ own words. Superpowers is also listed in `setup.manifest`.
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
-| `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Writes a short brief plus side files in `docs/onboarding/`. |
+| `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Asks the repo policy once, then writes a short brief, the project contract and side files in the onboarding pack: `docs/onboarding/`, or a folder outside the repository. Never writes `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. |
 | `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Edits no code and posts nothing. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
@@ -332,7 +374,9 @@ you answer.
 
 ## Project contract
 
-General skills read facts from each project's `AGENTS.md`. The headings are:
+General skills read facts from the project contract. It is the `## Project contract` section of the project's own
+`AGENTS.md` when that exists, or else `contract.md` in the onboarding pack. When both exist and disagree, the skills
+use `AGENTS.md` and mark the fact `conflict:`. The headings are:
 
 - Commands: build, test, lint, and how to confirm the test count is real.
 - Verify: how to run and drive the app.
@@ -340,4 +384,6 @@ General skills read facts from each project's `AGENTS.md`. The headings are:
 - Risk areas: contracts, schema, authorisation, generated files.
 - External systems and owners: each outside system, which endpoints and features depend on it, and who owns it.
 
-`agentd-onboard` fills these in for a new project.
+`agentd-onboard` fills these in for a new project, in `contract.md`. It never writes `AGENTS.md`. An access rule under
+Data access counts only when it cites its source (`told by <role>` or a document). The skills treat any other rule,
+such as one marked `inferred:` or `unknown:`, as no access, and run no query on that environment.

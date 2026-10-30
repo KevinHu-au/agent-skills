@@ -55,6 +55,8 @@ done
 check "AGENTS.md linked" resolves_to "$H/.agents/AGENTS.md" "$REPO/global/AGENTS.md"
 check "rm-scratch linked" resolves_to "$H/.agents/bin/rm-scratch" "$REPO/global/bin/rm-scratch"
 check "rm-scratch runs through the link and prints usage" bash -c 'out=$("$1" 2>&1); [ $? -eq 1 ] && printf "%s" "$out" | grep -q usage' _ "$H/.agents/bin/rm-scratch"
+check "onboarding-pack linked" resolves_to "$H/.agents/bin/onboarding-pack" "$REPO/global/bin/onboarding-pack"
+check "onboarding-pack runs through the link and prints usage" bash -c 'out=$("$1" 2>&1); [ $? -eq 2 ] && printf "%s" "$out" | grep -q usage' _ "$H/.agents/bin/onboarding-pack"
 check "CLAUDE.md linked" resolves_to "$H/.claude/CLAUDE.md" "$REPO/global/claude/CLAUDE.md"
 check "copilot guide resolves to AGENTS.md" resolves_to "$H/.copilot/copilot-instructions.md" "$REPO/global/AGENTS.md"
 check "hook script linked" resolves_to "$H/.copilot/hooks/block-dangerous-shell.sh" "$REPO/hooks/copilot/block-dangerous-shell.sh"

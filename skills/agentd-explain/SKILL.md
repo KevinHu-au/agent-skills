@@ -15,10 +15,17 @@ to the data source. The answer is for the engineer, never the customer. This is 
 - The current folder is inside a git repository. Find its root with `git rev-parse --show-toplevel` and work from
   there.
 - The input is one plain-English question. If it is empty, ask for the question once, then stop.
-- Sources, in this order: `docs/onboarding/README.md` and its glossary; earlier exports in `docs/onboarding/explain/`;
-  user guide documents in the repository; the project contract in `AGENTS.md` (Risk areas, and External systems and
-  owners); then the code. If the onboarding pack or the contract is missing, say so once, as one Gaps line, and carry
-  on from the code.
+- **Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists.
+  Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the
+  engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer
+  gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is
+  the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree,
+  use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a
+  document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+- Sources, in this order: the pack's `README.md` and its glossary; earlier exports in the pack's `explain/` folder;
+  user guide documents in the repository; the project contract (Risk areas, and External systems and owners); then
+  the code. If the onboarding pack or the contract is missing, say so once, as one Gaps line, and carry on from the
+  code.
 - The code wins every conflict. Where a document disagrees with the code, mark `conflict:` with both sources and use
   the code's value. An earlier export is just another document: every claim in it is checked against the code.
 - Detect each stack and read each matching reference: `references/dotnet.md` (`*.sln` or `*.csproj`),
@@ -75,23 +82,28 @@ to the data source. The answer is for the engineer, never the customer. This is 
 
 ## Export
 
-- Only when the engineer asks, after an answer. One file per topic: `docs/onboarding/explain/<topic>.md`, with
-  `<topic>` lowercase with hyphens, for example `invoice-discount`. If the folder is missing,
-  create `docs/onboarding/explain/` and say so.
+- Only when the engineer asks, after an answer. One file per topic: `explain/<topic>.md` in the pack folder, with
+  `<topic>` lowercase with hyphens, for example `invoice-discount`. If the `explain/` folder is missing, create it
+  and say so. With no pack folder, ask the engineer where to write the file. With nobody to answer, skip the export
+  and say so. Never write into the repository without a pack there.
 - The file merges everything answered in this chat on that topic, follow-ups included, in the export shape from the
   template. Its header records the question, the commit (`git rev-parse HEAD`) and the date.
 - If the file exists, ask before replacing it. Yes rewrites the whole file. No skips the export. With nobody to
   answer, skip the export and say so.
 - The line limits are for chat only; the export file has none.
-- If the customer does not want the file committed, give the engineer the exact line to add to `.git/info/exclude`.
-  The skill never edits that file.
+- The export follows the `Repo policy:` line in the pack's `README.md`. With `files committed`, the file is
+  committed with the pack. Otherwise check a new file inside the repository with `git check-ignore -q <file>`. If
+  git does not ignore it: with `files local only`, give the engineer the exact line to add to `.git/info/exclude`.
+  With `unknown`, or with no `Repo policy:` line (a pack from an older version), ask whether the customer allows the
+  file to be committed, and give the line only if not. With nobody to answer, give the line as advice for a customer
+  that allows no committed file. The skill never edits that file.
 - The export is the only write this skill makes.
 
 ## Rules
 
 - Read and search only, except the export above. No build, no tests, no app, no database, no `git log`, no
-  `git blame`. The git commands are `git rev-parse --show-toplevel` for the root and `git rev-parse HEAD` for the
-  export header.
+  `git blame`. The git commands are `git rev-parse --show-toplevel` for the root, `git rev-parse HEAD` for the
+  export header, and `git check-ignore` for the export. `"$HOME/.agents/bin/onboarding-pack" find` finds the pack.
 - No sub-agents. One question, one trail.
 - Always English, also when the question is in another language.
 - Markers: `unknown:` (not found; say who to ask), `inferred:` (worked out, not confirmed; name what is missing: the

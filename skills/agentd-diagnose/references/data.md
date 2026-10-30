@@ -4,7 +4,7 @@ Find why the data is wrong, how far it goes, and whether it is still happening. 
 
 ## Rules for the data
 
-- SELECT only, and only on an environment that the Data access heading of the contract marks read-only. If the heading is missing, run no query. Mark the environment `unknown:` and ask the engineer to add the heading to `AGENTS.md`. The engineer's word in chat does not replace the heading.
+- SELECT only, and only on an environment that the Data access heading of the contract marks read-only. If the heading is missing, or the environment's access rule cites no source, run no query. Mark the environment `unknown:` and ask the engineer to add the rule and its source to the contract (`contract.md` in the pack, or the project's `AGENTS.md`). The engineer's word in chat does not replace the heading.
 - Limit the rows. Ask before you scan a large table or run a query that may lock it.
 - Run a stored procedure or function only when you know it does not write.
 - Put row IDs, counts and date ranges in the report. Never put names, emails, addresses or other personal data in the report or the hand-off. The report is pasted into the ticket. Keep result files in the scratch folder.

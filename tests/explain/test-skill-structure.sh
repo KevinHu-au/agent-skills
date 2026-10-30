@@ -174,7 +174,7 @@ test_empty_input_asks_once() {
 }
 
 test_sources_and_code_wins() {
-  has_all "$SKILL" "docs/onboarding/README.md" "glossary" "docs/onboarding/explain/" "user guide" "AGENTS.md" \
+  has_all "$SKILL" "docs/onboarding/README.md" "glossary" 'the pack'"'"'s `explain/` folder' "user guide" "AGENTS.md" \
     "External systems" "code wins" "conflict:"
 }
 
@@ -250,12 +250,13 @@ test_no_sub_agents() {
 }
 
 test_export_rules() {
-  section_has "$SKILL" Export "only when the engineer asks" "docs/onboarding/explain/" "one file per topic" \
+  section_has "$SKILL" Export "only when the engineer asks" '`explain/<topic>.md` in the pack folder' "one file per topic" \
     "ask before replacing" ".git/info/exclude" "only write"
 }
 
 test_export_creates_the_folder() {
-  section_has "$SKILL" Export 'create `docs/onboarding/explain/`' "say so"
+  section_has "$SKILL" Export 'If the `explain/` folder is missing, create it' "say so" \
+    "With no pack folder, ask the engineer where to write the file" "Never write into the repository without a pack there"
 }
 
 test_export_never_edits_exclude() {
