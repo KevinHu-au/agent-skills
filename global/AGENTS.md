@@ -44,10 +44,10 @@
 
 Applies when a change gets two rounds of independent review (fix, review, fix, review).
 
-- Do not stop after the round 1 review. Apply the fixes you recommend, then start round 2 with a fresh reviewer.
-- After the round 2 review, apply the fixes you recommend.
+- Do not stop after the round 1 review. Apply the fixes you recommend, then start round 2 with a fresh reviewer. Skip round 2 only when every round 1 fix was minor and limited to comments, docs, formatting, behaviour-preserving renames or test-only changes. Say that you skipped it, and why.
+- After the last review round, apply the fixes you recommend.
 - Then stop only if something is still open: a finding from round 1 or round 2 that you did not fix, that you disagree with, or that needs my decision. Show those in a table and work through them with me.
-- If nothing is open after round 2, report what you did and continue.
+- If nothing is open after the last review round, report what you did and continue.
 - Do not start a third round unless I ask.
 - The other rules still apply: ask before you delete anything, and commit only when I say so.
 
