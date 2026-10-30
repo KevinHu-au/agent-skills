@@ -28,7 +28,7 @@ Where to look in a React web app: a `package.json` in the repository, or in a wo
 
 - The data lives in the browser or on a server. Find which: the browser store, the code that writes it, and the API it calls.
 - Find the writers of a stored value: the form handlers, the store actions, the import code. Find the readers too. A `localStorage` key is a string that other code reads, so search for the key as a string.
-- Rows the app writes on the server: find the request that writes them, then the server's handler. The server code is often in another repository: `unknown: ask the <system> owner`.
+- Rows the app writes on the server: find the request that writes them, then the server's handler. The server code is often in another repository: `unknown: ask the <system> owner`, or ask the engineer for its path and read it as SKILL.md, Rules, says.
 - Do not read a customer's browser storage or a production database. Reproduce with synthetic data in a local build only if the contract's Commands or Verify heading allows starting the app. Otherwise mark the fact `unknown:` and give the engineer the steps.
 - Logs, network traces and error-tracking events can hold personal data. Read only what the ticket needs, and quote none of it.
 

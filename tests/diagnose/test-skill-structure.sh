@@ -589,6 +589,14 @@ test_second_repository_hand_off() {
     'Run /agentd-dev-rev in <repository>' 'One block for each repository'
 }
 
+# The React and iOS references offer the second-repository path where the server code is elsewhere.
+test_stack_references_offer_the_second_repository_path() {
+  local f
+  for f in react.md ios.md; do
+    has_all "$REFS/$f" 'ask the engineer for its path and read it as SKILL.md, Rules, says' || return 1
+  done
+}
+
 # The SQL written for a DBA keeps the no-lock, no-write and no-full-count rules.
 test_dba_sql_keeps_the_safe_query_rules() {
   has_all "$REFS/bug.md" 'SKILL.md, Running commands, Data apply to the text of the query' 'SELECT ... INTO' 'FOR UPDATE' \
@@ -684,6 +692,7 @@ check "a second repository is read only with its name before each path" test_sec
 check "a confirmed environment cause has a no-code-fix hand-off" test_environment_cause_has_a_no_code_fix_hand_off
 check "a fix in a second repository gets its own block" test_second_repository_hand_off
 check "the SQL written for a DBA keeps the safe query rules" test_dba_sql_keeps_the_safe_query_rules
+check "the React and iOS references offer the second-repository path" test_stack_references_offer_the_second_repository_path
 
 echo
 echo "passed=$PASS failed=$FAIL"
