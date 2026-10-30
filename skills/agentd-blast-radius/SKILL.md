@@ -22,10 +22,12 @@ The skill needs a change. Take the first of these that the engineer gives:
 
 Read a branch diff with `git diff <base>...HEAD` (three dots, the merge base) and do not switch branches. For the default input, add `git diff --cached`.
 
-Read these from the repository root, even when you started in a subfolder. Read them when they exist, and skip them when they do not:
+**Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists. Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree, use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
 
-1. `AGENTS.md`, the project contract: Commands, Verify, Data access, Risk areas, External systems and owners.
-2. `docs/onboarding/README.md`, as a map of the use cases and code paths. Treat it as a hint. When it disagrees with the code, the code wins.
+Look from the repository root, even when you started in a subfolder. Read these when they exist, and skip them when they do not:
+
+1. The project contract: Commands, Verify, Data access, Risk areas, External systems and owners.
+2. The pack's `README.md`, as a map of the use cases and code paths. Treat it as a hint. When it disagrees with the code, the code wins.
 
 With no project contract, run safe checks only (see Running commands) and mark what you could not run `unknown:`. With no External systems and owners heading, every outside consumer is `unknown:`. Ask who to warn.
 
@@ -49,7 +51,7 @@ With no project contract, run safe checks only (see Running commands) and mark w
 
 The skill runs commands to prove a fact. It lists them first and asks for one confirmation per run. A command that is not on the confirmed list needs its own confirmation. With nobody to confirm, it must be a safe check.
 
-- **Read-only inspection:** reading files, searching, `git log`, `git blame`, `git show` and `git diff` need no confirmation and are not on the run plan.
+- **Read-only inspection:** reading files, searching, `git log`, `git blame`, `git show`, `git diff` and `"$HOME/.agents/bin/onboarding-pack" find` need no confirmation and are not on the run plan.
 - **Safe checks:** a build, and listing or running existing unit tests. A build may restore the packages that the project has declared: say so in the run plan. A unit test that writes only to its own temp folder is safe. So is a proof script in the scratch folder that imports project code and writes only there. Skip a test that uses a configured database or the network, even when it is called a unit test. Safe checks only is the rule when there is no project contract, and when nobody can confirm (a headless run). Mark what you did not run `unknown:` or `inferred:`.
 - **With the contract:** also what its Commands and Verify headings allow on the engineer's machine, such as running integration tests against local containers.
 - **Proposed change:** to run it, export `HEAD` into the scratch folder with `git archive` (not a plain copy, which takes untracked secrets and build output), and copy a file database there if the change touches one. Apply the change to the copy and run against the copy. With no scratch folder, apply it in memory: open a file database read-only and copy it into a memory database, and load the changed source text without writing it to disk.

@@ -19,8 +19,15 @@ over trust. Read the references named in the Flow when you reach that step.
   item once, then stop. A pasted diagnose report, or an intake comment with its engineer block, is extra facts; the
   work item stays the main input. When the engineer block says `Requirement: unconfirmed`, follow its Stop condition.
 - The work item number comes from the paste, else from the branch name. When neither has it, ask.
-- Sources, in this order: `docs/onboarding/README.md`, the project contract in `AGENTS.md` (Data access rules, Risk
-  areas), then the code. If the pack or the contract is missing, say so once and carry on from the code.
+- **Find the project facts.** The onboarding pack is `docs/onboarding/` when `docs/onboarding/README.md` exists.
+  Otherwise it is the folder that `"$HOME/.agents/bin/onboarding-pack" find` prints. If neither finds one, ask the
+  engineer once for the folder, and carry on without a pack if there is none or nobody answers. When the engineer
+  gives a folder, say that `"$HOME/.agents/bin/onboarding-pack" set <folder>` records it. The project contract is
+  the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack. When both exist and disagree,
+  use `AGENTS.md` and mark the fact `conflict:`. A Data access rule counts only when it cites `told by <role>` or a
+  document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
+- Sources, in this order: the pack's `README.md`, the project contract (Data access rules, Risk areas), then the code.
+  If the pack or the contract is missing, say so once and carry on from the code.
 - The references cover T-SQL only. If the project uses another database, say so and ask before writing anything.
 - Scope is data only: change existing rows or add reference data. A schema or code change in the same work item is out
   of scope: list it and do the data part. The script may create parent rows the fix needs when a look query shows them
@@ -69,8 +76,8 @@ over trust. Read the references named in the Flow when you reach that step.
 - This skill never runs a query or a command against any database. It writes every query, the engineer runs it, and the
   engineer pastes any result it needs.
 - It never writes to the repository. The script, the reverse and the placement steps are all in chat.
-- It may run read and search only: no build, no tests, no app, no database. Use git read commands, and `date` for a
-  timestamp file name.
+- It may run read and search only: no build, no tests, no app, no database. Use git read commands,
+  `"$HOME/.agents/bin/onboarding-pack" find`, and `date` for a timestamp file name.
 - Every statement is guarded, so any number of runs changes nothing after the first. Scope by rule, never by IDs copied
   from one environment. Read the safety checklist for the rest.
 - Keep the reverse, the capture query and the pull request notes out of the repository and out of any folder the tool

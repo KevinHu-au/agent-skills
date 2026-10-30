@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+# Find or record where a repository's onboarding pack lives, when the pack is kept outside the repository.
+# Usage: onboarding-pack key     [<repo>]
+#        onboarding-pack suggest [<repo>]
+#        onboarding-pack find    [<repo>]
+#        onboarding-pack set     <pack folder> [<repo>]
+#
+# A pack inside the repository is always docs/onboarding/ and is never recorded here. A customer that allows no
+# file in the repository gets a pack in another folder, and this tool records that folder in a registry file in the
+# engineer's home folder: $HOME/.agents/onboarding-packs.tsv. Each line is <key><TAB><pack folder>. Lines that
+# start with # are comments.
+#
+# The key is the repository's origin URL in one normal form: lower case, with no scheme, user name, password, port,
+# trailing '/' or '.git'. In the scp form (git@host:org/repo) the ':' becomes '/'. So https://user@host/org/repo.git,
+# ssh://git@host:22/org/repo and git@host:org/repo share the key host/org/repo. A repository with no origin uses the
+# absolute path of its main checkout. A linked worktree gets the same key as its main checkout.
+#
+# key      prints the key.
+# suggest  prints a default pack folder made from the key: $HOME/.agents/projects/<key as one name>-<hash>/onboarding.
+#          The hash is the first 8 characters of the key's git hash, so two keys that read alike get two folders.
+# find     prints the recorded pack folder.
+# set      adds the line, or replaces the line with the same key. The folder must be an absolute path to an existing
+#          folder outside the repository, and no other repository may have it recorded. Other lines are kept.
+# Exit status: 0 success, 1 no pack recorded (find), 2 bad usage, 3 the recorded folder does not exist (find),
+#              4 refused (not a repository, the repository cannot be read, or the folder is not allowed).
+set -u
+unset CDPATH
+
+REGISTRY="$HOME/.agents/onboarding-packs.tsv"
+
+die() {
+  printf 'onboarding-pack: %s\n' "$1" >&2
+  exit "${2:-4}"
+}
+usage() {
+  printf 'onboarding-pack: usage: onboarding-pack key|suggest|find [<repo>] | set <pack folder> [<repo>]\n' >&2
+  exit 2
+}
+
+has_bad_char() {
+  case "$1" in
+    *$'\t'* | *$'\n'*) return 0 ;;
+  esac
+  return 1
+}
+
+# main_root <repo>: the absolute path of the main checkout, also from a linked worktree or a subfolder.
+main_root() {
+  local common
+  common=$(cd -P -- "$1" 2>/dev/null && git rev-parse --git-common-dir 2>/dev/null) || return 1
+  common=$(cd -P -- "$1" && cd -P -- "$common" 2>/dev/null && pwd -P) || return 1
+  case "$common" in
+    */.git) printf '%s\n' "${common%/.git}" ;;
+    *) (cd -P -- "$1" && git rev-parse --show-toplevel 2>/dev/null) ;;
+  esac
+}
+
+# normal_url <url>: the URL in the key's normal form.
+normal_url() {
+  local u
+  u=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  # Everything up to the last '@' is a user name and maybe a password, which can hold '@' or '/' itself. A git URL
+  # has no '@' after the host, so dropping up to the last '@' never keeps a secret.
+  if [[ $u =~ ^[a-z][a-z0-9+.-]*:// ]]; then
+    u=${u#*://}
+    u=${u##*@}
+    if [[ $u =~ ^([^/:]+):[0-9]*(/.*)?$ ]]; then u="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"; fi
+  elif [[ $u =~ ^[^/]*: ]] || [[ $u == *@*:* ]]; then
+    u=${u##*@}
+    u=${u/:/\/}
+  fi
+  while [[ $u == */ ]]; do u=${u%/}; done
+  u=${u%.git}
+  while [[ $u == */ ]]; do u=${u%/}; done
+  printf '%s\n' "$u"
+}
+
+# repo_key <repo>: the registry key.
+repo_key() {
+  local url
+  url=$(git -C "$1" config --get remote.origin.url 2>/dev/null) || url=""
+  if [ -n "$url" ]; then
+    normal_url "$url"
+  else
+    main_root "$1"
+  fi
+}
+
+# repo_of [<repo>]: the repository folder to use, or exit 4 when it is not one.
+repo_of() {
+  local repo=${1:-.}
+  [ -d "$repo" ] || die "refused: '$repo' is not a folder"
+  git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || die "refused: '$repo' is not inside a git repository"
+  printf '%s\n' "$repo"
+}
+
+# key_of <repo>: the key, or exit 4.
+key_of() {
+  local k
+  k=$(repo_key "$1") && [ -n "$k" ] || die "refused: cannot read the repository"
+  has_bad_char "$k" && die "refused: the key contains a tab or a newline"
+  printf '%s\n' "$k"
+}
+
+# inside <folder> <root>: true when <folder> is <root> or below it. It compares files, not names, so letter case
+# and symlinks cannot hide a match.
+inside() {
+  local d=$1
+  while :; do
+    [ "$d" -ef "$2" ] && return 0
+    [ "$d" = / ] && return 1
+    d=$(dirname -- "$d")
+  done
+}
+
+[ $# -ge 1 ] || usage
+cmd=$1
+shift
+
+case "$cmd" in
+  key)
+    [ $# -le 1 ] || usage
+    repo=$(repo_of "${1:-}") || exit 4
+    key_of "$repo"
+    ;;
+  suggest)
+    [ $# -le 1 ] || usage
+    repo=$(repo_of "${1:-}") || exit 4
+    k=$(key_of "$repo") || exit 4
+    # A readable name plus a short hash of the whole key, so two keys that read alike still get two folders.
+    name=$(printf '%s' "$k" | tr -c 'A-Za-z0-9._-' '-' | tr -s '-' | sed -e 's/^-*//' -e 's/-*$//')
+    hash=$(printf '%s' "$k" | git hash-object --stdin 2>/dev/null | cut -c1-8)
+    [ -n "$name" ] && [ -n "$hash" ] || die "refused: cannot make a folder name from the key"
+    printf '%s\n' "$HOME/.agents/projects/$name-$hash/onboarding"
+    ;;
+  find)
+    [ $# -le 1 ] || usage
+    repo=$(repo_of "${1:-}") || exit 4
+    k=$(key_of "$repo") || exit 4
+    [ -f "$REGISTRY" ] || die "no pack recorded for $k (no registry file at $REGISTRY)" 1
+    pack=$(K="$k" awk -F '\t' '$0 !~ /^#/ && $1 == ENVIRON["K"] { p = $2 } END { if (p != "") print p }' "$REGISTRY")
+    [ -n "$pack" ] || die "no pack recorded for $k" 1
+    [ -d "$pack" ] || die "the recorded pack folder does not exist: $pack" 3
+    printf '%s\n' "$pack"
+    ;;
+  set)
+    { [ $# -ge 1 ] && [ $# -le 2 ]; } || usage
+    pack=$1
+    repo=$(repo_of "${2:-}") || exit 4
+    has_bad_char "$pack" && die "refused: the folder name contains a tab or a newline"
+    case "$pack" in
+      /*) ;;
+      *) die "refused: '$pack' is not an absolute path" ;;
+    esac
+    [ -d "$pack" ] || die "refused: '$pack' is not an existing folder"
+    pack=$(cd -P -- "$pack" && pwd -P) || die "refused: cannot resolve '$pack'"
+    top=$(cd -P -- "$repo" && git rev-parse --show-toplevel 2>/dev/null) || die "refused: cannot read the repository"
+    root=$(main_root "$repo") || die "refused: cannot read the repository"
+    # The current checkout, the main checkout and every linked worktree of this repository. A separate clone cannot be
+    # seen from here.
+    trees=$(printf '%s\n%s\n' "$top" "$root"; git -C "$repo" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
+    while IFS= read -r t; do
+      [ -n "$t" ] && [ -d "$t" ] || continue
+      if inside "$pack" "$t"; then
+        die "refused: '$pack' is inside a working tree of this repository ($t); a pack in the repository is docs/onboarding/ and is not recorded"
+      fi
+    done <<<"$trees"
+    k=$(key_of "$repo") || exit 4
+    if [ -f "$REGISTRY" ]; then
+      while IFS=$'\t' read -r rk rp; do
+        case "$rk" in '#'* | '') continue ;; esac
+        if [ "$rk" != "$k" ] && [ -d "$rp" ] && [ "$rp" -ef "$pack" ]; then
+          die "refused: '$pack' is already recorded for $rk; give this repository its own folder"
+        fi
+      done <"$REGISTRY"
+    fi
+    dir=${REGISTRY%/*}
+    mkdir -p -- "$dir" || die "refused: cannot create $dir"
+    # Write a new copy next to the registry, then move it over the old one, so a failed write leaves the old file.
+    tmp=$(mktemp "$dir/.onboarding-packs.XXXXXX") || die "refused: cannot write in $dir"
+    if {
+      if [ -f "$REGISTRY" ]; then
+        K="$k" awk -F '\t' '$0 ~ /^#/ || $1 != ENVIRON["K"]' "$REGISTRY"
+      else
+        printf '# onboarding-pack registry: <repository key><TAB><pack folder>. Written by ~/.agents/bin/onboarding-pack.\n'
+      fi
+      printf '%s\t%s\n' "$k" "$pack"
+    } >"$tmp" && mv -f -- "$tmp" "$REGISTRY"; then
+      printf 'onboarding-pack: recorded %s -> %s\n' "$k" "$pack"
+    else
+      die "refused: cannot write $REGISTRY; the new copy is left at $tmp"
+    fi
+    ;;
+  *) usage ;;
+esac

@@ -1,8 +1,9 @@
 <!--
 Project contract, version 1.
 
-Copy the "## Project contract" section into the project's AGENTS.md and fill it in.
-General agent skills read the project's facts from these exact headings. Do not rename them.
+agentd-onboard writes this section to contract.md in the onboarding pack. A project may also keep it in its own
+AGENTS.md; the skills read that copy first. General agent skills read the project's facts from these exact headings.
+Do not rename them.
 
 Rules for filling it in:
 - Cite a source for each fact: `path/to/file:line`, a URL, or "told by <role>".
@@ -11,6 +12,8 @@ Rules for filling it in:
 - When two sources disagree, write both with their sources and mark it `conflict:`. Do not pick one
   silently. Prefer the source closest to the running code (a project file beats a README).
 - Never write secrets. Write where they are kept, for example "LastPass folder X".
+- An access rule under Data access needs "told by <role>" or a document as its source. Never write it as `inferred:`.
+  Skills treat a rule without a source as no access.
 - Keep each answer short. Link to longer documents instead of copying them.
 -->
 

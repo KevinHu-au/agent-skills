@@ -25,7 +25,7 @@ check() {
   fi
 }
 
-REFERENCES="brief-template.md dotnet.md explorer-prompts.md feature-to-code-template.md external-systems.md ios.md react.md safe-checks.md update-mode.md"
+REFERENCES="brief-template.md contract-fill.md dotnet.md explorer-prompts.md feature-to-code-template.md external-systems.md ios.md react.md safe-checks.md update-mode.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -77,7 +77,7 @@ test_reference_file_label_matches_the_list() {
 
 test_required_h2_sections_in_order() {
   [ -f "$SKILL" ] &&
-    [ "$(h2_list "$SKILL" | tr '\n' '|')" = "Prerequisite|Modes|Flow|Safe checks|Markers|Output|Rules|" ]
+    [ "$(h2_list "$SKILL" | tr '\n' '|')" = "Prerequisite|Repo policy and the pack folder|Modes|Flow|Safe checks|Markers|Output|Rules|" ]
 }
 
 test_skill_has_no_absolute_home_paths() {
@@ -309,11 +309,30 @@ test_the_skills_own_output_is_not_a_change() {
     has_all "$SKILL" "The pack itself and build output from safe checks never count"
 }
 
-# The skill never writes to AGENTS.md or CLAUDE.md, and never proposes a contract section for them.
+# The skill never writes to AGENTS.md or CLAUDE.md. It writes the project contract to contract.md in the pack, and
+# an access rule needs a cited source.
 test_the_skill_never_writes_agents_md() {
-  [ ! -e "$REFS/contract-fill.md" ] &&
-    has_all "$SKILL" 'Never create or edit `AGENTS.md` or `CLAUDE.md`, and never propose a section for them' &&
-    ! grep -rqi 'project contract' "$SKILL" "$REFS"
+  has_all "$SKILL" 'Never create or edit `AGENTS.md` or `CLAUDE.md`, and never propose a section for them' \
+    'Put the project contract in `contract.md` in the pack folder' 'references/contract-fill.md' &&
+    has_all "$REFS/contract-fill.md" 'Never create or edit `AGENTS.md` or `CLAUDE.md`' \
+      '`contract.md` in the pack folder' 'Never write an access rule as `inferred:`' 'treat every other rule as no access' &&
+    ! grep -qE 'Write the section `## Project contract` in `AGENTS.md`|ask before creating it' "$REFS/contract-fill.md"
+}
+
+# The repo policy picks the pack folder, and a pack outside the repository is recorded with onboarding-pack.
+test_repo_policy_sets_the_pack_folder() {
+  local policy modes t
+  policy=$(section_of "$SKILL" "Repo policy and the pack folder")
+  modes=$(section_of "$SKILL" Modes)
+  for t in '**committed:**' '**local only:**' '**none:**' 'info/exclude' 'writes nothing into the repository' \
+    '"$HOME/.agents/bin/onboarding-pack" set <folder>' 'Repo policy: tools'; do
+    printf '%s' "$policy" | grep -qF -- "$t" || return 1
+  done
+  for t in '"$HOME/.agents/bin/onboarding-pack" find' 'Exit 3' 'no `Repo policy:` line'; do
+    printf '%s' "$modes" | grep -qF -- "$t" || return 1
+  done
+  has_all "$REFS/brief-template.md" 'Repo policy: tools' &&
+    has_all "$SKILL" 'With the files policy `none`, write nothing in the repository'
 }
 
 test_git_commands_run_from_the_root_and_read_their_output_correctly() {
@@ -372,9 +391,9 @@ echo "agentd-onboard skill structure"
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with 'Use when' and covers onboarding, taking over support and refreshing" test_description_starts_with_use_when_and_covers_the_jobs
 check "SKILL.md is at most 160 lines" test_skill_is_at_most_160_lines
-check "SKILL.md names the nine reference files and each exists" test_every_referenced_file_exists
-check "the reference-file label says nine, the number in REFERENCES" test_reference_file_label_matches_the_list
-check "the seven H2 sections appear in order" test_required_h2_sections_in_order
+check "SKILL.md names the ten reference files and each exists" test_every_referenced_file_exists
+check "the reference-file label says ten, the number in REFERENCES" test_reference_file_label_matches_the_list
+check "the eight H2 sections appear in order" test_required_h2_sections_in_order
 check "SKILL.md has no absolute home paths" test_skill_has_no_absolute_home_paths
 check "brief-template.md H2 sections equal the checker's required sections" test_brief_template_h2s_match_checker
 check "a filled-in brief-template.md passes check-brief.sh" test_filled_brief_template_passes_the_checker
@@ -406,7 +425,8 @@ check "update mode covers a full re-check" test_update_mode_handles_a_full_reche
 check "a finding is not a conflict" test_a_finding_is_not_a_conflict
 check "Modes name the Flow step they mean, not a bare step number" test_update_mode_names_the_flow_step_it_means
 check "the skill's own output is not counted as a change" test_the_skills_own_output_is_not_a_change
-check "the skill never writes AGENTS.md or proposes a contract section" test_the_skill_never_writes_agents_md
+check "the skill never writes AGENTS.md and writes the contract to contract.md in the pack" test_the_skill_never_writes_agents_md
+check "the repo policy sets the pack folder and a pack outside the repository is recorded" test_repo_policy_sets_the_pack_folder
 check "git commands run from the root and their output is read correctly" test_git_commands_run_from_the_root_and_read_their_output_correctly
 check "a user guide for a feature maps to Use cases" test_a_user_guide_for_a_feature_maps_to_use_cases
 check "update mode step 4 does not contradict itself" test_update_mode_step_4_does_not_contradict_itself
