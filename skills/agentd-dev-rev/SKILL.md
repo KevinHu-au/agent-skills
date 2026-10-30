@@ -182,9 +182,9 @@ Output:
 | --- | --- |
 | Claude Code | Use a separate Task/review agent if available. Select the strongest model it offers and high effort. |
 | Copilot CLI | Use a separate review-capable task agent. Select the strongest model it offers and high reasoning effort, when the tool supports it. |
-| Other harness | Use its independent-agent mechanism only if it can enforce the model floor and effort. Otherwise stop and report the blocker. |
+| Other harness | Use its independent-agent mechanism only if it can select the strongest model and high effort. Otherwise stop and report the blocker. |
 
-The key invariant is independence plus model floor. "Fast reviewer", "same-agent review", "manual inspection", and "review after commit" are not equivalent.
+The key invariant is independence plus the strongest available model. "Fast reviewer", "same-agent review", "manual inspection", and "review after commit" are not equivalent.
 
 ## Triage Rules
 
@@ -222,7 +222,7 @@ Any red flag means stop and return to the hard rules.
 | Treating tests-after as equivalent to TDD | Prefer failing test first when practical; explain exceptions. |
 | Skipping Round 2 after fixing a blocker or major finding, or a minor fix that changed production logic | Restage and review once more. |
 | Starting Round 2 after only minor fixes that did not change production logic | Skip it, re-run validation, and report the skip in the handoff. |
-| Treating low-capability review as acceptable fallback | Stop and report the missing required reviewer. |
+| Using a weaker model or the same agent when no suitable reviewer exists | Stop and tell the engineer that no separate reviewer at the strongest model is available. |
 | Silently accepting product/backcompat decisions | Ask the engineer. |
 | Hiding disagreed claims | Report them with evidence. |
 | Changing a `Do not change` item, or going past a stop condition, from a pasted block | Stop and report to the engineer. |
