@@ -16,6 +16,15 @@ Where to look in a .NET project. These notes come from general knowledge of the 
 - Async: a blocked `.Result` or `.Wait()`, and a task nobody awaits.
 - Configuration: `appsettings.<Environment>.json`, user secrets and environment variables differ between machines. Name the key, never the value.
 
+## Production dumps
+
+The engineer takes a dump and runs the tools. Install nothing, and run nothing against a live process. If a tool is missing, say so and give the engineer the command. A dump can hold secrets and personal data in memory. Ask for the findings, and never repeat a value from the dump in the report.
+
+- **Crash or hang dump:** ask the engineer to run `dotnet-dump analyze <file>` and paste the output of these commands: `clrthreads`, `pe` (the last exception), `clrstack` for the failing thread, and `dumpheap -stat` for memory problems. For a hang, add `syncblk` and `clrstack -all`.
+- **A Windows dump of a .NET Framework process** opens in WinDbg or Visual Studio. Ask for the same facts: the exception, the stack of each thread and the locked objects.
+- **What to write down:** the exception type, the top frames with `path:line` when symbols exist, and the runtime and the app version. Write the message only after you remove names, emails, IDs and user paths from it, or describe it in your own words.
+- **Tier:** a dump shows what the process did. It is `supported` until a local run built from the same inputs produces the failure.
+
 ## Data candidates
 
 - Find the writers of a table: the entity mapping, stored procedures, triggers, DbUp or migration scripts, and jobs. On SQL Server, `SELECT` from `sys.sql_modules` where `definition` contains the table name lists the procedures and triggers that mention it. To size a table without scanning it, read `sys.partitions` (the `rows` column of the heap or clustered index), not `count(*)`.
