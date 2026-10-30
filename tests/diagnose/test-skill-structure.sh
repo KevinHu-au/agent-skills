@@ -439,9 +439,42 @@ test_the_skill_files_name_no_outside_skill() {
 }
 
 test_the_borrowed_debugging_ideas_are_in_the_references() {
-  has_all "$REFS/bug.md" 'whole error' 'working case' 'backward' 'fixed sleep' 'git archive' 'git stash' &&
+  has_all "$REFS/bug.md" 'whole error' 'working case' 'backward' 'fixed sleep' 'worktree' 'git stash' &&
     has_all "$REFS/data.md" 'good rows' 'stages' 'cannot read' &&
-    has_all "$REFS/performance.md" 'Time each layer' 'fast case' 'git archive'
+    has_all "$REFS/performance.md" 'Time each layer' 'fast case' 'worktree'
+}
+
+# Old commits run in a worktree in the scratch folder. Bisect runs only there, with a script that exits 0, 1 or 125 and
+# fails for the ticket's own reason, and it ends with a reset that takes no options. git archive is the fallback.
+test_old_commits_use_a_worktree_and_bisect_runs_only_there() {
+  local r b
+  r=$(section_of "$SKILL" 'Running commands' | grep -F -- '- **Old commits:**')
+  for t in 'git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-<name> <ref>' 'turns off the repository' \
+    'submodule update --init' 'it needs the network' 'Without `git-lfs`, large files stay pointers' '.git/worktrees/' \
+    "writes the submodule entries into the repository's \`.git/config\`" \
+    'list each `git worktree add`, the submodule update, any `git bisect` and each `git worktree remove --force <scratch>/wt-<name>`' \
+    'fails at setup' 'Do not fall back to `git archive` then' 'Never remove any other worktree' \
+    'Never run `git worktree prune`' 'Never check out, stash or bisect in the repository itself' \
+    'With no scratch folder, read old files with `git show <ref>:<path>`' \
+    'Only if the `git worktree` command is unavailable or unsupported' 'no submodules, no LFS content and no `.git`'; do
+    printf '%s\n' "$r" | grep -qiF -- "$t" || return 1
+  done
+  # Each worktree is removed before the scratch folder, and prune is never an instruction to run.
+  [[ "${r%%remove the scratch folder*}" == *'run `git worktree remove --force` on each worktree you added'* ]] || return 1
+  local f
+  for f in "$SKILL" "$REFS/bug.md" "$REFS/performance.md"; do
+    [ "$(grep -o 'git worktree prune' "$f" | wc -l)" -eq "$(grep -o 'Never run `git worktree prune`' "$f" | wc -l)" ] || return 1
+  done
+  section_of "$SKILL" 'Running commands' | grep -qF 'Delete nothing else, except the worktrees that Old commits adds and removes' || return 1
+  b=$(grep -F 'bisect in a worktree of its own' "$REFS/bug.md")
+  for t in 'git -c core.hooksPath=/dev/null -C <scratch>/wt-bisect bisect start <bad> <good>' 'bisect run <script>' \
+    'with the `git archive` fallback or no scratch folder, do not bisect' 'exits 125 if that fails' 'exits 0 for good, 1 for bad, and 125' \
+    "must fail for the ticket's own reason" 'on its parent' '<scratch>/wt-bisect bisect reset`, with no options' 'not why' \
+    'every remaining commit is skipped' 'do not name the nearest commit' 'means the first parent'; do
+    printf '%s\n' "$b" | grep -qF -- "$t" || return 1
+  done
+  has_all "$REFS/bug.md" 'Never run `git checkout`, `git stash` or `git bisect` in the repository itself' &&
+    ! grep -qF 'git bisect` in the repository.' "$REFS/bug.md"
 }
 
 test_narrow_has_the_working_case_the_boundary_check_and_the_design_concern() {
@@ -693,6 +726,7 @@ check "a confirmed environment cause has a no-code-fix hand-off" test_environmen
 check "a fix in a second repository gets its own block" test_second_repository_hand_off
 check "the SQL written for a DBA keeps the safe query rules" test_dba_sql_keeps_the_safe_query_rules
 check "the React and iOS references offer the second-repository path" test_stack_references_offer_the_second_repository_path
+check "old commits use a worktree, and bisect runs only there" test_old_commits_use_a_worktree_and_bisect_runs_only_there
 
 echo
 echo "passed=$PASS failed=$FAIL"
