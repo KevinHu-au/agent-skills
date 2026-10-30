@@ -23,7 +23,7 @@ check() {
 }
 
 # The skills that read the onboarding pack or the project contract.
-READERS="agentd-diagnose agentd-blast-radius agentd-pr-review agentd-data-fix agentd-intake agentd-explain agentd-verify-init"
+READERS="agentd-diagnose agentd-blast-radius agentd-pr-review agentd-data-fix agentd-intake agentd-explain agentd-verify-init agentd-dev-rev"
 
 # paragraph <file>: the "Find the project facts" paragraph on one line, with any list mark and indent removed. It ends
 # at a blank line, the next list item or a heading.
