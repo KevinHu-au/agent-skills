@@ -16,15 +16,9 @@ in the verify skill's folder, so a committed skill carries them.
 - The scripts folder is the folder the project's migration tool runs scripts from.
 - No customer values in a usage example. A usage example in a contract or a helper header shows `<ticket>`, and never a
   real work item number.
-- Write `${name}?` (braces) whenever a variable is followed by `?` in a string. PowerShell 7 reads `"$name?"` as a
-  variable called `name?`. This only fails at run time, so a parse check does not catch it.
-- Helpers set strict mode. Test that the key exists first, before a read of an optional key from a settings file, such
-  as the role override list. A missing key is an error under strict mode.
 - A parse check is not enough. After it, run each helper once with its prerequisites missing (no container, no
   state). It must stop with its own `blocked:` message instead of a shell error. This is a run-time smoke check
   and does not start Docker. It applies to every helper except the shared file that is only sourced.
-- A helper that runs a query in the container must wrap query results in `@()` before indexing or counting. PowerShell turns a
-  one-row result into a plain string, so the count prints its first character and a `.Count` read fails.
 - Privacy: the browser tool's open output prints the full authorize URL (tenant and client IDs), its network output
   prints the Authorization header, and a saved response can hold the signed-in person's name. Filter these from tool
   output before it reaches notes or the report. Doctor output follows the same rule. Evidence files are the only place
@@ -34,11 +28,14 @@ in the verify skill's folder, so a committed skill carries them.
 
 The contracts of the helpers that depend on the stack sit in the reference for that stack. Load the reference, then give each helper its contract.
 
-- `db-start.ps1` and `db-restore.ps1`: `references/sqlserver-docker.md`.
-- `dbup-run.ps1` and `api-start.ps1`: `references/dotnet.md`.
-- `ui-start.ps1`: `references/react.md`.
+- `db-start.ps1` and `db-restore.ps1`: `references/sqlserver-docker.md`. For LocalDB, `db-start.ps1` is in `references/sqlserver-localdb.md` instead.
+- `dbup-run.ps1` and `api-start.ps1`: `references/dotnet.md`. For .NET Framework, `api-start.ps1` is in `references/dotnet-framework.md` instead.
+- `ui-start.ps1`: `references/react.md`. For an iOS app, `ui-start.ps1` is in `references/ios.md` instead, and the app has no `api-start.ps1` of its own.
+- `doctor.ps1`: this file. For an iOS app, the Doctor section of `references/ios.md` replaces it.
 
 An entry applies only when its reference was loaded. For any other stack, use the next section.
+
+The rules for the shell that runs the helpers are in `references/host-powershell.md` (PowerShell) or `references/host-shell.md` (bash or zsh).
 
 ## When no reference matches
 
@@ -47,7 +44,7 @@ A stack with no matching reference still needs all the helpers it uses. Write ea
 - A start helper refuses to start when a process this run did not start already holds the port. It names the process.
 - A helper that needs a dependency that is missing stops with `blocked: <reason>` and prints the fix command. It never runs the command itself. The fix command must not change tracked files.
 - A helper never falls back to a settings file for a connection string.
-- A helper that runs the migrations or starts the API refuses to run unless the connection environment variable is set and names the container's host and port.
+- A helper that runs the migrations or starts the API refuses to run unless the connection source names the per-ticket database: the connection environment variable is set and names the container's host and port, or, for an app that reads a settings file of the engineer's own, the engineer has confirmed that the file points at the per-ticket database, and the helper has recorded it as `connectionConfirmedFor` in `state.json`.
 
 ## state.json
 
@@ -88,7 +85,7 @@ State, hashing and the evidence folder. It is dot-sourced by the other helpers a
 - `LocalOnlyFiles`: the list of local-only files. `Get-AppFingerprint` leaves them out. Nothing else reads their content.
 - `New-EvidenceFolder`: parameters: ticket. Creates `~/.<app>-verify/<ticket>/<timestamp>/` and prints its path.
 - Rule: it creates and reads, and never removes anything. It records the new path in `state.json` as `evidenceFolder`.
-- `state.json` has the launch keys (the process IDs of the API and UI and of their launchers, and the wanted roles) only
+- `state.json` has the launch keys (the process IDs of the API and UI and of their launchers, the wanted roles, and `connectionConfirmedFor`) only
   after a launch writes them. The state reader must default every launch key to null when it is missing.
 
 ## doctor.ps1
