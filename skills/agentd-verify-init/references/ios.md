@@ -44,7 +44,7 @@ On iOS this section replaces the `doctor.ps1` contract in `templates/helpers.md`
 
 ## Three-way match on iOS
 
-On iOS the three-way match has two legs, the screen and the database. The iOS app has no browser network log, so the API leg is `unknown:`. It goes under Not verified in the report, and it does not make the result `blocked`. This replaces, for an iOS app only, the rule that a three-way leg for a ticket value that was not done makes the result `blocked`. A ticket value that is not checked on the screen and in the database still does.
+On iOS the three-way match has two legs, the screen and the database. The iOS app has no browser network log, so the API leg is `unknown:`. It goes under Not verified in the report, and it does not make the result `blocked`. This replaces, for an iOS app only, the rule that a three-way leg for a ticket value that was not done makes the result `blocked`. A ticket value that is not checked on the screen and in the database still does. When the `API:` line says `debug token`, the engineer runs the API call in their own terminal. The verifier gives them one read-only `curl` command: a GET request with the token written as `<token>`. The verifier never asks for the token, never has the token, and never saves or prints it. The engineer pastes back the response value. Compare it as the third leg. The response can hold customer data, so keep only the compared value in the report. If the engineer does not paste the value, or the line has no `debug token`, the API leg is `unknown:`.
 
 ## Evidence and privacy
 
