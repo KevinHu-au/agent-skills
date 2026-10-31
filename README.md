@@ -167,6 +167,12 @@ The `agentd-dev-rev` skill has a structure test in `tests/dev-rev/`. It reads th
 tests/dev-rev/test-skill-structure.sh
 ```
 
+The `agentd-handoff` skill has a structure test in `tests/handoff/`. It reads the skill file and writes nothing.
+
+```bash
+tests/handoff/test-skill-structure.sh
+```
+
 The `agentd-pr-prep` skill has a structure test in `tests/pr-prep/`. It reads the skill file and writes nothing.
 
 ```bash
@@ -355,6 +361,7 @@ own words. Superpowers is also listed in `setup.manifest`.
 | `agentd-dev-rev` | Build a change with TDD, stage it, and get up to two independent review rounds. Reads the diagnose, blast-radius and intake blocks when pasted, and asks a few questions when run alone. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
+| `agentd-handoff` | Stop a long task and continue later. Shows the next steps for you to correct, then writes one dated file (`<date>-<task-slug>.md`) with the status so far, the next steps, the resume command for the session and a fresh-start prompt. The folder follows the repo policy. Edits no code and never commits. |
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Asks the repo policy once, then writes a short brief, the project contract and side files in the onboarding pack: `docs/onboarding/`, or a folder outside the repository. Never writes `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. Proposes the remote default branch as the base and asks. Follows the repository's PR template when it has one. Adds Root cause and Risks only from a pasted diagnose or blast-radius block, and a work item link when the number is known. |
@@ -385,6 +392,7 @@ onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> v
 
 explain: a side tool, run any time
 pr-review: a side tool, run when you are the approver of a teammate's PR
+handoff: a side tool, run when you stop a task and want to continue later
 data-fix: after intake or diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
 blast-radius: only when the change touches a contract, schema, shared code or an external system
 ```
