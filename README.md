@@ -173,6 +173,12 @@ The `agentd-handoff` skill has a structure test in `tests/handoff/`. It reads th
 tests/handoff/test-skill-structure.sh
 ```
 
+The `agentd-resume` skill has a structure test in `tests/resume/`. It reads the skill file and the `agentd-handoff` skill, and writes nothing.
+
+```bash
+tests/resume/test-skill-structure.sh
+```
+
 The `agentd-pr-prep` skill has a structure test in `tests/pr-prep/`. It reads the skill file and writes nothing.
 
 ```bash
@@ -366,6 +372,7 @@ own words. Superpowers is also listed in `setup.manifest`.
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Asks the repo policy once, then writes a short brief, the project contract and side files in the onboarding pack: `docs/onboarding/`, or a folder outside the repository. Never writes `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. Proposes the remote default branch as the base and asks. Follows the repository's PR template when it has one. Adds Root cause and Risks only from a pasted diagnose or blast-radius block, and a work item link when the number is known. |
 | `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Edits no code and posts nothing. |
+| `agentd-resume` | Continue a task that `agentd-handoff` stopped. Reads the hand-off file, checks the branch, commit and working tree against it, reports what matches and what differs, and starts on the next steps only after you agree. Never fixes a mismatch and never commits. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
 | `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. It has references for .NET Core and .NET Framework (on IIS Express), SQL Server in Docker or LocalDB, React web apps and iOS apps, with helpers in PowerShell or bash. Only the .NET Core, Docker and React path has been run end to end. The rest is written from general knowledge and one iOS prototype. |
 
@@ -393,6 +400,7 @@ onboard (once per project) -> intake -> diagnose -> blast-radius -> dev-rev -> v
 explain: a side tool, run any time
 pr-review: a side tool, run when you are the approver of a teammate's PR
 handoff: a side tool, run when you stop a task and want to continue later
+resume: run first in the new session to continue a handoff
 data-fix: after intake or diagnose, for a work item that needs a data fix; a live cause goes on to dev-rev
 blast-radius: only when the change touches a contract, schema, shared code or an external system
 ```
