@@ -160,6 +160,25 @@ test_external_systems_has_method_limits_and_record() {
     "inferred:" "unknown: ask the" "owner" "direction" "protocol" "failure behaviour" "local test"
 }
 
+test_dotnet_reference_separates_framework_and_core() {
+  local d="$REFS/dotnet.md"
+  grep -qF 'it says how to tell .NET Framework from .NET Core' "$SKILL" &&
+    has_all "$d" "## Which kind of project" "## What differs on .NET Framework" &&
+    section_of "$d" "Which kind of project" | grep -qF 'TargetFrameworkVersion' &&
+    section_of "$d" "Which kind of project" | grep -qF 'netstandard2.0' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'Global.asax' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'packages.config' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'ApiController' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'system.serviceModel' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF '__MigrationHistory' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'vstest.console.exe' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'DelegatingHandler' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF '*.tt' &&
+    section_of "$d" "What differs on .NET Framework" | grep -qF 'WebClient' &&
+    section_of "$d" "Which kind of project" | grep -qF 'Web Site project' &&
+    grep -qF '*.vbproj' "$d" && grep -qF '/ListTests' "$REFS/safe-checks.md" && grep -qF -- '--explore' "$REFS/safe-checks.md"
+}
+
 test_dotnet_reference_names_where_to_look() {
   has_all "$REFS/dotnet.md" "*.csproj" "TargetFramework" "Route" "Authorize" "IHostedService" "AddHttpClient" \
     "appsettings" "DbUp" "migrations" "stored procedures"
@@ -402,6 +421,7 @@ check "safe-checks.md lists the forbidden commands" test_safe_checks_lists_forbi
 check "SKILL.md, explorer-prompts.md and brief-template.md name the four markers" test_references_name_the_four_markers
 check "external-systems.md has method, limits and the per-system record" test_external_systems_has_method_limits_and_record
 check "dotnet.md names where to look in a .NET project" test_dotnet_reference_names_where_to_look
+check "dotnet.md separates .NET Framework from .NET Core" test_dotnet_reference_separates_framework_and_core
 check "ios.md names where to look in an iOS project" test_ios_reference_names_where_to_look
 check "react.md names where to look in a React project" test_react_reference_names_where_to_look
 check "update-mode.md has the eight steps, in order" test_update_mode_has_the_eight_steps_in_order

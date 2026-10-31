@@ -315,7 +315,7 @@ test_dotnet_reference_splits_framework_and_core() {
   # SKILL.md sends the reader to the right part.
   grep -qF 'the common part, and the part for .NET Framework or .NET Core' "$SKILL" &&
     section_has "$d" "Which kind of project" 'TargetFrameworkVersion' 'TargetFramework' 'net48' 'netcoreapp3.1' 'net8.0-windows' \
-      'TargetFrameworks' 'netstandard2.0' 'Windows service' &&
+      'TargetFrameworks' 'netstandard2.0' 'Windows service' 'skip the IIS' 'Web Site project' &&
     section_has "$d" "Common to both" 'Hangfire' 'Quartz' 'NServiceBus' 'MassTransit' 'TypeNameHandling' 'BinaryFormatter' \
       'ContextKey' 'PropertyNamingPolicy' 'sys.partitions' 'ToQueryString' 'sys.sql_modules' &&
     section_has "$d" "$fw" 'Global.asax' 'web.config' 'packages.config' 'App_Start' 'Entity Framework 6' '__MigrationHistory' \

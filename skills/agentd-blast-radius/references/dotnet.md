@@ -4,14 +4,15 @@ Where to look in a .NET project. These notes come from general knowledge of the 
 
 ## Which kind of project
 
-Read the target in each `.csproj`.
+Read the target in each project file (`.csproj` or `.vbproj`).
 
 - .NET Framework: `<TargetFrameworkVersion>v4.8</TargetFrameworkVersion>` (an older project file that lists every source file), or `<TargetFramework>net48</TargetFramework>` and the other `net4*` values. It is usually ASP.NET MVC or Web API 2 on IIS.
 - .NET Core: `net5.0`, `net6.0` and later, and the older `netcoreapp1.x` to `netcoreapp3.1`. A suffix such as `net8.0-windows` is still .NET Core. A project can list several in `<TargetFrameworks>`: it is each kind that the list names.
-- Not every project is a web host. A `net4*` Windows service, a WinForms or WPF application and a console tool have no IIS, `Global.asax` or MVC. Read only the parts of the Framework section that fit what the project is.
-- `netstandard2.0` and `netstandard2.1` are class libraries that either kind can load. Find the projects that reference the library (search `ProjectReference` and the package name), and read the part for each kind that runs it. A change in the library can break both hosts.
+- Not every project is a web host. A `net4*` Windows service, a WinForms or WPF application and a console tool have no IIS, `Global.asax` or MVC. Read only what fits the project.
+- A Web Site project has no project file. Read `targetFramework` on the `compilation` element in `web.config`. It is .NET Framework.
+- `netstandard2.0` and `netstandard2.1` are class libraries that either kind can load. Find the projects that reference the library (search `ProjectReference` and the package name), and read the guidance for each kind that runs it. A change in the library can break both hosts.
 
-A solution can hold both kinds. Read the common part, then the part for each kind that the change touches or that runs the changed code.
+A solution can hold both kinds. Read the common part, then the part for each kind that the change touches or that runs the changed code. For a Windows service, a desktop application or a console tool, skip the IIS, `Global.asax` and MVC notes in the Framework part.
 
 ## Common to both
 
