@@ -41,3 +41,11 @@ Load this file in Flow step 4, when a `package.json` in the repository, includin
 - A browser may block a second download or ask where to save it. Set the download folder to the evidence folder for the run.
 - Read the file after the download. For a spreadsheet, compare a few cells with the screen and the API.
 - Report the file name and the cells checked. Never paste customer values into a feature file.
+
+## ui-start.ps1
+
+Parameters: ticket. Starts the UI dev server and waits until the port answers an HTTP request. Prints the URL and the
+process ID, and saves the process ID in `state.json`. Refuse when a process this run did not start holds the port.
+
+- When a dependency is missing, it stops with `blocked: <reason>` and prints the fix command. It never runs the command
+  itself. The fix command must not change tracked files (for npm, `npm ci`, never `npm install`).

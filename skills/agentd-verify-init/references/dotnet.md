@@ -1,6 +1,6 @@
-# .NET backends with SQL Server
+# .NET backends
 
-Load this file in Flow step 5, when the repository has `*.sln` or `*.csproj` files. It says how the helpers start the API and the database for a .NET project. These notes come from general knowledge of the platform. They are not yet checked on a project. Treat each row as a place to look first, not a guarantee. Mark a recipe built only from these notes `inferred:`.
+Load this file in Flow step 5, when the repository has `*.sln` or `*.csproj` files. It says how the helpers start the API and run the migrations for a .NET project. For a SQL Server database, `references/sqlserver-docker.md` says how the database starts. The `dbup-run.ps1` and `api-start.ps1` contracts and the Doctor section assume the database from the database reference (today, SQL Server in a container). For another database, write these checks for that database and mark them `inferred:`. These notes come from general knowledge of the platform. They are not yet checked on a project. Treat each row as a place to look first, not a guarantee. Mark a recipe built only from these notes `inferred:`.
 
 ## Environment variables
 
@@ -21,27 +21,38 @@ Load this file in Flow step 5, when the repository has `*.sln` or `*.csproj` fil
 - Record the hash of a branch script only after the runner log shows that script ran.
 - Run the runner with the connection string of the container as an environment variable.
 
-## Database in Docker
-
-- Use the SQL Server image the integration tests use. Read its tag from the test fixture. Use `mssql/server`, which has `sqlcmd`, never `azure-sql-edge`.
-- One container per ticket, with a unique name and its own host port. Do not use 1433.
-- Make the `sa` password per container. Store it only in the container configuration, and read it back with `docker inspect`. Never write it to a file in the repository.
-- On Apple Silicon, turn on Rosetta in Docker Desktop and pull the `linux/amd64` image. Put these steps in the Gotchas of the generated skill. Add the `--platform linux/amd64` flag to `docker run`.
-- Wait until `sqlcmd` can run a query before starting the runner. An open port is not enough.
-
-## Bacpac
-
-Use a test-environment `.bacpac` only when the ticket needs specific data. Ask the engineer for its path at run time. Never write a path to a file in the repository.
-
-1. Find `SqlPackage` by the `SQLPACKAGE_PATH` environment variable, then on `PATH`. If it is not on PATH, ask the engineer to set the variable. An agent shell does not load the profile that adds the tool.
-2. Import the bacpac into the container with `SqlPackage /Action:Import`.
-3. Before the upgrade, run the journal check with a read-only SELECT on the journal table. Read the journal's name format from the runner code (embedded scripts are often journalled as `<Project>.<Folder>.<file>.sql`, not as paths), and map each branch script path to that name before the compare. Build the base script list with `git ls-tree -r --name-only <merge-base sha> <scripts folder>`. If the journal already lists a branch script (a script the branch adds or changes), the test environment ran an earlier version of it and the runner would skip it. The result is `blocked`. The engineer picks an older bacpac or another data source.
-4. List journal entries that are on neither the base nor the branch under Environment and under Not verified.
-5. Run the runner in upgrade mode, never reset. A reset flag (`--reset`) drops the database and the imported data with it.
-
 ## Doctor
 
 - A project may have no health endpoint and no anonymous route. Say so in the Gotchas.
 - With no health endpoint, check four things: the ports answer, the signed-in API user and its roles, the container is running, and the database target.
 - Run `SELECT DB_NAME(), @@SERVERNAME` through the API's own connection or the container, and report both values. Do not report what a settings file says.
 - Refuse to drive an API or UI this run did not start. Say which process holds the port.
+
+## dbup-run.ps1
+
+Parameters: ticket, scripts project folder, merge-base sha, scripts folder. Runs the migration tool in upgrade mode from
+its own project folder and prints the log lines that name each script that ran. It runs on every run, after
+`db-start.ps1`, and after `db-restore.ps1` when that ran. It never takes the place of the bacpac journal check.
+
+- Rule: it must refuse to run unless the connection environment variable is set and names the container's host and
+  port. It must never fall back to a settings file, because a settings file can name the engineer's own database.
+- Pass the connection string as an environment variable. Never read or print its value.
+- After the log shows a branch script ran, record its hash in `state.json`. Not before. Find the branch scripts with
+  `Get-BranchScripts`. The helper drops the entries of removed scripts, and writes `appFingerprint` after a successful run.
+- Scripts the tool re-runs on every run are not hashed.
+- The "DbUp scripts applied" number in the Environment line is the journal row count, read from the database with
+  `SELECT COUNT(*)` on the journal table after the run. It is not a count of lines in the log that the helper printed.
+
+## api-start.ps1
+
+Parameters: ticket, roles (a list, or `default`). Starts the API with the container's connection string and the wanted
+roles in environment variables. Prints the port and the process ID, and saves the process ID in `state.json`.
+
+- Rule: it must refuse to run unless the connection environment variable is set and names the container's host and
+  port. It never falls back to a settings file.
+- Roles: for k wanted roles and N entries in the settings JSON, set indexes 0..max(N,k)-1, cycling through the k roles.
+  Read N from the JSON files only. A role change restarts the API.
+- Refuse to start when something this run did not start already holds the port. Name the process.
+- It must not require the plain-HTTP port when the UI only calls the secure port. Pass `--urls` for the secure port
+  only. When it refuses, it names the process that holds a port. Some systems hold a fixed port: macOS holds port 5000
+  for AirPlay Receiver.
