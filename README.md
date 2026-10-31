@@ -353,7 +353,7 @@ own words. Superpowers is also listed in `setup.manifest`.
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. Proposes the remote default branch as the base and asks. Follows the repository's PR template when it has one. Adds Root cause and Risks only from a pasted diagnose or blast-radius block, and a work item link when the number is known. |
 | `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Edits no code and posts nothing. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
-| `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. |
+| `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. It has references for .NET Core and .NET Framework (on IIS Express), SQL Server in Docker or LocalDB, React web apps and iOS apps, with helpers in PowerShell or bash. Only the .NET Core, Docker and React path has been run end to end. The rest is written from general knowledge and one iOS prototype. |
 
 Every skill sets `disable-model-invocation: true`. The model never starts one on its own, so run a skill by
 typing `/skill-name`. This field is a Claude Code feature.
