@@ -156,7 +156,9 @@ test_asks_tool_and_commit() {
 }
 
 test_committed_file_rules() {
-  section_has "$SKILL" Rules "no personal paths" "no secrets" "no customer values" "environment variable" "docker inspect"
+  section_has "$SKILL" Rules "no personal paths" "no secrets" "no customer values" "environment variable" \
+    "no password is written to a file" "the database reference says how" "one container per ticket" \
+    "its own host port"
 }
 
 test_never_types_credentials() {
@@ -246,7 +248,7 @@ h2_exact() {
 }
 
 test_dotnet_reference_h2s_exact() {
-  h2_exact "$REFS/dotnet.md" "Environment variables|Migrations|Database in Docker|Bacpac|Doctor"
+  h2_exact "$REFS/dotnet.md" "Environment variables|Migrations|Doctor|dbup-run.ps1|api-start.ps1"
 }
 
 test_dotnet_reference_names_where_to_look() {
@@ -254,17 +256,60 @@ test_dotnet_reference_names_where_to_look() {
   has_all "$f" "general knowledge" "not yet checked on a project" &&
     section_has "$f" "Environment variables" "__" "role override" "array index" "max(N,k)" "user secrets" &&
     section_has "$f" Migrations "DbUp" "EF Core" "journal" "SchemaVersions" &&
-    section_has "$f" "Database in Docker" "Rosetta" "amd64" &&
-    section_has "$f" Bacpac "SqlPackage" "bacpac" "upgrade" "never reset" "SQLPACKAGE_PATH" "not on PATH" &&
     section_has "$f" Doctor "DB_NAME()" "no health endpoint"
 }
 
+test_helpers_template_covers_a_stack_without_a_reference() {
+  section_has "$HP" "When no reference matches" "mark the helper" "inferred:" \
+    "refuses to start when a process this run did not start already holds the port" \
+    "stops with \`blocked: <reason>\` and prints the fix command" "never falls back to a settings file" \
+    "refuses to run unless the connection environment variable is set and names the container's host and port"
+}
+
+test_database_reference_states_its_dependency_on_the_migration_runner() {
+  has_all "$DBA" "references/dotnet.md" "dbup-run.ps1" "another runner" "inferred:"
+}
+
+test_dotnet_reference_says_the_helper_contracts_follow_the_database_reference() {
+  has_all "$DN" "assume the database from the database reference" "for another database" "inferred:" &&
+    ! grep -qx '# .NET backends with SQL Server' "$DN"
+}
+
+# finding 8: every helper has exactly one contract, in the file that the index names
+test_every_helper_has_one_contract_in_the_indexed_file() {
+  local spec h want f n
+  # <helper>:<the file that holds its contract>
+  for spec in "common:$HP" "doctor:$HP" "cleanup:$HP" "db-start:$DBA" "db-restore:$DBA" \
+    "dbup-run:$DN" "api-start:$DN" "ui-start:$RX"; do
+    h=${spec%%:*}
+    want=${spec#*:}
+    for f in "$HP" "$DN" "$DBA" "$RX"; do
+      n=$(grep -c -F -x "## $h.ps1" "$f")
+      if [ "$f" = "$want" ]; then [ "$n" -eq 1 ] || return 1; else [ "$n" -eq 0 ] || return 1; fi
+    done
+  done
+  section_has "$HP" "When no reference matches" "all the helpers" || return 1
+  section_has "$HP" "Where the other contracts live" '`db-start.ps1` and `db-restore.ps1`: `references/sqlserver-docker.md`' \
+    '`dbup-run.ps1` and `api-start.ps1`: `references/dotnet.md`' '`ui-start.ps1`: `references/react.md`' \
+    "applies only when its reference was loaded"
+}
+
+test_sqlserver_docker_reference_h2s_exact() {
+  h2_exact "$DBA" "Database in Docker|Bacpac|db-start.ps1|db-restore.ps1"
+}
+
+test_sqlserver_docker_reference_names_where_to_look() {
+  has_all "$DBA" "general knowledge" "not yet checked on a project" &&
+    section_has "$DBA" "Database in Docker" "Rosetta" "amd64" "docker inspect" &&
+    section_has "$DBA" Bacpac "SqlPackage" "bacpac" "upgrade" "never reset" "SQLPACKAGE_PATH" "not on PATH"
+}
+
 test_bacpac_journal_conflict_is_blocked() {
-  section_has "$REFS/dotnet.md" Bacpac "already lists" "branch script" "blocked" "older bacpac"
+  section_has "$DBA" Bacpac "already lists" "branch script" "blocked" "older bacpac"
 }
 
 test_react_reference_h2s_exact() {
-  h2_exact "$REFS/react.md" "Build and ports|Sign-in|Selectors|Grids|Downloads"
+  h2_exact "$REFS/react.md" "Build and ports|Sign-in|Selectors|Grids|Downloads|ui-start.ps1"
 }
 
 test_react_reference_names_where_to_look() {
@@ -288,13 +333,19 @@ test_feature_map_reference_picks_about_five() {
     section_has "$f" Confirm "about five" "confirm, swap or add"
 }
 
+test_sql_server_trigger_never_reads_a_connection_string() {
+  ! joined <"$SKILL" | grep -qF -- 'a SQL Server connection string' &&
+    joined <"$SKILL" | grep -qF -- 'never open a settings file or user secrets to look'
+}
+
 test_skill_loads_references_by_stack() {
   joined <"$SKILL" | grep -qF -- 'Load `references/feature-map.md` for the rules that pick the features.' &&
     joined <"$SKILL" | grep -qF -- 'For React web projects (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also load `references/react.md`.' &&
     joined <"$SKILL" | grep -qF -- 'For .NET projects (the repository has `*.sln` or `*.csproj` files) also load `references/dotnet.md`.' &&
+    joined <"$SKILL" | grep -qF -- 'For a SQL Server database (a `dbup-sqlserver`, `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.Data.SqlClient` or `System.Data.SqlClient` package, or a SQL Server image in the integration tests; never open a settings file or user secrets to look, and when no signal shows, ask the engineer) also load `references/sqlserver-docker.md`.' &&
     step_has "Pick the features" 'references/feature-map.md' &&
     step_has "Write the feature map and data setup" 'references/react.md' &&
-    step_has "Write the helpers" 'references/dotnet.md'
+    step_has "Write the helpers" 'references/dotnet.md' 'references/sqlserver-docker.md' 'index of where the other contracts live'
 }
 
 # Names are checked by test_no_customer_names, which covers the three reference files too.
@@ -309,6 +360,9 @@ RP="$TPLS/report.md"
 FMT="$TPLS/feature-map.md"
 HP="$TPLS/helpers.md"
 UM="$REFS/update-mode.md"
+DN="$REFS/dotnet.md"
+RX="$REFS/react.md"
+DBA="$REFS/sqlserver-docker.md"
 
 # The twelve-line Verify block and the fifteen-line evidence report, copied from the design (PLAN.local.md, "Input to
 # /verify-<app>" and "Output: the evidence report"). The templates must hold the same lines, so a paraphrase fails.
@@ -444,8 +498,9 @@ test_feature_map_template_has_four_sections() {
 test_helpers_template_lists_the_eight_helpers_and_state_keys() {
   has_all "$HP" "common.ps1" "db-start.ps1" "db-restore.ps1" "dbup-run.ps1" "api-start.ps1" "ui-start.ps1" \
     "doctor.ps1" "cleanup.ps1" "containerId" "createdAt" "dataSource" "recipes" "branchScripts" \
-    "appFingerprint" "SHA-256" "git ls-files --others --exclude-standard" "working tree" "docker inspect" \
-    "environment variable" "found on PATH" "SQLPACKAGE_PATH"
+    "appFingerprint" "SHA-256" "git ls-files --others --exclude-standard" "working tree" \
+    "environment variable" "found on PATH" "references/sqlserver-docker.md" "references/dotnet.md" \
+    "references/react.md"
 }
 
 test_helpers_never_edit_settings_files() {
@@ -510,7 +565,7 @@ test_stored_procedures_need_no_hash() {
 }
 
 test_unknown_journal_entries_are_listed() {
-  has_all "$HP" "neither the base nor the branch" "go under Environment and under Not verified"
+  has_all "$DBA" "neither the base nor the branch" "go under Environment and under Not verified"
 }
 
 test_role_mismatch_hint() {
@@ -523,7 +578,7 @@ test_disagree_still_drives_and_reports_both_readings() {
 }
 
 test_db_restore_stops_on_a_journal_conflict() {
-  has_all "$HP" "db-restore.ps1" "already lists a branch script" "blocked" "before the upgrade"
+  has_all "$DBA" "db-restore.ps1" "already lists a branch script" "blocked" "before the upgrade"
 }
 
 test_update_mode_promotes_a_proven_draft() {
@@ -532,21 +587,23 @@ test_update_mode_promotes_a_proven_draft() {
 }
 
 test_helpers_refuse_without_the_connection_variable() {
-  has_all "$HP" "dbup-run.ps1" "api-start.ps1" "refuse to run" "names the container" \
+  has_all "$DN" "dbup-run.ps1" "api-start.ps1" "refuse to run" "names the container" \
     "never fall back to a settings file"
 }
 
 test_fresh_restore_rules() {
-  has_all "$HP" "drop and recreate" "per-ticket database" "never drops any other database" "the report says" &&
-    section_has "$HP" db-start.ps1 "In a terminal, the helper prompts the engineer" \
+  has_all "$DBA" "drop and recreate" "per-ticket database" "never drops any other database" &&
+    has_all "$HP" "the report says" &&
+    section_has "$DBA" db-start.ps1 "In a terminal, the helper prompts the engineer" \
       "An agent without a terminal asks the engineer and runs the helper again with \`-ConfirmRestore\`" \
       "Without the switch and without a terminal, the helper refuses with \`blocked\` and never drops"
 }
 
 test_container_and_state_rules_are_pinned() {
-  has_all "$HP" "never azure-sql-edge" "host port other than 1433" "unique container name" "kept between runs" \
-    "a hash is recorded only after" "a different container ID resets the recipe list" \
-    "a removed script forces a fresh restore" "made by SQL, not through the app"
+  has_all "$DBA" "never azure-sql-edge" "host port other than 1433" "unique container name" "kept between runs" \
+    "made by SQL, not through the app" &&
+    has_all "$HP" "a hash is recorded only after" "a different container ID resets the recipe list" \
+      "a removed script forces a fresh restore"
 }
 
 test_browser_and_session_rules_are_pinned() {
@@ -723,11 +780,18 @@ check "no phrase is copied from the source skills" test_no_phrase_is_copied_from
 check "dotnet.md has the five H2s in order" test_dotnet_reference_h2s_exact
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
 check "a bacpac whose journal lists a branch script is blocked" test_bacpac_journal_conflict_is_blocked
-check "react.md has the five H2s in order" test_react_reference_h2s_exact
+check "sqlserver-docker.md has the four H2s in order" test_sqlserver_docker_reference_h2s_exact
+check "sqlserver-docker.md names where to look" test_sqlserver_docker_reference_names_where_to_look
+check "react.md has the six H2s in order" test_react_reference_h2s_exact
+check "helpers.md covers a stack without a reference" test_helpers_template_covers_a_stack_without_a_reference
+check "sqlserver-docker.md states its dependency on the migration runner" test_database_reference_states_its_dependency_on_the_migration_runner
+check "dotnet.md says the helper contracts follow the database reference" test_dotnet_reference_says_the_helper_contracts_follow_the_database_reference
+check "every helper has one contract, in the file the index names" test_every_helper_has_one_contract_in_the_indexed_file
 check "react.md names where to look" test_react_reference_names_where_to_look
 check "feature-map.md has the three H2s in order" test_feature_map_reference_h2s_exact
 check "feature-map.md picks about five features" test_feature_map_reference_picks_about_five
 check "SKILL.md loads the references by stack" test_skill_loads_references_by_stack
+check "the SQL Server trigger never reads a connection string" test_sql_server_trigger_never_reads_a_connection_string
 check "stack references use neutral wording" test_stack_references_use_neutral_wording
 
 check "verify-skill.md header has the name and the nested marker, no flag" test_verify_skill_template_header
@@ -821,7 +885,7 @@ test_state_reader_defaults_launch_keys_to_null() {
 }
 
 test_api_start_does_not_need_the_plain_http_port() {
-  section_has "$HP" "api-start.ps1" "must not require the plain-HTTP port" "--urls" "secure port only" \
+  section_has "$DN" "api-start.ps1" "must not require the plain-HTTP port" "--urls" "secure port only" \
     "names the process that holds"
 }
 
@@ -830,12 +894,12 @@ test_gotchas_name_the_launch_profile_ports() {
 }
 
 test_dbup_count_is_the_journal_row_count() {
-  section_has "$HP" "dbup-run.ps1" "journal row count" "SELECT COUNT(*)" "not a count of lines"
+  section_has "$DN" "dbup-run.ps1" "journal row count" "SELECT COUNT(*)" "not a count of lines"
 }
 
 test_helpers_get_a_run_time_smoke_check() {
   section_has "$HP" "Rules for every helper" "prerequisites missing" "its own \`blocked:\` message" \
-    "instead of a PowerShell error" &&
+    "instead of a shell error" &&
     step_has "Write the helpers" "prerequisites missing" "blocked:"
 }
 
@@ -989,10 +1053,10 @@ test_doctor_helper_reads_the_saved_user_response() {
 }
 
 test_one_owner_per_job_in_the_data_helpers() {
-  section_has "$HP" db-start.ps1 "scripts folder" "state check" "fresh restore needed" "It never imports a bacpac" &&
-    ! section_has "$HP" db-start.ps1 "import the bacpac" &&
-    section_has "$HP" db-restore.ps1 "Imports the bacpac" "the upgrade always follows in" &&
-    section_has "$HP" dbup-run.ps1 "It runs on every run, after \`db-start.ps1\`, and after \`db-restore.ps1\` when that ran." &&
+  section_has "$DBA" db-start.ps1 "scripts folder" "state check" "fresh restore needed" "It never imports a bacpac" &&
+    ! section_has "$DBA" db-start.ps1 "import the bacpac" &&
+    section_has "$DBA" db-restore.ps1 "Imports the bacpac" "the upgrade always follows in" &&
+    section_has "$DN" dbup-run.ps1 "It runs on every run, after \`db-start.ps1\`, and after \`db-restore.ps1\` when that ran." &&
     ! has_all "$HP" "always runs after any restore or import" "always after any restore or import"
 }
 
@@ -1051,22 +1115,22 @@ test_dev_rev_step_9_orders_none_and_base_and_never_writes_an_unconfirmed_base() 
 }
 
 test_restore_and_dbup_helpers_know_the_branch_scripts() {
-  section_has "$HP" db-restore.ps1 "merge-base sha" "scripts folder" "Get-BranchScripts" &&
-    section_has "$HP" dbup-run.ps1 "merge-base sha" "scripts folder" "Get-BranchScripts"
+  section_has "$DBA" db-restore.ps1 "merge-base sha" "scripts folder" "Get-BranchScripts" &&
+    section_has "$DN" dbup-run.ps1 "merge-base sha" "scripts folder" "Get-BranchScripts"
 }
 
 test_every_state_key_has_a_writer() {
-  section_has "$HP" db-start.ps1 "writes \`containerId\` and \`createdAt\` when it creates the container" \
+  section_has "$DBA" db-start.ps1 "writes \`containerId\` and \`createdAt\` when it creates the container" \
     "clears \`branchScripts\` and \`recipes\`" &&
-    section_has "$HP" dbup-run.ps1 "writes \`appFingerprint\` after a successful run" \
+    section_has "$DN" dbup-run.ps1 "writes \`appFingerprint\` after a successful run" \
       "drops the entries of removed scripts" &&
-    section_has "$HP" db-start.ps1 "-ConfirmRestore"
+    section_has "$DBA" db-start.ps1 "-ConfirmRestore"
 }
 
 test_fresh_restore_has_one_rule() {
   vt_step_has "Start the data and the app" "it prints \`fresh restore needed: <reason>\` and, without a terminal, stops" \
     "run it again with \`-ConfirmRestore\`" &&
-    section_has "$HP" db-start.ps1 "print \`fresh restore needed: <reason>\`" \
+    section_has "$DBA" db-start.ps1 "print \`fresh restore needed: <reason>\`" \
       "ends with \`blocked: fresh restore needed: <reason>\`"
 }
 
@@ -1089,7 +1153,7 @@ test_eval_says_the_round_1_changes_were_not_run() {
 
 test_a_changed_data_source_forces_a_fresh_restore() {
   section_has "$HP" state.json "A changed data source (for example \`empty\` to \`bacpac\`) also forces a fresh restore" &&
-    section_has "$HP" db-start.ps1 "the data source"
+    section_has "$DBA" db-start.ps1 "the data source"
 }
 
 test_feature_map_has_a_code_folders_column() {
@@ -1104,7 +1168,7 @@ test_update_mode_does_not_drive_when_no_code_changed() {
 }
 
 test_ui_start_runs_the_named_fix_command() {
-  section_has "$HP" ui-start.ps1 "prints the fix command" "It never runs the command itself" \
+  section_has "$RX" ui-start.ps1 "prints the fix command" "It never runs the command itself" \
     "The fix command must not change tracked files (for npm, \`npm ci\`, never \`npm install\`)" &&
     vt_step_has "Start the data and the app" "it prints a fix command" \
       "Show it to the engineer, run it once, then run \`ui-start.ps1\` again" "git status --porcelain" \
@@ -1116,7 +1180,7 @@ check "feature map has a Code folders column that dev-rev reads" test_feature_ma
 check "update mode does not drive when no code changed" test_update_mode_does_not_drive_when_no_code_changed
 check "ui-start runs the named fix command after showing it" test_ui_start_runs_the_named_fix_command
 test_db_start_sees_the_bacpac_and_writes_the_data_source_late() {
-  section_has "$HP" db-start.ps1 "data source (\`empty\`, or the bacpac file name and its date)" \
+  section_has "$DBA" db-start.ps1 "data source (\`empty\`, or the bacpac file name and its date)" \
     "writes \`dataSource\` only after the state check passes or after a confirmed drop, never on a \`blocked\` exit" \
     "With \`-ConfirmRestore\` and no forced reason, the helper drops and recreates the database on request." \
     "\`database: new\`, \`database: reused\` or \`database: dropped\`" &&
@@ -1126,8 +1190,8 @@ test_db_start_sees_the_bacpac_and_writes_the_data_source_late() {
 }
 
 test_ui_start_saves_its_process_id() {
-  section_has "$HP" ui-start.ps1 "saves the process ID in \`state.json\`" &&
-    section_has "$HP" api-start.ps1 "saves the process ID in \`state.json\`"
+  section_has "$RX" ui-start.ps1 "saves the process ID in \`state.json\`" &&
+    section_has "$DN" api-start.ps1 "saves the process ID in \`state.json\`"
 }
 
 test_doctor_roles_follow_the_api_start() {
@@ -1161,7 +1225,7 @@ test_doctor_prints_no_personal_data() {
 }
 
 test_bacpac_journal_check_maps_paths_to_journal_names() {
-  section_has "$REFS/dotnet.md" Bacpac "Read the journal's name format from the runner code" \
+  section_has "$DBA" Bacpac "Read the journal's name format from the runner code" \
     "map each branch script path to that name before the compare" "git ls-tree -r --name-only <merge-base sha> <scripts folder>"
 }
 
