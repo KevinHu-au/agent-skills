@@ -328,6 +328,25 @@ test_dotnet_reference_splits_framework_and_core() {
     not_in_section "$d" "Common to both" 'Global.asax' 'machineKey' 'AddNewtonsoftJson'
 }
 
+# The phrases below are only in the new bullets, so deleting a bullet fails the test.
+test_ios_reference_names_the_stored_data_that_old_builds_leave() {
+  section_has "$REFS/ios.md" Data 'NSKeyedArchiver' 'NSKeyedUnarchiver.setClass(_:forClassName:)' 'allowedClasses' \
+    'Old code reading new data' 'RawRepresentable' '@SceneStorage' 'widget `kind`' 'App Intent' 'BGTaskScheduler' \
+    'userInfo' 'CloudKit' 'NSUbiquitousKeyValueStore'
+}
+
+test_react_reference_names_the_stored_data_that_old_builds_leave() {
+  section_has "$REFS/react.md" Data 'redux-persist' '`migrate`' 'discard the stored state' 'persistQueryClient' '`buster`' \
+    '`onupgradeneeded`' 'service worker or PWA cache' 'signs everyone out' 'domain and path' 'host-only' &&
+    section_has "$REFS/react.md" Indirection 'query parameter' &&
+    [ "$(grep -c 'Redux or Zustand store has the same risk' "$REFS/react.md")" -eq 0 ]
+}
+
+test_surfaces_points_to_the_ios_and_react_data_sections() {
+  section_has "$REFS/surfaces.md" "Persisted names" 'references/dotnet.md' 'stored data is under Data' \
+    'references/ios.md' 'references/react.md'
+}
+
 test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked() {
   has_all "$REFS/dotnet.md" 'JsonPropertyName' 'Program.cs' 'model snapshot' 'sys.sql_modules' 'general knowledge' \
     'not yet checked'
@@ -396,6 +415,9 @@ check "a search that finds no caller is supported and never confirmed" test_a_se
 check "staged runs, the no-fact case and the Unproven tier rules are written" test_staged_runs_the_no_fact_case_and_the_unproven_tier_rules_are_written
 check "surfaces.md covers every surface" test_surfaces_reference_covers_every_surface
 check "dotnet.md names where to look and says it is unchecked" test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked
+check "ios.md names the stored data that old builds leave" test_ios_reference_names_the_stored_data_that_old_builds_leave
+check "react.md names the stored data that old builds leave" test_react_reference_names_the_stored_data_that_old_builds_leave
+check "surfaces.md points to the iOS and React Data sections" test_surfaces_points_to_the_ios_and_react_data_sections
 check "surfaces.md covers persisted names, deploy order and rollback, and performance reach" test_surfaces_reference_covers_persisted_names_deploy_order_and_performance
 check "dotnet.md splits .NET Framework and .NET Core" test_dotnet_reference_splits_framework_and_core
 check "ios.md names where to look and says it is unchecked" test_ios_reference_names_where_to_look_and_says_it_is_unchecked

@@ -32,7 +32,7 @@ The JSON, XML or CSV that the application sends to a caller you do not control.
 
 ## Persisted names
 
-- A type, method or message name that is stored as data, and read back later by code that may have changed. Look at job queues and schedulers, message buses and workflow state, serialised objects that carry type names, and caches and sessions. The .NET stores are in `references/dotnet.md`.
+- A type, method or message name that is stored as data, and read back later by code that may have changed. Look at job queues and schedulers, message buses and workflow state, serialised objects that carry type names, and caches and sessions. The .NET stores are in `references/dotnet.md`. For iOS and React, the stored data is under Data in `references/ios.md` and `references/react.md`.
 - A rename, a namespace change, a move to another assembly or a changed signature can make an old stored item fail to load or run. The item was written before the change and is read after it.
 - Look at what is stored now, not at what the new code would write. A queue or table can hold days or months of old items.
 - Prove it with a run that reads an old-shaped item with the new code. If the store is a shared environment, ask the owner for a sample with the secrets and personal data removed.

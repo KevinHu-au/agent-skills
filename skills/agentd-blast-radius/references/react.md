@@ -22,7 +22,7 @@ Where to look in a React web app: a `package.json` in the repository, or in a wo
 - Props and components: a changed prop type or name reaches every parent. A component used by many pages has many callers. Search for the component name and its import path.
 - Context and stores: a change to a context value or a store shape reaches every `useContext`, selector and `useQuery` key that reads it.
 - Custom hooks: a change to a hook's return value reaches every component that calls it.
-- Routes and links: routes are strings. A renamed route breaks `<Link to>`, `navigate(...)`, bookmarks, emails and other apps that link to it.
+- Routes and links: routes are strings. A renamed route or query parameter breaks `<Link to>`, `navigate(...)`, bookmarks, emails and other apps that link to it.
 - Events and messages: `window.addEventListener`, `postMessage`, a WebSocket or SignalR handler, and an event bus react to a change with no call site.
 - Dynamic imports and `lazy`: a moved file changes a chunk. A search for the import path still finds it.
 - Tests and mocks: a changed service or hook needs the `msw` handlers, `__mocks__` folders and test data to change as well.
@@ -30,8 +30,12 @@ Where to look in a React web app: a `package.json` in the repository, or in a wo
 ## Data
 
 - `localStorage`, `sessionStorage`, IndexedDB and cookies hold values from older builds. A renamed key, or a changed shape, meets the old stored value on the next visit. Look for a stored-version number or a migration.
-- A persisted Redux or Zustand store has the same risk.
 - Search the code for the storage key as a string, because the compiler does not check it.
+- `redux-persist` and the Zustand `persist` middleware keep a `version` and a `migrate` function. A changed shape without a new version meets the old stored value. In Zustand, a new version without a `migrate` function makes it discard the stored state, so every user loses it. Check the version and `migrate` together.
+- A persisted query cache (`persistQueryClient`) is dropped by a changed `buster` string. A changed query key or response shape without a new buster reads old data.
+- IndexedDB has a database `version` and `onupgradeneeded` code. A changed store or index without a new version does nothing for users who already have the database.
+- A service worker or PWA cache can serve an old bundle after a deploy. Check the cache names, the update flow and any queued background sync tags.
+- A renamed session or auth cookie signs everyone out. A browser identifies a cookie by name, domain and path. A changed `Domain` or `Path`, or a move from a host-only cookie to a `Domain` cookie, leaves the old cookie next to the new one, and the old one is still sent. A cookie with a changed `Secure` or `SameSite` value usually replaces the old one, but an insecure origin cannot overwrite a `Secure` cookie. Test it.
 
 ## Configuration
 

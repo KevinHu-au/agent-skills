@@ -23,7 +23,14 @@ Where to look in an iOS app. These notes come from general knowledge of the plat
 - A property rename or a type change is a different migration from an added property with a default. A rename needs `@Attribute(originalName:)` in SwiftData, or a renaming identifier in Core Data.
 - `@Relationship(deleteRule: .cascade)` deletes the children with the parent. Check what else holds the child.
 - Readers of a property: search the code for the name. In Core Data also search `NSPredicate(format:)`, `NSSortDescriptor(key:)`, `@FetchRequest` sort keys and `value(forKey:)`. These are strings that the compiler does not check. SwiftData `#Predicate`, `@Query` and `FetchDescriptor` use checked key paths, but a renamed property still compiles and changes the stored name unless `@Attribute(originalName:)` pins it.
-- `UserDefaults` and Keychain keys are strings that other code reads. Search for the key as a string. Keychain data survives an app delete.
+- `UserDefaults` and Keychain keys are strings that other code reads. Search for the key as a string. Keychain data survives an app delete. A renamed `@AppStorage` key (it is a `UserDefaults` key) or `@SceneStorage` key resets the user's setting or the restored scene without an error.
+- A `Codable` value saved as JSON or a property list (in `UserDefaults`, a file or an app group container) follows `CodingKeys` and the shape of the type. New code reading old data: a new non-optional field or a changed type fails to decode, and a removed field is ignored, so its old data is dropped without an error. Old code reading new data (an old build, or an app extension) fails when a field it requires is gone. Look for a stored version number and a fallback.
+- `NSKeyedArchiver` data stores the class name. A class that is renamed, or moved to another module, stops old archives from decoding, unless `@objc(Name)` or `NSKeyedUnarchiver.setClass(_:forClassName:)` maps the old name. With secure coding on, the new class must also be in `allowedClasses`.
+- A stored `RawRepresentable` value (an enum raw value, a status string) is compared by other code. A renamed case or a renumbered value changes the meaning of old data.
+- A renamed widget `kind` string removes the widget from the user's home screen.
+- A renamed or removed App Intent breaks the shortcuts that users built.
+- Task and notification identifiers: a `BGTaskScheduler` identifier (it must also be listed in `Info.plist`), and a pending notification request with its identifier and `userInfo`. A renamed identifier or a changed payload leaves the already-scheduled items with no handler.
+- CloudKit record types and fields, and `NSUbiquitousKeyValueStore` keys, are shared with devices that still run an old build. A schema that has shipped cannot be rolled back.
 
 ## Indirection
 
