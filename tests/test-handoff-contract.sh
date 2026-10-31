@@ -2,7 +2,8 @@
 # Checks the contract between the skills that write a hand-off block and agentd-dev-rev, which reads it. Every H2
 # heading in the diagnose hand-off block and in the blast-radius add-on block, and every field line of the intake
 # engineer block, must be named in the Inputs section of agentd-dev-rev. A heading added to a template without a
-# matching rule in dev-rev fails here. Reads files and writes nothing.
+# matching rule in dev-rev fails here. The headings and lines that agentd-pr-prep reads must still exist in the
+# blocks of the templates. Reads files and writes nothing.
 # Usage: tests/test-handoff-contract.sh
 set -u
 
@@ -12,6 +13,7 @@ DEV="$SKILLS/agentd-dev-rev/SKILL.md"
 DIAGNOSE_TEMPLATE="$SKILLS/agentd-diagnose/references/report-template.md"
 BLAST_TEMPLATE="$SKILLS/agentd-blast-radius/references/report-template.md"
 INTAKE_TEMPLATE="$SKILLS/agentd-intake/references/comment-template.md"
+PREP="$SKILLS/agentd-pr-prep/SKILL.md"
 PASS=0
 FAIL=0
 
@@ -33,6 +35,15 @@ block_h2s() {
   awk '
     $0 == "````" { on = 0 }
     on && /^## / { sub(/^## /, ""); print }
+    $0 == "````markdown" { on = 1 }
+  ' "$1"
+}
+
+# block_lines <template>: the lines inside the four-backtick markdown fence of a report template.
+block_lines() {
+  awk '
+    $0 == "````" { on = 0 }
+    on
     $0 == "````markdown" { on = 1 }
   ' "$1"
 }
@@ -97,12 +108,29 @@ test_intake_fields_are_named() {
     inputs_has 'Requirement: unconfirmed' '`Stop condition:`' '`Assumptions:`'
 }
 
+# agentd-pr-prep reads two headings and a verdict line from each block. They must exist in the template, and pr-prep must
+# name them.
+test_pr_prep_reads_diagnose_headings_that_exist() {
+  block_h2s "$DIAGNOSE_TEMPLATE" | grep -qx 'Root cause' &&
+    block_lines "$DIAGNOSE_TEMPLATE" | grep -qF '**Confidence:** confirmed' &&
+    template_has "$DIAGNOSE_TEMPLATE" 'hypothesis, not confirmed' &&
+    template_has "$PREP" '`**Confidence:**`' '`## Root cause`' 'hypothesis, not confirmed'
+}
+
+test_pr_prep_reads_blast_radius_headings_that_exist() {
+  block_h2s "$BLAST_TEMPLATE" | grep -qx 'Risks to cover' && block_h2s "$BLAST_TEMPLATE" | grep -qx 'Warn or coordinate' &&
+    block_lines "$BLAST_TEMPLATE" | grep -qF '**Blast radius:**' &&
+    template_has "$PREP" '`**Blast radius:**`' '`## Risks to cover`' '`## Warn or coordinate`'
+}
+
 check "dev-rev names every heading of the diagnose hand-off block" test_diagnose_headings_are_named
 check "dev-rev names every heading of the blast-radius add-on block" test_blast_radius_headings_are_named
 check "dev-rev names the diagnose Stop condition section" test_diagnose_stop_condition_is_named
 check "dev-rev names the confidence and verdict lines" test_verdict_lines_are_named
 check "dev-rev names the needed: and not needed: values" test_diagnose_blast_radius_values_are_named
 check "dev-rev names the intake Requirement, Assumptions and Stop condition fields" test_intake_fields_are_named
+check "pr-prep reads headings and lines that exist in the diagnose block" test_pr_prep_reads_diagnose_headings_that_exist
+check "pr-prep reads headings and lines that exist in the blast-radius block" test_pr_prep_reads_blast_radius_headings_that_exist
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
