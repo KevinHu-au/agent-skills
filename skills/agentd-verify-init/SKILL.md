@@ -54,10 +54,10 @@ skill never verifies a ticket itself. Read the references and templates named in
    that pick the features.
 4. **Write the feature map and data setup.** One file per feature with user steps only, an index, and named setup
    recipes. The map holds routes, labels and steps, never customer values. For React web projects (a `package.json` that lists `react-dom` under `dependencies`, in
-   any workspace) also load `references/react.md`. Shape the files with `templates/feature-map.md`.
-5. **Write the helpers.** Launch and stop the app, start the database, and run the Doctor check. Doctor reports the
+   any workspace) also load `references/react.md`. For an iOS app (the repository has a `*.xcodeproj` or `*.xcworkspace`) also load `references/ios.md`, whose `ui-start.ps1` replaces the one in `references/react.md`. When the repository also has a web UI or an API that the ticket may drive, ask the engineer which one it drives, and load only that reference. Shape the files with `templates/feature-map.md`.
+5. **Write the helpers.** Launch and stop the app, start the database, and run the Doctor check. First pick the language of the helpers: the language of the repository's existing scripts, else the shell of the machine that runs them (bash on a Mac, Windows PowerShell on Windows), and ask the engineer when both are possible. The `.ps1` names in the contracts are examples: use the extension of that language. Doctor reports the
    database the running process uses and refuses to drive an API or UI this run did not start. For .NET projects (the repository has `*.sln` or
-   `*.csproj` files) also load `references/dotnet.md`. For a SQL Server database (a `dbup-sqlserver`, `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.Data.SqlClient` or `System.Data.SqlClient` package, or a SQL Server image in the integration tests; never open a settings file or user secrets to look, and when no signal shows, ask the engineer) also load `references/sqlserver-docker.md`. Give each helper its contract: `templates/helpers.md` holds the core rules and an index of where the other contracts live. After the parse check, run each helper once with its
+   `*.csproj` files) also load `references/dotnet.md`. A .NET Framework project (a `web.config`, a `Global.asax`, or a `TargetFrameworkVersion` of `v4.x` in a `*.csproj`) also loads `references/dotnet-framework.md`, whose `api-start.ps1` replaces the one in `references/dotnet.md`. For a SQL Server database (a `dbup-sqlserver`, `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.Data.SqlClient` or `System.Data.SqlClient` package, or a SQL Server image in the integration tests; never open a settings file or user secrets to look, and when no signal shows, ask the engineer) also load `references/sqlserver-docker.md`. Ask the engineer where the local database runs. For LocalDB, also load `references/sqlserver-localdb.md`, whose `db-start.ps1` replaces the one in `references/sqlserver-docker.md`. Helpers in PowerShell also load `references/host-powershell.md`; helpers in bash or zsh also load `references/host-shell.md`. Give each helper its contract: `templates/helpers.md` holds the core rules and an index of where the other contracts live. After the parse check, run each helper once with its
    prerequisites missing, except the shared file that is only sourced. It must stop with its own `blocked:` message, not a shell error.
 6. **Write the verify skill.** Name it `verify-<app>`. Put this marker in its header, nested exactly:
 
@@ -67,7 +67,7 @@ skill never verifies a ticket itself. Read the references and templates named in
    ```
 
    Build it from `templates/verify-skill.md`. Copy everything under `## Report` and `## Results` of
-   `templates/report.md` into its Report section, including the notes and the Order of results. The generated skill
+   `templates/report.md` into its Report section, including the notes and the Order of results. For an iOS app, also copy the section `Three-way match on iOS` of `references/ios.md` after the Order of results. The generated skill
    gets the Verify block, the evidence report and the six independence mechanisms below.
 7. **Run the proof run.** With the engineer present: launch, sign-in, Doctor, drive one feature, capture evidence, run
    cleanup, then check the evidence folder still exists. With nobody to sign in, stop at sign-in. Mark the skill

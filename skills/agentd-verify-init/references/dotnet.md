@@ -55,4 +55,4 @@ roles in environment variables. Prints the port and the process ID, and saves th
 - Refuse to start when something this run did not start already holds the port. Name the process.
 - It must not require the plain-HTTP port when the UI only calls the secure port. Pass `--urls` for the secure port
   only. When it refuses, it names the process that holds a port. Some systems hold a fixed port: macOS holds port 5000
-  for AirPlay Receiver.
+  for AirPlay Receiver. Put this port rule in the Gotchas of the generated skill.

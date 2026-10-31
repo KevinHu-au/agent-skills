@@ -8,6 +8,7 @@ metadata:
 <!-- Generator notes. Delete this comment when you write the skill.
 Copy this file to the verify skill's folder as SKILL.md. Replace each <app> and each other <placeholder>. Fill `<current-user route>` from the API code. Fill `<admin roles>` from the API code.
 Copy everything under `## Report` and `## Results` of `templates/report.md` into the Report section, including the notes and the Order of results.
+For an iOS app, replace the `Browser and session` section with a `Driver` section built from the `Driver`, `Sign-in` and `Evidence and privacy` sections of `references/ios.md`, and use the Doctor of that file in place of the saved-response steps. Also drop the steps for helpers that the app does not have (`db-start`, `db-restore`, `dbup-run` and `api-start`), unless the engineer says the run needs a local API. Write every helper name with the extension of the language that Flow step 5 of the generator picked.
 Optional first body line, written only by the Create flow when the proof run stops (Flow step 7 of the generator):
 draft: not proven
 Not proven:
@@ -160,7 +161,7 @@ endpoint, so Doctor checks the ports, the signed-in API user, the role set, the 
 - Cleanup never removes it. `cleanup.ps1` stops the processes this run started and nothing else.
 - Data is made in this order: an empty schema plus a setup run through the UI as admin; SQL inserts only when the UI
   cannot reach the state in reasonable time, each approved by the engineer and marked "made by SQL, not through the
-  app"; a test-environment bacpac only when the ticket needs specific data.
+  app"; a test-environment database backup (a bacpac for SQL Server) only when the ticket needs specific data.
 
 ## Browser and session
 
@@ -196,13 +197,12 @@ of `templates/report.md` of the generator when you write this skill, including t
 
 - Fill this list from what the proof run showed. Keep `unknown:` and `inferred:` on what no run has checked. After a
   passing proof run, replace each of them that the run confirmed or refuted with the result. Examples: the browser profile keeps or loses the sign-in between runs;
-  a port is fixed; on Apple Silicon, turn on Rosetta in Docker Desktop and pull the `linux/amd64` image.
-- Launch profile ports: a port in the project's launch profile may be held by the operating system (macOS holds port
-  5000 for AirPlay Receiver). Pass `--urls` for `https://localhost:<port>` only, when the UI calls only the secure
-  port. Do not require `http://localhost:<port>`. Doctor and the start helper name the process that holds a port.
+  a port is fixed. Add each gotcha that a loaded reference says to put here (for example the Apple Silicon steps of the database reference).
+- A fixed port: a port that the project fixes (in a launch profile, a server configuration or a script) may be held by the operating system (macOS holds port
+  5000 for AirPlay Receiver). Do not require a plain-HTTP port when the UI calls only the secure port, for example `https://localhost:<port>`. Doctor and the start helper name the process that holds a port. The stack reference says how to change the port.
 - Local-only files: an edit to a local-only file (`<local-only file>`) never forces a restore. A branch script that
   changed or was removed, or an app-code change outside the scripts folder, this skill's folder and the local-only
-  files, forces a restore. A new branch script is applied by DbUp without a restore.
+  files, forces a restore. A new branch script is applied by the migration runner without a restore.
 - The header has no `disable-model-invocation` line. Copilot cannot load a skill that has the flag (checked with
   Copilot 1.0.102). The engineer may add it back when Copilot supports it, to keep the skill out of the auto-loaded
   context.
