@@ -185,7 +185,7 @@ test_dotnet_reference_names_where_to_look() {
 }
 
 test_ios_reference_names_where_to_look() {
-  has_all "$REFS/ios.md" "*.xcodeproj" "Package.swift" "IPHONEOS_DEPLOYMENT_TARGET" "@main" "NavigationStack" "@Observable" \
+  has_all "$REFS/ios.md" "stack signals" "Package.swift" "IPHONEOS_DEPLOYMENT_TARGET" "@main" "NavigationStack" "@Observable" \
     "SwiftData" "SchemaMigrationPlan" "Info.plist" "xcodebuild" "-only-testing" "general knowledge" "not yet checked" \
     "safe-checks.md" "Never run them from this skill" &&
     grep -qF 'For iOS (SwiftUI) projects also load `references/ios.md`' "$SKILL"
@@ -194,7 +194,7 @@ test_ios_reference_names_where_to_look() {
 test_react_reference_names_where_to_look() {
   has_all "$REFS/react.md" "react-dom" "vite.config" "createBrowserRouter" "createContext" "NSwag" ".env" "localStorage" \
     "general knowledge" "not yet checked" "safe-checks.md" "Never run them from this skill" "root \`package.json\` of a monorepo" &&
-    grep -qF 'For React web projects (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also load `references/react.md`' "$SKILL"
+    grep -qF 'For React web projects also load `references/react.md`' "$SKILL"
 }
 
 test_update_mode_has_the_eight_steps_in_order() {

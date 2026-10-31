@@ -1,6 +1,6 @@
 # .NET projects
 
-Load this file when the repository has `*.sln`, `*.csproj` or `*.vbproj` files, or a Web Site project (a `web.config` and pages such as `*.aspx` or `*.cshtml`, with no project file). It says where a .NET project keeps the things the explorers look for. Treat each row as a place to look first, not a guarantee.
+Load this file for a .NET project (the stack signals in `SKILL.md`). It says where a .NET project keeps the things the explorers look for. Treat each row as a place to look first, not a guarantee.
 
 ## Which kind of project
 

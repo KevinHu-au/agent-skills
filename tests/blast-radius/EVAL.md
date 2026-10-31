@@ -136,3 +136,7 @@ add-on block for `agentd-dev-rev`.
 ## Iterations
 
 None yet. The skill was not changed after round 1.
+
+## Other stacks (PR 8, 2026-10-31)
+
+`references/generic.md` was added for a project that matches none of the stack signals. It is covered by the structure test only. No run on an unknown-stack project was done, and its notes come from general knowledge.

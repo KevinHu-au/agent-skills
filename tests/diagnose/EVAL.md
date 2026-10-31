@@ -237,3 +237,7 @@ One row for each change made to the skill because of a result.
 | 6 | Idea review, round 2, major | Comparing good and bad rows could pull personal columns into the context. | Compare personal columns inside the query. Print only IDs and counts. |
 | 6 | Idea review, round 2, minor | "Look for the same fault elsewhere" was dropped from Narrow. Two rules chose the next check. A race test could pass by luck. A Not confirmed report could drop Decisions needed. | The sentence is back. One rule: check first the difference that rules out the most candidates, and likelihood breaks a tie. The test forces the failing order. Not confirmed keeps Decisions needed. |
 | 6 | Idea review, tests | Most of the new text had no test that fails when the text is removed. | Seven tests: no outside skill named, the ideas present, the six stop signs, the Narrow step, the Design concern only in the report, the example rule, and the round 2 rules. |
+
+## Other stacks (PR 8, 2026-10-31)
+
+`references/generic.md` was added for a project that matches none of the stack signals. It is covered by the structure test only. No run on an unknown-stack project was done, and its notes come from general knowledge.
