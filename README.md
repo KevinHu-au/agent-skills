@@ -160,6 +160,12 @@ The `agentd-dev-rev` skill has a structure test in `tests/dev-rev/`. It reads th
 tests/dev-rev/test-skill-structure.sh
 ```
 
+The `agentd-pr-prep` skill has a structure test in `tests/pr-prep/`. It reads the skill file and writes nothing.
+
+```bash
+tests/pr-prep/test-skill-structure.sh
+```
+
 `shellcheck` is not run by the tests. Run it yourself if it is installed.
 
 The `agentd-onboard` skill has its own tests in `tests/onboard/`. They check the skill files, the brief
@@ -344,7 +350,7 @@ own words. Superpowers is also listed in `setup.manifest`.
 | `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Asks the repo policy once, then writes a short brief, the project contract and side files in the onboarding pack: `docs/onboarding/`, or a folder outside the repository. Never writes `AGENTS.md`. |
-| `agentd-pr-prep` | Write a PR title and description from the branch diff. |
+| `agentd-pr-prep` | Write a PR title and description from the branch diff. Proposes the remote default branch as the base and asks. Follows the repository's PR template when it has one. Adds Root cause and Risks only from a pasted diagnose or blast-radius block, and a work item link when the number is known. |
 | `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Edits no code and posts nothing. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
 | `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. |
