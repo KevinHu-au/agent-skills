@@ -1,6 +1,6 @@
 # React frontends
 
-Where to look in a React web app: a `package.json` in the repository, or in a workspace folder, lists `react-dom` under `dependencies`. A React Native app does not use `react-dom`. These notes come from general knowledge of the platform. They are not yet checked on a customer project. The test flags below were not run.
+Where to look in a React web app. The stack signals in `SKILL.md` say what counts as one. A React Native app does not use `react-dom`. These notes come from general knowledge of the platform. They are not yet checked on a customer project. The test flags below were not run.
 
 ## Run and count tests
 

@@ -1,11 +1,13 @@
 # React frontends
 
-Load this file when a `package.json` lists `react-dom` (a React Native app does not). Treat each row as a place to
-look first, not a guarantee. The
+Load this file for a React web project (the stack signals in `SKILL.md`; a React Native app does not
+count). Treat each row as a place to look first, not a guarantee. The
 trail leaves this file at the API call; the backend layers come from the backend's reference, or from the generic
 order in `SKILL.md`.
 
 ## Detect
+
+The stack signals in `SKILL.md` decide when to load this file. These lines say what to look for once it is loaded.
 
 - `package.json` with `react` and `react-dom`; a bundler such as Vite (`vite.config.*`) or webpack.
 - `*.tsx` or `*.jsx` files under `src/`.

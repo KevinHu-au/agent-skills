@@ -24,7 +24,7 @@ check() {
   fi
 }
 
-REFERENCES="bug.md data.md dotnet.md ios.md performance.md react.md report-template.md"
+REFERENCES="bug.md data.md dotnet.md generic.md ios.md performance.md react.md report-template.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -393,7 +393,14 @@ test_ios_reference_names_where_to_look() {
 test_react_reference_names_where_to_look() {
   has_all "$REFS/react.md" 'vitest run' 'run zero tests' 'do not run a script by name' 'CI=true' 'useEffect' 'react-dom/profiling' \
     'N+1: a request per row' 'VITE_' 'general knowledge' 'not yet checked' '## Run and count tests' 'Never run end-to-end tests' &&
-    grep -qF 'For a React web project (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also read `references/react.md`' "$SKILL"
+    grep -qF 'For a React web project also read `references/react.md`' "$SKILL"
+}
+
+test_generic_reference_covers_an_unknown_stack() {
+  [ "$(h2_list "$REFS/generic.md" | tr '\n' '|')" = 'Run and count tests|Configuration layers|Wiring and dependency injection|Migrations and the database|Bug candidates|Data candidates|Performance candidates|' ] &&
+    has_all "$REFS/generic.md" 'inferred:' 'confirmed:' 'general knowledge' 'not yet checked' 'matches no test' 'exit 0' 'the total' \
+      'composition root' 'migration tool' 'ask the engineer' &&
+    grep -qF 'For a stack with no reference, read `references/generic.md`. Its facts stay `inferred:` until a run, a query or a measurement shows them.' "$SKILL"
 }
 
 # Rules added after the Round 2 review.
@@ -709,6 +716,7 @@ check "data.md covers the four questions and privacy" test_data_reference_covers
 check "data.md hands a repair to /agentd-data-fix and keeps the stale backup wording out" test_data_repair_hand_off_names_the_data_fix_skill
 check "the report template hands a data repair to /agentd-data-fix, and the closing line follows" test_report_template_hands_a_data_repair_to_the_data_fix_skill
 check "performance.md has the seven mantras in order and the vetting" test_performance_reference_has_the_mantras_in_order_and_the_vetting
+check "generic.md covers an unknown stack and the SKILL.md points to it" test_generic_reference_covers_an_unknown_stack
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
 check "dotnet.md separates .NET Framework from .NET Core" test_dotnet_reference_separates_framework_and_core
 check "ios.md names where to look" test_ios_reference_names_where_to_look

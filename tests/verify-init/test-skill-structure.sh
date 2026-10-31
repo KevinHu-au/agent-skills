@@ -514,7 +514,7 @@ test_skill_loads_the_framework_and_localdb_references() {
 }
 
 test_skill_loads_the_ios_reference_and_copies_its_report_section() {
-  joined <"$SKILL" | grep -qF -- 'For an iOS app (the repository has a `*.xcodeproj` or `*.xcworkspace`) also load `references/ios.md`, whose `ui-start.ps1` replaces the one in `references/react.md`.' &&
+  joined <"$SKILL" | grep -qF -- 'For an iOS app also load `references/ios.md`; an app that has only a `Package.swift` is not run by this skill: ask the engineer how it runs, and mark each recipe `inferred:`. Its `ui-start.ps1` replaces the one in `references/react.md`.' &&
     joined <"$SKILL" | grep -qF -- 'For an iOS app, also copy the section `Three-way match on iOS` of `references/ios.md` after the Order of results.' &&
     step_has "Write the feature map and data setup" 'references/ios.md' &&
     step_has "Write the verify skill" 'Three-way match on iOS'
@@ -525,10 +525,15 @@ test_sql_server_trigger_never_reads_a_connection_string() {
     joined <"$SKILL" | grep -qF -- 'never open a settings file or user secrets to look'
 }
 
+test_package_swift_only_and_web_site_projects_are_not_driven() {
+  joined <"$SKILL" | grep -qF -- 'an app that has only a `Package.swift` is not run by this skill' &&
+    has_all "$REFS/dotnet.md" 'Web Site project' 'has no `dotnet` build' 'inferred:'
+}
+
 test_skill_loads_references_by_stack() {
   joined <"$SKILL" | grep -qF -- 'Load `references/feature-map.md` for the rules that pick the features.' &&
-    joined <"$SKILL" | grep -qF -- 'For React web projects (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also load `references/react.md`.' &&
-    joined <"$SKILL" | grep -qF -- 'For .NET projects (the repository has `*.sln` or `*.csproj` files) also load `references/dotnet.md`.' &&
+    joined <"$SKILL" | grep -qF -- 'For React web projects also load `references/react.md`.' &&
+    joined <"$SKILL" | grep -qF -- 'For .NET projects also load `references/dotnet.md`.' &&
     joined <"$SKILL" | grep -qF -- 'For a SQL Server database (a `dbup-sqlserver`, `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.Data.SqlClient` or `System.Data.SqlClient` package, or a SQL Server image in the integration tests; never open a settings file or user secrets to look, and when no signal shows, ask the engineer) also load `references/sqlserver-docker.md`.' &&
     step_has "Pick the features" 'references/feature-map.md' &&
     step_has "Write the feature map and data setup" 'references/react.md' &&
@@ -1017,6 +1022,7 @@ check "react.md names where to look" test_react_reference_names_where_to_look
 check "feature-map.md has the three H2s in order" test_feature_map_reference_h2s_exact
 check "feature-map.md picks about five features" test_feature_map_reference_picks_about_five
 check "SKILL.md loads the references by stack" test_skill_loads_references_by_stack
+check "a Package.swift-only app and a Web Site project are not driven" test_package_swift_only_and_web_site_projects_are_not_driven
 check "the SQL Server trigger never reads a connection string" test_sql_server_trigger_never_reads_a_connection_string
 check "stack references use neutral wording" test_stack_references_use_neutral_wording
 
