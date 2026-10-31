@@ -104,6 +104,8 @@ repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   
   folder that another repository has recorded. It cannot see a separate clone of the same repository, so do not point
   it at a folder inside one. Exit
   status: 0 success, 1 no pack recorded, 2 bad usage, 3 the recorded folder is gone, 4 refused.
+  `verify-folder <app>`, `verify-find` and `verify-set <folder>` do the same for a generated verify skill, with the
+  registry `~/.agents/verify-skills.tsv` and the default folder `~/.agents/verify/<app>/`.
 - `block-dangerous-shell.sh` checks each Copilot shell command. It denies `git push`, `git reset --hard`, a
   forced `git clean`, `git branch -D` or a forced branch delete, a forced `git checkout` or `git switch`, and
   `git checkout .` or `git restore .`. It also catches forms such as `git -C "<path>" push`, `/usr/bin/git push`,
@@ -148,7 +150,7 @@ tests/test-shared-text.sh
 tests/test-handoff-contract.sh
 ```
 
-The first checks the keys, `find` and `set` of `onboarding-pack` in a throwaway home folder, so your real registry is
+The first checks the keys, `find`, `set` and the `verify-` commands of `onboarding-pack` in a throwaway home folder, so your real registry is
 never read or written. The second checks that the "Find the project facts" paragraph is word for word the same in
 every skill that reads the onboarding pack. The third checks that `agentd-dev-rev` names every heading of the diagnose
 hand-off block and the blast-radius add-on block, and the fields of the intake engineer block. They read files and
@@ -300,7 +302,7 @@ A shared `.gitignore` tells the whole team the folder exists.
 A local-only skill is lost when you clone again on a new machine. Regenerate the
 project skills from the onboarding pack.
 
-`agentd-verify-init` does not support the policy `none` yet: it writes the project skill into the repository.
+With the policy `none`, `agentd-verify-init` writes the project skill to `~/.agents/verify/<app>/` (see `onboarding-pack verify-folder`, `verify-set` and `verify-find`). The folder is recorded in `~/.agents/verify-skills.tsv`, keyed like the onboarding pack. `agentd-dev-rev` and update mode look there after the repository folders. The skill offers two links, in `~/.agents/skills` and `~/.claude/skills`, and makes them only if you agree.
 
 ### Where the onboarding pack lives
 

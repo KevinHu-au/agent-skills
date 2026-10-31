@@ -63,6 +63,7 @@ text, `references/` or `templates/`, and each rule has a phrase check in the str
 - Windows. The run was on macOS with PowerShell.
 - Update mode on a real code change beyond one route.
 - The adapters added after this check: .NET Framework on IIS Express, LocalDB, an iOS app with a standalone XCUITest driver, helpers in bash or zsh, and Windows PowerShell 5.1. The structure test only covers them. The iOS notes come from one prototype: build, install, launch, sign-in, read two screens and go back. The Framework and LocalDB notes were checked only for tool names and folders in one Windows virtual machine. No generated helper for them has run.
+- Policy `none` (7d): the `onboarding-pack verify-*` commands are tested in a throwaway home folder, and the lookup and link text by the structure test only. No policy `none` generation run was done. Whether Claude Code or Copilot CLI loads a skill through the two links was not tried. The `API:` line and the iOS debug-token leg were not run either.
 - The cause of two server errors seen at sign-in. They did not stop the run.
 - The round 1 and round 2 review changes and the later rulings (Flow order, start sequence, `dbup-run.ps1` on every run, the data-source restore, Doctor saved-response input and a new file after an API restart, `-ConfirmRestore`, the `ui-start.ps1` fix command, the Code folders column) were checked by the structure test only, not by a real run.
 - The failed feature in V6b is a product finding, not a skill defect. The skill reported it correctly.

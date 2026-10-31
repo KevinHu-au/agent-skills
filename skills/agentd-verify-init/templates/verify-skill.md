@@ -77,6 +77,7 @@ Feature: <feature file(s)>; entry points: <which ones>
 Neighbours: <features from blast-radius> | none
 Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
 Roles: default | <role list>
+API: <the API the run must use, and "debug token" when the engineer will run the API call with a debug token and paste back the value>
 Steps: <numbered user actions>
 Side effects: <tables or rows to check with a read-only SELECT> | none
 Diagnose: <from the diagnose hand-off, verbatim: the Confidence line, the Root cause line, and the reproduction command from the Verification line (not its expected output)> | none
@@ -89,6 +90,7 @@ Reference anchors: <calculation reference anchors, as an index only> | none
   yourself, before you write expectations. With no local branch, run `git merge-base HEAD origin/<branch>`. When that command finds nothing (a shallow clone, a detached HEAD), say so
   and ask again. The skill never guesses.
 - With no block, also ask what to check, or run the feature files the engineer names.
+- `API:` is optional. When the line is absent, use the default API that the stack reference names. For an iOS app, the API-leg rule of `references/ios.md` applies instead; its API leg is never `blocked`. When it names an API, use that one and say so under Environment. If the run cannot reach it, the result is `blocked`.
 - `Verify: none: <reason>` means `/agentd-dev-rev` found no user-visible effect. Say so, and ask the engineer whether
   to check anything.
 - Compare your own reading of the raw ticket with the `Change:` line before you drive. If they conflict, the result is
