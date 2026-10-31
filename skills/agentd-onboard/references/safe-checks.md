@@ -5,7 +5,7 @@ Safe checks give facts that reading cannot: does it build, and how many unit tes
 ## Allowed
 
 - A build of the project, with the command the project already uses (from `AGENTS.md`, the README, or the pipeline file). A build writes `bin/`, `obj/` or `node_modules/`, and may restore packages from the project's package feed. Say so in the confirmation.
-- Listing or counting unit tests, for example `dotnet test --list-tests` or `jest --listTests`. This shows the test names and the real count and runs no test. Use it to check that a filter such as a category really matches tests.
+- Listing or counting unit tests, for example `dotnet test --list-tests`, `jest --listTests`, or on a classic .NET Framework project `vstest.console.exe <test dll> /ListTests` or the NUnit console `--explore`. The classic listing reads the built test assembly, so a build comes first. This shows the test names and the real count and runs no test. Use it to check that a filter such as a category really matches tests.
 
 Both a build and a test listing run the project's own build and test code (build targets, test discovery). Say so in the confirmation, and let the engineer decide.
 
