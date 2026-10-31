@@ -24,7 +24,7 @@ check() {
   fi
 }
 
-REFERENCES="dotnet.md ios.md react.md report-template.md surfaces.md"
+REFERENCES="dotnet.md generic.md ios.md react.md report-template.md surfaces.md"
 
 # frontmatter_value <key>: the value of a key in the first frontmatter block of SKILL.md.
 frontmatter_value() {
@@ -168,7 +168,14 @@ test_ios_reference_is_loaded_for_ios_only() {
 }
 
 test_react_reference_is_loaded_for_react_only() {
-  grep -qF 'For a React web project (a `package.json` that lists `react-dom` under `dependencies`, in any workspace) also read `references/react.md`' "$SKILL"
+  grep -qF 'For a React web project also read `references/react.md`' "$SKILL"
+}
+
+test_generic_reference_covers_an_unknown_stack() {
+  [ "$(h2_list "$REFS/generic.md" | tr '\n' '|')" = 'Run and count tests|Configuration layers|Wiring and dependency injection|Migrations and the database|Surfaces to map|' ] &&
+    has_all "$REFS/generic.md" 'inferred:' 'confirmed:' 'persisted' 'old builds' 'general knowledge' 'not yet checked' 'matches no test' 'exit 0' 'the total' \
+      'composition root' 'migration tool' 'ask the engineer' 'surfaces.md' 'do not run a target by name' 'run plan' 'Never run end-to-end' &&
+    grep -qF 'For a stack with no reference, read `references/generic.md`. Its facts stay `inferred:` until a run, a query or a measurement shows them.' "$SKILL"
 }
 
 test_verdicts_are_defined_and_the_gate_asks_the_question() {
@@ -419,6 +426,7 @@ check "ios.md names the stored data that old builds leave" test_ios_reference_na
 check "react.md names the stored data that old builds leave" test_react_reference_names_the_stored_data_that_old_builds_leave
 check "surfaces.md points to the iOS and React Data sections" test_surfaces_points_to_the_ios_and_react_data_sections
 check "surfaces.md covers persisted names, deploy order and rollback, and performance reach" test_surfaces_reference_covers_persisted_names_deploy_order_and_performance
+check "generic.md covers an unknown stack and the SKILL.md points to it" test_generic_reference_covers_an_unknown_stack
 check "dotnet.md splits .NET Framework and .NET Core" test_dotnet_reference_splits_framework_and_core
 check "ios.md names where to look and says it is unchecked" test_ios_reference_names_where_to_look_and_says_it_is_unchecked
 check "react.md names where to look and says it is unchecked" test_react_reference_names_where_to_look_and_says_it_is_unchecked

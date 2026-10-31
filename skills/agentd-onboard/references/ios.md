@@ -1,6 +1,6 @@
 # iOS projects (SwiftUI)
 
-Load this file when the repository has a `*.xcodeproj` or `*.xcworkspace`, or a `Package.swift` whose sources `import SwiftUI`. A `Package.swift` alone can also be a server or command-line package. It says where a SwiftUI app keeps the things the explorers look for. Treat each row as a place to look first, not a guarantee. These notes come from general knowledge of the platform. They are not yet checked on a customer project. The test commands and flags below were run on Xcode 26.0.1 against a small synthetic Swift package. Not run against an app-hosted test target.
+Load this file for an iOS (SwiftUI) project (the stack signals in `SKILL.md`). A `Package.swift` alone can also be a server or command-line package. It says where a SwiftUI app keeps the things the explorers look for. Treat each row as a place to look first, not a guarantee. These notes come from general knowledge of the platform. They are not yet checked on a customer project. The test commands and flags below were run on Xcode 26.0.1 against a small synthetic Swift package. Not run against an app-hosted test target.
 
 ## Runtime and layout
 

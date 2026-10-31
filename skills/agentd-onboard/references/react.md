@@ -1,6 +1,6 @@
 # React frontends
 
-Load this file when a `package.json` in the repository, including one in a workspace folder, lists `react-dom` under `dependencies`. A library that lists it only as a peer or development dependency does not count. The root `package.json` of a monorepo may list only workspaces. A React Native app does not use `react-dom`. This file says where a React app keeps the things the explorers look for. Treat each row as a place to look first, not a guarantee. These notes come from general knowledge of the platform. They are not yet checked on a customer project.
+Load this file for a React web project (the stack signals in `SKILL.md`; a library does not count). The root `package.json` of a monorepo may list only workspaces. A React Native app does not use `react-dom`. This file says where a React app keeps the things the explorers look for. Treat each row as a place to look first, not a guarantee. These notes come from general knowledge of the platform. They are not yet checked on a customer project.
 
 ## Runtime and layout
 

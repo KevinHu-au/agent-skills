@@ -1,6 +1,6 @@
 # React frontends
 
-Load this file in Flow step 4, when a `package.json` in the repository, including one in a workspace folder, lists `react-dom` under `dependencies`. It shapes the text under "Driving it" in each feature file and the browser steps in the helpers. These notes come from general knowledge of the platform. They are not yet checked on a project. Treat each row as a place to look first, not a guarantee. Mark a recipe built only from these notes `inferred:`.
+Load this file in Flow step 4, for a React web project (the stack signals in Flow step 1 of `SKILL.md`). It shapes the text under "Driving it" in each feature file and the browser steps in the helpers. These notes come from general knowledge of the platform. They are not yet checked on a project. Treat each row as a place to look first, not a guarantee. Mark a recipe built only from these notes `inferred:`.
 
 ## Build and ports
 

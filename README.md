@@ -18,7 +18,12 @@ install.sh      The setup script. Dry run by default.
 tests/          test-install.sh runs the installer against throwaway home folders. One folder per skill.
 ```
 
-Skills in this repository are general. They work for any client and any stack.
+Skills in this repository are general across clients. They are written for .NET (Framework and Core) with SQL Server,
+React web and SwiftUI iOS projects, so they are not for every stack. Each skill that has stack references detects a
+stack by the same signals. For any other stack, or for a part of a project that matches none of the signals (a Python API behind a React
+frontend), `agentd-diagnose` and `agentd-blast-radius` read their `references/generic.md`, `agentd-explain` uses a
+generic layer order, `agentd-onboard` works from the code alone, and `agentd-verify-init` asks the engineer. Every fact
+the agent works out for such a stack is marked `inferred:`.
 A skill that only makes sense for one project belongs in that project's own
 repository, not here. This keeps client details out of this repository. See
 [Project skills in customer repositories](#project-skills-in-customer-repositories).
