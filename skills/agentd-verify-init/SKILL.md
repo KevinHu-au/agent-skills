@@ -29,14 +29,14 @@ skill never verifies a ticket itself. Read the references and templates named in
 
 ## Modes
 
-- **Create:** no marked `verify-*/SKILL.md` exists under a `.github/skills/` or `.claude/skills/` folder. Run the Flow.
-- **Update:** one exists, and its header carries the marker below, so this skill wrote it. Follow
+- **Create:** no marked `verify-*/SKILL.md` exists under a `.github/skills/` or `.claude/skills/` folder. Then look for `verify-*/SKILL.md` under the folder that `"$HOME/.agents/bin/onboarding-pack" verify-find` prints. Exit status 1 means none is recorded; for any other failure (the folder is gone, the tool is missing), say so in the reply and carry on without it. Run the Flow when neither place has one.
+- **Update:** one exists, in either place, and its header carries the marker below, so this skill wrote it. Follow
   `references/update-mode.md` instead of the Flow. Edit only that skill's folder. Check the feature map against the
   code, drive every feature once, unless no code changed since the scan and the skill is not a draft (then stop and change nothing), and list
   product regressions apart from map corrections. The engineer commits through the normal pull request.
 - An unmarked `verify-*` skill is the customer's own. Lookup ignores an unmarked skill. Update mode stops and changes
   nothing when it meets one. Create mode stops and asks for another name when its target folder exists without the
-  marker. When several marked skills match, list them and ask.
+  marker. When several marked skills match in one place, list them and ask. A marked skill in the repository wins over one outside it; name the other one in the reply.
 
 ## Flow
 
@@ -44,11 +44,17 @@ skill never verifies a ticket itself. Read the references and templates named in
    reference for the stack, ask the engineer and mark each drive recipe `inferred:`.
 2. **Ask where the skill lives.** Read the `Repo policy:` line in the pack's `README.md` first, and ask only for a
    part it does not give or gives as `unknown`: the customer's allowed tool (Copilot, Claude, or both) and whether the
-   files may be committed. With `files none`, stop with one line: this skill writes the project skill into the
-   repository, and that policy allows no file there. Copilot only goes in `.github/skills/`. Claude only, or both,
-   goes in `.claude/skills/`. Not committed: add the folder to `.git/info/exclude` (the file
-   `git rev-parse --git-path info/exclude` prints), never
-   `.gitignore`.
+   files may be committed.
+   - With `files none`, write nothing in the repository, not even `.git/info/exclude`, and do not use the folders below.
+     Write the skill to `verify-<app>/` under the folder that `onboarding-pack verify-find` prints. With none recorded,
+     take the folder that `onboarding-pack verify-folder <app>` prints, run `mkdir -p` on it before `verify-set`, then
+     record it with `onboarding-pack verify-set <folder>` once the engineer agrees. There is one folder per repository,
+     and it holds every `verify-<app>/` of that repository: put a second app beside the first. When `verify-set`
+     refuses (another repository has the folder), ask the engineer for another folder. When `verify-find` exits 3,
+     the recorded folder is gone: say so, ask the engineer, and never write to the default folder instead.
+   - If the files policy is not `none`: Copilot only goes in `.github/skills/`. Claude only, or both, goes in
+     `.claude/skills/`. Not committed: add the folder to `.git/info/exclude` (the file
+     `git rev-parse --git-path info/exclude` prints), never `.gitignore`.
 3. **Pick the features.** Find the features from routes, menus and user documents. Rank them by recent change. Always
    include the entry feature. Show about five with a reason each. The engineer confirms, swaps or adds. Load `references/feature-map.md` for the rules
    that pick the features.
@@ -73,7 +79,7 @@ skill never verifies a ticket itself. Read the references and templates named in
    cleanup, then check the evidence folder still exists. With nobody to sign in, stop at sign-in. Mark the skill
    `draft: not proven` on the first line of the body, and list each step that did not run after `Not proven:`.
 8. **Report.** List the files written, where they live, what the proof run showed, and anything marked `inferred:` or
-   `unknown:`. Say that the engineer commits through the normal pull request.
+   `unknown:`. Say that the engineer commits through the normal pull request. With `files none`, say instead that nothing is committed, and offer two links so the tools can load the skill. Run `mkdir -p` on each parent folder first, then `ln -s` from `~/.agents/skills/verify-<app>` to the skill folder, and from `~/.claude/skills/verify-<app>` (or `$CLAUDE_CONFIG_DIR/skills`) to the first link. Make them only after the engineer says yes, and never replace an existing path.
 
 ## Rules
 
