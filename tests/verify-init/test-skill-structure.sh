@@ -263,7 +263,8 @@ test_helpers_template_covers_a_stack_without_a_reference() {
   section_has "$HP" "When no reference matches" "mark the helper" "inferred:" \
     "refuses to start when a process this run did not start already holds the port" \
     "stops with \`blocked: <reason>\` and prints the fix command" "never falls back to a settings file" \
-    "refuses to run unless the connection environment variable is set and names the container's host and port"
+    "refuses to run unless the connection source names the per-ticket database" \
+    "connectionConfirmedFor"
 }
 
 test_database_reference_states_its_dependency_on_the_migration_runner() {
@@ -278,20 +279,193 @@ test_dotnet_reference_says_the_helper_contracts_follow_the_database_reference() 
 # finding 8: every helper has exactly one contract, in the file that the index names
 test_every_helper_has_one_contract_in_the_indexed_file() {
   local spec h want f n
-  # <helper>:<the file that holds its contract>
-  for spec in "common:$HP" "doctor:$HP" "cleanup:$HP" "db-start:$DBA" "db-restore:$DBA" \
-    "dbup-run:$DN" "api-start:$DN" "ui-start:$RX"; do
+  # <helper>:<the files that hold a contract for it; each holds exactly one, and no other file holds one>
+  for spec in "common:$HP" "doctor:$HP" "cleanup:$HP" "db-start:$DBA $LDB" "db-restore:$DBA" \
+    "dbup-run:$DN" "api-start:$DN $DNF" "ui-start:$RX $IOS"; do
     h=${spec%%:*}
     want=${spec#*:}
-    for f in "$HP" "$DN" "$DBA" "$RX"; do
+    for f in "$HP" "$DN" "$DNF" "$DBA" "$LDB" "$RX" "$IOS"; do
       n=$(grep -c -F -x "## $h.ps1" "$f")
-      if [ "$f" = "$want" ]; then [ "$n" -eq 1 ] || return 1; else [ "$n" -eq 0 ] || return 1; fi
+      case " $want " in *" $f "*) [ "$n" -eq 1 ] || return 1 ;; *) [ "$n" -eq 0 ] || return 1 ;; esac
     done
   done
   section_has "$HP" "When no reference matches" "all the helpers" || return 1
   section_has "$HP" "Where the other contracts live" '`db-start.ps1` and `db-restore.ps1`: `references/sqlserver-docker.md`' \
     '`dbup-run.ps1` and `api-start.ps1`: `references/dotnet.md`' '`ui-start.ps1`: `references/react.md`' \
-    "applies only when its reference was loaded"
+    "applies only when its reference was loaded" '`references/sqlserver-localdb.md`' '`references/dotnet-framework.md`' \
+    '`references/ios.md`' \
+    "the Doctor section of \`references/ios.md\` replaces it"
+}
+
+test_dotnet_framework_reference_h2s_exact() {
+  h2_exact "$DNF" "Build and tools|Configuration|Start with IIS Express|One-time administrator steps|Sign-in|Doctor|api-start.ps1"
+}
+
+test_dotnet_framework_reference_names_where_to_look() {
+  has_all "$DNF" "general knowledge" "not yet checked on a customer project" "inferred:" &&
+    section_has "$DNF" "Build and tools" "vswhere" "vstest.console.exe" "MSBuild" "not on PATH" "git status --porcelain" &&
+    section_has "$DNF" Configuration "web.config" "never edit" "LocalOnlyFiles" \
+      "blocked: connection string not set for this ticket" "never falls back" &&
+    section_has "$DNF" "Start with IIS Express" "/config:" "/site:" "applicationhost.config" "scratch copy" "never edit" &&
+    section_has "$DNF" "One-time administrator steps" "netsh http add urlacl" "firewall" "never runs them" &&
+    section_has "$DNF" Sign-in "debug token" "never type credentials" "never save or print" &&
+    section_has "$DNF" Doctor "sys.dm_exec_sessions" "inferred:" &&
+    section_has "$DNF" "api-start.ps1" "refuses to start when a process this run did not start holds the port" \
+      "saves the process ID in \`state.json\`" "confirm"
+}
+
+test_localdb_reference_h2s_exact() {
+  h2_exact "$LDB" "Instance and database|Bacpac|db-start.ps1"
+}
+
+test_localdb_reference_names_where_to_look() {
+  has_all "$LDB" "general knowledge" "not yet checked on a customer project" "inferred:" &&
+    section_has "$LDB" "Instance and database" "sqllocaldb" "(localdb)" \
+      "never create, stop, delete or change an instance the engineer made" "one new database per ticket" &&
+    section_has "$LDB" Bacpac "references/sqlserver-docker.md" "TargetServerName" "never reset" &&
+    section_has "$LDB" db-start.ps1 "containerId" "<instance>\\<database>" "never drops any other database" \
+      "database: new" "the instance and the per-ticket database"
+}
+
+test_ios_reference_h2s_exact() {
+  h2_exact "$IOS" "Build and install|Driver|Sign-in|Doctor|Three-way match on iOS|Evidence and privacy|ui-start.ps1"
+}
+
+test_ios_reference_names_where_to_look() {
+  has_all "$IOS" "general knowledge" "not yet checked on a customer project" "inferred:" &&
+    section_has "$IOS" "Build and install" "-project" "contents.xcworkspacedata" "no schemes" "build-for-testing" \
+      "-derivedDataPath" "git status --porcelain" "never restores" "DeviceHub" "bootstatus" "simctl install" &&
+    section_has "$IOS" Driver "XCUIApplication(bundleIdentifier:)" "project.pbxproj" "continueAfterFailure = false" \
+      "TEST_RUNNER_VERIFY_EVIDENCE_DIR" "child" &&
+    section_has "$IOS" Sign-in "never type credentials" "30 seconds" "600 seconds" "already signed in" \
+      "blocked: sign-in did not complete" "bearer" "NSURLErrorDomain" "spinner" &&
+    section_has "$IOS" Doctor "simulator is booted" "plain request" "no token" "cached" &&
+    section_has "$IOS" "Three-way match on iOS" "two legs" "API leg" "unknown:" "Not verified" \
+      "does not make the result \`blocked\`" &&
+    section_has "$IOS" "Evidence and privacy" "customer data" "outside every repository" "counts and identifiers" &&
+    section_has "$IOS" "ui-start.ps1" "no schemes" "never installs a runtime" "project file stays unchanged"
+}
+
+test_host_powershell_reference_h2s_exact() {
+  h2_exact "$HPS" "Rules|Windows PowerShell 5.1"
+}
+
+test_host_powershell_reference_names_where_to_look() {
+  has_all "$HPS" "general knowledge" "not yet checked on a customer project" "inferred:" "powershell.exe" &&
+    section_has "$HPS" Rules '${name}?' "variable is followed by" "only fails at run time" \
+      "test that the key exists first" "strict mode" 'wrap query results in `@()`' "plain string" &&
+    ! section_has "$HP" "Rules for every helper" "strict mode" &&
+    section_has "$HPS" "Windows PowerShell 5.1" "&&" "execution policy" \
+      "blocked: execution policy" "never changes the policy" "Stop-Process -Id" "owns the LocalDB instances"
+}
+
+test_host_shell_reference_h2s_exact() {
+  h2_exact "$HSH" "Rules|State and queries"
+}
+
+test_host_shell_reference_names_where_to_look() {
+  has_all "$HSH" "general knowledge" "not yet checked on a customer project" "inferred:" &&
+    section_has "$HSH" Rules "#!/usr/bin/env bash" "set -u" "bash 3.2" "zsh" "not split" "quote every variable" \
+      "mapfile" "sed -i" "kill <pid>" &&
+    section_has "$HSH" "State and queries" "jq" "// empty" "temp file" "shasum -a 256"
+}
+
+test_skill_loads_the_host_references() {
+  joined <"$SKILL" | grep -qF -- 'Helpers in PowerShell also load `references/host-powershell.md`; helpers in bash or zsh also load `references/host-shell.md`.' &&
+    step_has "Write the helpers" 'references/host-powershell.md' 'references/host-shell.md'
+}
+
+test_helpers_index_names_the_host_references() {
+  section_has "$HP" "Where the other contracts live" 'references/host-powershell.md' 'references/host-shell.md'
+}
+
+test_generated_gotchas_name_no_single_stack() {
+  section_has "$VT" Gotchas "each gotcha that a loaded reference says to put here" &&
+    ! section_has "$VT" Gotchas "Rosetta" &&
+    ! section_has "$VT" Gotchas "DbUp" &&
+    ! section_has "$VT" Gotchas '--urls'
+}
+
+test_generator_notes_cover_an_ios_driver() {
+  has_all "$VT" 'For an iOS app, replace the `Browser and session` section' "references/ios.md" \
+    '`Driver`, `Sign-in` and `Evidence and privacy`' \
+    "drop the steps for helpers that the app does not have" "Write every helper name with the extension"
+}
+
+test_ios_doctor_replaces_the_generic_doctor() {
+  section_has "$IOS" Doctor "replaces the \`doctor.ps1\` contract" "no container"
+}
+
+test_localdb_reference_covers_doctor_and_cleanup() {
+  section_has "$LDB" db-start.ps1 "doctor.ps1" "sqllocaldb info" "Running" "docker inspect" "cleanup.ps1" "DROP DATABASE" \
+    "never runs it"
+}
+
+test_framework_reference_covers_a_runner_that_reads_a_settings_file() {
+  has_all "$DNF" "reads a settings file instead" "asks for the same confirmation" \
+    "blocked: connection string not set for this ticket"
+}
+
+test_powershell_encoding_rule_is_complete() {
+  section_has "$HPS" "Windows PowerShell 5.1" "WriteAllText" 'UTF8Encoding($false)' "without a byte order mark" \
+    "-Encoding UTF8" "jq"
+}
+
+test_ios_privacy_filter_and_missing_xcodegen() {
+  section_has "$IOS" Sign-in "templates/helpers.md" "authorize" "client_id" "code=" "email address" &&
+    section_has "$IOS" Driver "blocked: xcodegen not found" "brew install xcodegen" "never install it" "signing team"
+}
+
+test_dotnet_api_start_puts_the_port_rule_in_the_gotchas() {
+  section_has "$DN" api-start.ps1 "Gotchas of the generated skill" "AirPlay Receiver"
+}
+
+test_host_shell_warns_about_the_empty_array_under_set_u() {
+  section_has "$HSH" Rules "unbound variable" "empty array" '${#list[@]}'
+}
+
+test_powershell_query_rule_covers_localdb() {
+  section_has "$HPS" Rules "database query" "LocalDB" 'wrap query results in `@()`'
+}
+
+test_skill_picks_the_helper_language_first() {
+  step_has "Write the helpers" "First pick the language of the helpers" "else the shell of the machine that runs them" \
+    "use the extension of that language"
+}
+
+test_localdb_container_id_changes_when_the_database_is_recreated() {
+  section_has "$LDB" db-start.ps1 "create_date" "sys.databases" "dropped and created again" "clears the stored state"
+}
+
+test_localdb_reference_holds_the_parallels_user_fact() {
+  section_has "$LDB" "Instance and database" "prlctl exec" "--current-user" "SYSTEM" &&
+    ! has_all "$HPS" "prlctl"
+}
+
+test_the_settings_file_confirmation_is_recorded_per_database() {
+  section_has "$DNF" "api-start.ps1" "-ConnectionConfirmed" "connectionConfirmedFor" "containerId" "lapses" &&
+    section_has "$HP" "common.ps1" "connectionConfirmedFor"
+}
+
+test_framework_roles_are_the_engineers_step() {
+  section_has "$DNF" Sign-in "ignores \`roles\`" "blocked: roles differ" "nothing is restarted" "engineer's step"
+}
+
+test_framework_doctor_matches_the_process_id() {
+  section_has "$DNF" Doctor '`host_process_id` is the IIS Express process ID' "program_name" "generic" "blocked: database target not shown" "inferred:"
+}
+
+test_ios_doctor_checks_the_installed_build_and_uses_one_log_filter() {
+  section_has "$IOS" Doctor "get_app_container" "shasum -a 256" "the one this run built" &&
+    section_has "$IOS" "Evidence and privacy" "named in the Sign-in section" "client_id" "email addresses"
+}
+
+test_ios_builds_the_app_with_build_not_build_for_testing() {
+  section_has "$IOS" "Build and install" 'Use `build` for the app' "build-for-testing"
+}
+
+test_skill_asks_which_ui_the_ticket_drives() {
+  joined <"$SKILL" | grep -qF -- 'ask the engineer which one it drives, and load only that reference'
 }
 
 test_sqlserver_docker_reference_h2s_exact() {
@@ -333,6 +507,19 @@ test_feature_map_reference_picks_about_five() {
     section_has "$f" Confirm "about five" "confirm, swap or add"
 }
 
+test_skill_loads_the_framework_and_localdb_references() {
+  joined <"$SKILL" | grep -qF -- 'A .NET Framework project (a `web.config`, a `Global.asax`, or a `TargetFrameworkVersion` of `v4.x` in a `*.csproj`) also loads `references/dotnet-framework.md`, whose `api-start.ps1` replaces the one in `references/dotnet.md`.' &&
+    joined <"$SKILL" | grep -qF -- 'Ask the engineer where the local database runs. For LocalDB, also load `references/sqlserver-localdb.md`, whose `db-start.ps1` replaces the one in `references/sqlserver-docker.md`.' &&
+    step_has "Write the helpers" 'references/dotnet-framework.md' 'references/sqlserver-localdb.md'
+}
+
+test_skill_loads_the_ios_reference_and_copies_its_report_section() {
+  joined <"$SKILL" | grep -qF -- 'For an iOS app (the repository has a `*.xcodeproj` or `*.xcworkspace`) also load `references/ios.md`, whose `ui-start.ps1` replaces the one in `references/react.md`.' &&
+    joined <"$SKILL" | grep -qF -- 'For an iOS app, also copy the section `Three-way match on iOS` of `references/ios.md` after the Order of results.' &&
+    step_has "Write the feature map and data setup" 'references/ios.md' &&
+    step_has "Write the verify skill" 'Three-way match on iOS'
+}
+
 test_sql_server_trigger_never_reads_a_connection_string() {
   ! joined <"$SKILL" | grep -qF -- 'a SQL Server connection string' &&
     joined <"$SKILL" | grep -qF -- 'never open a settings file or user secrets to look'
@@ -363,6 +550,11 @@ UM="$REFS/update-mode.md"
 DN="$REFS/dotnet.md"
 RX="$REFS/react.md"
 DBA="$REFS/sqlserver-docker.md"
+DNF="$REFS/dotnet-framework.md"
+LDB="$REFS/sqlserver-localdb.md"
+IOS="$REFS/ios.md"
+HPS="$REFS/host-powershell.md"
+HSH="$REFS/host-shell.md"
 
 # The twelve-line Verify block and the fifteen-line evidence report, copied from the design (PLAN.local.md, "Input to
 # /verify-<app>" and "Output: the evidence report"). The templates must hold the same lines, so a paraphrase fails.
@@ -556,7 +748,7 @@ test_helpers_contract_names_the_local_only_list() {
 test_gotchas_say_a_local_only_edit_never_forces_a_restore() {
   section_has "$VT" Gotchas "never forces a restore" "a branch script that changed or was removed" \
     "an app-code change outside the scripts folder, this skill's folder and the local-only files" \
-    "a new branch script is applied by DbUp without a restore" &&
+    "a new branch script is applied by the migration runner without a restore" &&
     ! section_has "$VT" Gotchas "any other change in the working tree"
 }
 
@@ -780,6 +972,39 @@ check "no phrase is copied from the source skills" test_no_phrase_is_copied_from
 check "dotnet.md has the five H2s in order" test_dotnet_reference_h2s_exact
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
 check "a bacpac whose journal lists a branch script is blocked" test_bacpac_journal_conflict_is_blocked
+check "dotnet-framework.md has the seven H2s in order" test_dotnet_framework_reference_h2s_exact
+check "dotnet-framework.md names where to look" test_dotnet_framework_reference_names_where_to_look
+check "sqlserver-localdb.md has the three H2s in order" test_localdb_reference_h2s_exact
+check "sqlserver-localdb.md names where to look" test_localdb_reference_names_where_to_look
+check "SKILL.md loads the Framework and LocalDB references" test_skill_loads_the_framework_and_localdb_references
+check "host-powershell.md has the two H2s in order" test_host_powershell_reference_h2s_exact
+check "host-powershell.md names where to look" test_host_powershell_reference_names_where_to_look
+check "host-shell.md has the two H2s in order" test_host_shell_reference_h2s_exact
+check "host-shell.md names where to look" test_host_shell_reference_names_where_to_look
+check "SKILL.md loads the host references" test_skill_loads_the_host_references
+check "the helpers index names the host references" test_helpers_index_names_the_host_references
+check "the generated Gotchas name no single stack" test_generated_gotchas_name_no_single_stack
+check "the generator notes cover an iOS driver" test_generator_notes_cover_an_ios_driver
+check "ios.md has the seven H2s in order" test_ios_reference_h2s_exact
+check "ios.md names where to look" test_ios_reference_names_where_to_look
+check "SKILL.md loads the iOS reference and copies its report section" test_skill_loads_the_ios_reference_and_copies_its_report_section
+check "the iOS Doctor replaces the generic Doctor" test_ios_doctor_replaces_the_generic_doctor
+check "LocalDB covers Doctor and cleanup" test_localdb_reference_covers_doctor_and_cleanup
+check "a Framework runner that reads a settings file asks for the confirmation" test_framework_reference_covers_a_runner_that_reads_a_settings_file
+check "the PowerShell 5.1 encoding rule is complete" test_powershell_encoding_rule_is_complete
+check "iOS privacy filter and a missing xcodegen" test_ios_privacy_filter_and_missing_xcodegen
+check "dotnet.md puts the port rule in the Gotchas" test_dotnet_api_start_puts_the_port_rule_in_the_gotchas
+check "host-shell.md warns about the empty array under set -u" test_host_shell_warns_about_the_empty_array_under_set_u
+check "the PowerShell query rule covers LocalDB" test_powershell_query_rule_covers_localdb
+check "SKILL.md picks the helper language first" test_skill_picks_the_helper_language_first
+check "a recreated LocalDB database changes the containerId value" test_localdb_container_id_changes_when_the_database_is_recreated
+check "the Parallels user fact lives in the LocalDB reference" test_localdb_reference_holds_the_parallels_user_fact
+check "the settings-file confirmation is recorded per database" test_the_settings_file_confirmation_is_recorded_per_database
+check "Framework roles are the engineer's step" test_framework_roles_are_the_engineers_step
+check "Framework Doctor matches the process ID" test_framework_doctor_matches_the_process_id
+check "iOS Doctor checks the installed build, one log filter" test_ios_doctor_checks_the_installed_build_and_uses_one_log_filter
+check "iOS builds the app with build" test_ios_builds_the_app_with_build_not_build_for_testing
+check "SKILL.md asks which UI the ticket drives" test_skill_asks_which_ui_the_ticket_drives
 check "sqlserver-docker.md has the four H2s in order" test_sqlserver_docker_reference_h2s_exact
 check "sqlserver-docker.md names where to look" test_sqlserver_docker_reference_names_where_to_look
 check "react.md has the six H2s in order" test_react_reference_h2s_exact
@@ -876,12 +1101,12 @@ check "pr-prep Testing is unchanged without a report" test_pr_prep_without_a_rep
 # ---------------------------------------------------------------- helper run-time defects
 
 test_helpers_brace_a_variable_before_a_question_mark() {
-  section_has "$HP" "Rules for every helper" '${name}?' "variable is followed by" "only fails at run time"
+  section_has "$HPS" Rules '${name}?' "variable is followed by" "only fails at run time"
 }
 
 test_state_reader_defaults_launch_keys_to_null() {
   section_has "$HP" "common.ps1" "default every launch key to null" "missing" &&
-    section_has "$HP" "Rules for every helper" "test that the key exists first" "strict mode"
+    section_has "$HPS" Rules "test that the key exists first" "strict mode"
 }
 
 test_api_start_does_not_need_the_plain_http_port() {
@@ -890,7 +1115,7 @@ test_api_start_does_not_need_the_plain_http_port() {
 }
 
 test_gotchas_name_the_launch_profile_ports() {
-  section_has "$VT" Gotchas "launch profile ports" "<port>" "AirPlay Receiver"
+  section_has "$VT" Gotchas "a fixed port" "<port>" "AirPlay Receiver" "the stack reference says how to change the port"
 }
 
 test_dbup_count_is_the_journal_row_count() {
@@ -917,7 +1142,7 @@ check "usage examples show the ticket placeholder" test_usage_examples_show_the_
 # ---------------------------------------------------------------- helper and browser defects from the end-to-end evaluation
 
 test_query_results_are_wrapped_in_an_array() {
-  section_has "$HP" "Rules for every helper" 'wrap query results in `@()`' "before indexing or counting" \
+  section_has "$HPS" Rules 'wrap query results in `@()`' "before indexing or counting" \
     "one-row result" "plain string"
 }
 
@@ -1286,10 +1511,25 @@ test_readme_planned_wording_is_updated() {
   grep -qF 'dev-rev -> verify -> pr-prep' "$README" || return 1
   has_all "$README" '`verify` means the project skill `/verify-<app>`'
 }
+test_readme_row_names_the_stacks_and_what_was_run() {
+  local row
+  row=$(grep '^| `agentd-verify-init` |' "$README")
+  [ -n "$row" ] || return 1
+  for t in ".NET Core" ".NET Framework" "IIS Express" "LocalDB" "React" "iOS" "PowerShell or bash" "run end to end" \
+    "general knowledge"; do
+    printf '%s\n' "$row" | grep -qF -- "$t" || return 1
+  done
+}
+test_eval_says_the_later_adapters_were_not_run() {
+  section_has "$EVAL" "Not run or not verified" "adapters added after this check" "structure test only" \
+    ".NET Framework on IIS Express" "LocalDB" "standalone XCUITest" "bash or zsh" "Windows PowerShell 5.1"
+}
 check "README lists the skill in the Skills table only" test_readme_lists_the_skill
 check "README has the verify-init tests paragraph" test_readme_has_the_tests_paragraph
 check "README flag paragraph matches the recorded result" test_readme_flag_paragraph_matches_the_recorded_result
 check "README Planned wording is updated" test_readme_planned_wording_is_updated
+check "README row names the stacks and what was run" test_readme_row_names_the_stacks_and_what_was_run
+check "EVAL.md says the later adapters were not run" test_eval_says_the_later_adapters_were_not_run
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]
