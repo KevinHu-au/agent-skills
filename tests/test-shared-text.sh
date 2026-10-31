@@ -53,5 +53,20 @@ check "the tool is in global/bin" [ -x "$HERE/../global/bin/onboarding-pack" ]
 check "the paragraph treats an unsourced access rule as no access" bash -c \
   'printf "%s" "$1" | grep -qF "as no access"' _ "$REF"
 
+# The .NET notes of blast-radius, diagnose and onboard tell .NET Framework from .NET Core with the same bullets.
+# kind_bullets <file>: the lines of the "Which kind of project" part of a dotnet.md that are the shared rule.
+kind_bullets() {
+  awk '/^## Which kind of project/ { on = 1; next } /^## / { on = 0 } on && (/^- / || /^Read the target/)' "$1"
+}
+
+KREF=$(kind_bullets "$SKILLS/agentd-blast-radius/references/dotnet.md")
+# blast-radius holds the reference copy. Change the bullets in all three files together. The sentence after the list
+# differs on purpose in each file.
+check "blast-radius dotnet.md has the kind bullets (the reference copy)" [ "$(printf '%s\n' "$KREF" | grep -c '^- ')" -ge 5 ]
+for s in agentd-diagnose agentd-onboard; do
+  check "$s dotnet.md has the same kind bullets as blast-radius" \
+    [ "$(kind_bullets "$SKILLS/$s/references/dotnet.md")" = "$KREF" ]
+done
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

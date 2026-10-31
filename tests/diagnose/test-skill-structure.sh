@@ -221,6 +221,48 @@ test_performance_reference_has_the_mantras_in_order_and_the_vetting() {
     has_all "$REFS/performance.md" '5 runs' 'median' 'limiter' 'end to end'
 }
 
+# dotnet_section_has <heading> <text>...: the section of dotnet.md holds every text, ignoring case.
+dotnet_section_has() {
+  local h=$1 body t
+  shift
+  body=$(section_of "$REFS/dotnet.md" "$h")
+  [ -n "$body" ] || return 1
+  for t in "$@"; do printf '%s\n' "$body" | grep -qiF -- "$t" || return 1; done
+}
+
+# dotnet_line_has <section> <text> <text>...: the first line of that section of dotnet.md that holds the first text also
+# holds every other text.
+dotnet_line_has() {
+  local sec=$1 first=$2 t line
+  shift 2
+  line=$(section_of "$REFS/dotnet.md" "$sec" | grep -F -- "$first" | head -n 1)
+  [ -n "$line" ] || return 1
+  for t in "$@"; do printf '%s\n' "$line" | grep -qF -- "$t" || return 1; done
+}
+
+test_dotnet_reference_separates_framework_and_core() {
+  grep -qF 'it says how to tell .NET Framework from .NET Core' "$SKILL" &&
+    dotnet_section_has "Which kind of project" 'TargetFrameworkVersion' 'net48' 'netcoreapp3.1' 'net8.0-windows' \
+      'TargetFrameworks' 'netstandard2.0' 'Windows service' &&
+    dotnet_section_has "Run and count tests" 'vstest.console.exe' '/ListTests' 'NUnit' '--filter' &&
+    dotnet_section_has "Bug candidates" 'Global.asax.cs' 'Autofac' 'lazy loading' 'deadlock' 'HttpContext.Current' 'web.config' &&
+    dotnet_section_has "Production dumps" 'dotnet-dump analyze' 'WinDbg' 'SOS' '!clrstack' 'procdump' 'Install nothing' &&
+    dotnet_section_has "Performance candidates" 'EF6' 'Database.Log' 'Extended Events' 'Performance Monitor' 'PerfView' \
+      'dotnet-counters' 'dotnet-trace' &&
+    # Each kind's tools sit on the line for that kind, and not on the other kind's line.
+    dotnet_line_has "Production dumps" 'dotnet-dump analyze' '.NET Core' &&
+    ! dotnet_line_has "Production dumps" 'dotnet-dump analyze' 'WinDbg' &&
+    ! dotnet_line_has "Production dumps" 'dotnet-dump analyze' '!clrstack ' &&
+    dotnet_line_has "Production dumps" 'WinDbg' '.NET Framework' 'procdump' '!clrstack' 'SOS' &&
+    dotnet_line_has "Performance candidates" 'Database.Log' 'EF6' 'scratch folder' 'parameter values' &&
+    dotnet_line_has "Performance candidates" 'dotnet-counters' '.NET Core' &&
+    ! dotnet_line_has "Performance candidates" 'dotnet-counters' 'PerfView' &&
+    dotnet_line_has "Performance candidates" 'PerfView' '.NET Framework' 'Performance Monitor' &&
+    dotnet_line_has "Bug candidates" 'Lazy loading' 'EF6' 'EF Core' 'virtual' &&
+    dotnet_line_has "Bug candidates" 'HttpContext.Current' '.NET Framework' &&
+    dotnet_line_has "Bug candidates" 'deadlock' 'ASP.NET Core' 'thread pool' 'WPF' 'ConfigureAwait(false)'
+}
+
 test_dotnet_reference_names_where_to_look() {
   has_all "$REFS/dotnet.md" '--filter' 'N+1' 'Release' 'dotnet-counters' 'dotnet-trace' 'zero'
 }
@@ -668,6 +710,7 @@ check "data.md hands a repair to /agentd-data-fix and keeps the stale backup wor
 check "the report template hands a data repair to /agentd-data-fix, and the closing line follows" test_report_template_hands_a_data_repair_to_the_data_fix_skill
 check "performance.md has the seven mantras in order and the vetting" test_performance_reference_has_the_mantras_in_order_and_the_vetting
 check "dotnet.md names where to look" test_dotnet_reference_names_where_to_look
+check "dotnet.md separates .NET Framework from .NET Core" test_dotnet_reference_separates_framework_and_core
 check "ios.md names where to look" test_ios_reference_names_where_to_look
 check "react.md names where to look" test_react_reference_names_where_to_look
 check "report-template.md has the report headings in order" test_report_template_has_the_headings_in_order
