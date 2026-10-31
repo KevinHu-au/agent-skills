@@ -1,10 +1,12 @@
 # iOS apps (SwiftUI)
 
-Load this file when the repository has a `*.xcodeproj` or `*.xcworkspace`, or a `Package.swift` whose sources
-`import SwiftUI`. Treat each row as a place to look first, not a guarantee. The API behind the app is often in another
+Load this file for an iOS (SwiftUI) project (the stack signals in `SKILL.md`). Treat each row as a place
+to look first, not a guarantee. The API behind the app is often in another
 repository: the trail then stops at the HTTP call, as `SKILL.md` says.
 
 ## Detect
+
+The stack signals in `SKILL.md` decide when to load this file. These lines say what to look for once it is loaded.
 
 - A `*.xcodeproj` or `*.xcworkspace`; an `@main` type that conforms to `App`.
 - Swift files that `import SwiftUI`; `*.xcdatamodeld` (Core Data) or `@Model` types (SwiftData).

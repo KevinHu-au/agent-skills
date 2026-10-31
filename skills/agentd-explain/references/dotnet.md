@@ -1,11 +1,13 @@
 # .NET backends
 
-Load this file when the repository has `*.sln` or `*.csproj` files. It covers ASP.NET Core (often with a command and
+Load this file for a .NET project (the stack signals in `SKILL.md`). It covers ASP.NET Core (often with a command and
 query split) and older .NET Framework MVC and Web API projects. Treat each row as a place to look first, not a
 guarantee. A server-rendered screen (MVC view, Razor Pages, Blazor) is covered here. A separate frontend's layers come
 from `react.md`, or from the generic order in `SKILL.md`.
 
 ## Detect
+
+The stack signals in `SKILL.md` decide when to load this file. These lines say what to look for once it is loaded.
 
 - ASP.NET Core: `TargetFramework` of `net6.0` or later in a `*.csproj`; `Program.cs` with `WebApplication` or
   `AddControllers`.

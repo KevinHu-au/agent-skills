@@ -28,9 +28,8 @@ to the data source. The answer is for the engineer, never the customer. This is 
   code.
 - The code wins every conflict. Where a document disagrees with the code, mark `conflict:` with both sources and use
   the code's value. An earlier export is just another document: every claim in it is checked against the code.
-- Detect each stack and read each matching reference: `references/dotnet.md` (`*.sln` or `*.csproj`),
-  `references/react.md` (`package.json` that lists `react-dom`), `references/ios.md` (`*.xcodeproj`, `*.xcworkspace`,
-  or a `Package.swift` whose sources import SwiftUI). For a stack with no reference, use the generic order: screen →
+- Detect each stack and read each matching reference: `references/dotnet.md`, `references/react.md`, `references/ios.md`.
+  A .NET project has `*.sln`, `*.csproj` or `*.vbproj` files, or is a Web Site project (a `web.config` with `*.aspx` or `*.cshtml` pages and no project file). An iOS (SwiftUI) project has a `*.xcodeproj` or `*.xcworkspace`, or a `Package.swift` whose sources import SwiftUI. A React web project has a `package.json`, in the repository or in any workspace folder, that lists `react-dom` under `dependencies`, or under `devDependencies` when the same file lists a bundler or dev server (`vite`, `webpack`, `next`, `react-scripts` or `parcel`) and has no `main`, `module` or `exports` field. A file that also lists `react-native`, a peer-only entry, or a dev entry that fails those conditions is a mobile app or a library, not a web project. A project, or a part of one, that matches none of these is a stack with no reference. For a stack with no reference, use the generic order: screen →
   client state → client service → API boundary → application logic → data access → storage or external system.
   When the engineer gives the path of a second repository, detect its stack too and read its reference.
 - A layer the stack does not have is `none`. A layer that should exist but was not found is `unknown:`.
