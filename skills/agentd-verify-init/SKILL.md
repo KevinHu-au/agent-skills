@@ -57,8 +57,8 @@ skill never verifies a ticket itself. Read the references and templates named in
    any workspace) also load `references/react.md`. Shape the files with `templates/feature-map.md`.
 5. **Write the helpers.** Launch and stop the app, start the database, and run the Doctor check. Doctor reports the
    database the running process uses and refuses to drive an API or UI this run did not start. For .NET projects (the repository has `*.sln` or
-   `*.csproj` files) also load `references/dotnet.md`. Give each helper the contract in `templates/helpers.md`. After the parse check, run each helper once with its
-   prerequisites missing, except the shared file that is only sourced. It must stop with its own `blocked:` message, not a PowerShell error.
+   `*.csproj` files) also load `references/dotnet.md`. For a SQL Server database (a `dbup-sqlserver`, `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.Data.SqlClient` or `System.Data.SqlClient` package, or a SQL Server image in the integration tests; never open a settings file or user secrets to look, and when no signal shows, ask the engineer) also load `references/sqlserver-docker.md`. Give each helper its contract: `templates/helpers.md` holds the core rules and an index of where the other contracts live. After the parse check, run each helper once with its
+   prerequisites missing, except the shared file that is only sourced. It must stop with its own `blocked:` message, not a shell error.
 6. **Write the verify skill.** Name it `verify-<app>`. Put this marker in its header, nested exactly:
 
    ```yaml
@@ -77,15 +77,16 @@ skill never verifies a ticket itself. Read the references and templates named in
 
 ## Rules
 
-- Committed files carry no personal paths: find tools on `PATH` or by an environment variable, and ask for a bacpac
-  path at run time. They carry no secrets: the database password is made per container and read back with
-  `docker inspect`. They carry no customer values in the feature map.
+- Committed files carry no personal paths: find tools on `PATH` or by an environment variable, and ask for a data file
+  path at run time. They carry no secrets: no password is written to a file, and the database reference says how it is made. They
+  carry no customer values in the feature map.
 - The skill never types credentials. The engineer signs in with their own account.
-- It must never read, print, copy or change user secrets or any connection string. Pass connection strings and roles
-  to the app as environment variables, never by editing a settings file.
+- It must never read, print, copy or change user secrets or any connection string, and never edit a settings file.
+  The stack reference says how the app gets its connection string and roles.
 - Evidence goes to `~/.<app>-verify/<ticket>/<timestamp>/`, outside every repository. It is never committed and
   cleanup never removes it.
-- The database is SQL Server in Docker, one container per ticket, with its own host port.
+- Each ticket gets its own database, made by this skill, never the engineer's own. The database reference says how it
+  starts (for SQL Server: one container per ticket, with its own host port).
 - The generated skill names six independence mechanisms: expectations before evidence, a separate verifier in a fresh
   session, three-way match of screen, API and database, recompute the figures on calculation tickets, check the
   neighbours, and try the edges. Expectations never come from the diff.
