@@ -4,6 +4,9 @@
 #        onboarding-pack suggest [<repo>]
 #        onboarding-pack find    [<repo>]
 #        onboarding-pack set     <pack folder> [<repo>]
+#        onboarding-pack verify-folder <app>
+#        onboarding-pack verify-find   [<repo>]
+#        onboarding-pack verify-set    <verify folder> [<repo>]
 #
 # A pack inside the repository is always docs/onboarding/ and is never recorded here. A customer that allows no
 # file in the repository gets a pack in another folder, and this tool records that folder in a registry file in the
@@ -21,19 +24,28 @@
 # find     prints the recorded pack folder.
 # set      adds the line, or replaces the line with the same key. The folder must be an absolute path to an existing
 #          folder outside the repository, and no other repository may have it recorded. Other lines are kept.
+#
+# A repository whose files policy is none also keeps its generated verify skill outside the repository. The verify-
+# commands do for that folder what find and set do for the pack, with their own registry file,
+# $HOME/.agents/verify-skills.tsv, so the pack registry is never touched. The folder holds verify-<app>/SKILL.md.
+# A repository has one verify folder, and it holds every verify-<app>/ of that repository. verify-folder prints the
+# default folder, $HOME/.agents/verify/<app>; it does not look at a repository, so two repositories with one app name
+# get one default and the second verify-set is refused. The app name is letters, digits, '.', '_' and
+# '-', and starts with a letter or digit. verify-find and verify-set take the same refusals as find and set.
 # Exit status: 0 success, 1 no pack recorded (find), 2 bad usage, 3 the recorded folder does not exist (find),
 #              4 refused (not a repository, the repository cannot be read, or the folder is not allowed).
 set -u
 unset CDPATH
 
 REGISTRY="$HOME/.agents/onboarding-packs.tsv"
+VERIFY_REGISTRY="$HOME/.agents/verify-skills.tsv"
 
 die() {
   printf 'onboarding-pack: %s\n' "$1" >&2
   exit "${2:-4}"
 }
 usage() {
-  printf 'onboarding-pack: usage: onboarding-pack key|suggest|find [<repo>] | set <pack folder> [<repo>]\n' >&2
+  printf 'onboarding-pack: usage: onboarding-pack key|suggest|find|verify-find [<repo>] | set <pack folder> [<repo>] | verify-set <verify folder> [<repo>] | verify-folder <app>\n' >&2
   exit 2
 }
 
@@ -117,6 +129,22 @@ inside() {
 cmd=$1
 shift
 
+# find and set work on the pack registry; verify-find and verify-set work on the verify registry. In the case below,
+# `pack` also holds a verify folder. A new verify- command must be listed here to get the verify registry.
+reg=$REGISTRY
+what=pack
+inrepo='a pack in the repository is docs/onboarding/ and is not recorded'
+header='# onboarding-pack registry: <repository key><TAB><pack folder>. Written by ~/.agents/bin/onboarding-pack.'
+case "$cmd" in
+  verify-find | verify-set)
+    reg=$VERIFY_REGISTRY
+    what='verify folder'
+    inrepo='a verify folder is never inside the repository'
+    header='# onboarding-pack verify registry: <repository key><TAB><verify folder>. Written by ~/.agents/bin/onboarding-pack.'
+    cmd=${cmd#verify-}
+    ;;
+esac
+
 case "$cmd" in
   key)
     [ $# -le 1 ] || usage
@@ -137,10 +165,10 @@ case "$cmd" in
     [ $# -le 1 ] || usage
     repo=$(repo_of "${1:-}") || exit 4
     k=$(key_of "$repo") || exit 4
-    [ -f "$REGISTRY" ] || die "no pack recorded for $k (no registry file at $REGISTRY)" 1
-    pack=$(K="$k" awk -F '\t' '$0 !~ /^#/ && $1 == ENVIRON["K"] { p = $2 } END { if (p != "") print p }' "$REGISTRY")
-    [ -n "$pack" ] || die "no pack recorded for $k" 1
-    [ -d "$pack" ] || die "the recorded pack folder does not exist: $pack" 3
+    [ -f "$reg" ] || die "no $what recorded for $k (no registry file at $reg)" 1
+    pack=$(K="$k" awk -F '\t' '$0 !~ /^#/ && $1 == ENVIRON["K"] { p = $2 } END { if (p != "") print p }' "$reg")
+    [ -n "$pack" ] || die "no $what recorded for $k" 1
+    [ -d "$pack" ] || die "the recorded $what does not exist: $pack" 3
     printf '%s\n' "$pack"
     ;;
   set)
@@ -162,34 +190,51 @@ case "$cmd" in
     while IFS= read -r t; do
       [ -n "$t" ] && [ -d "$t" ] || continue
       if inside "$pack" "$t"; then
-        die "refused: '$pack' is inside a working tree of this repository ($t); a pack in the repository is docs/onboarding/ and is not recorded"
+        die "refused: '$pack' is inside a working tree of this repository ($t); $inrepo"
       fi
     done <<<"$trees"
     k=$(key_of "$repo") || exit 4
-    if [ -f "$REGISTRY" ]; then
+    if [ -f "$reg" ]; then
       while IFS=$'\t' read -r rk rp; do
         case "$rk" in '#'* | '') continue ;; esac
         if [ "$rk" != "$k" ] && [ -d "$rp" ] && [ "$rp" -ef "$pack" ]; then
           die "refused: '$pack' is already recorded for $rk; give this repository its own folder"
         fi
-      done <"$REGISTRY"
+      done <"$reg"
     fi
-    dir=${REGISTRY%/*}
+    # The pack folders and the verify folders must not overlap, so a repository's pack and another's verify skill never
+    # share a folder.
+    if [ "$reg" = "$REGISTRY" ]; then other=$VERIFY_REGISTRY; else other=$REGISTRY; fi
+    if [ -f "$other" ]; then
+      while IFS=$'\t' read -r rk rp; do
+        case "$rk" in '#'* | '') continue ;; esac
+        if [ -d "$rp" ] && [ "$rp" -ef "$pack" ]; then
+          die "refused: '$pack' is already recorded in $other for $rk; pack folders and verify folders must differ"
+        fi
+      done <"$other"
+    fi
+    dir=${reg%/*}
     mkdir -p -- "$dir" || die "refused: cannot create $dir"
     # Write a new copy next to the registry, then move it over the old one, so a failed write leaves the old file.
     tmp=$(mktemp "$dir/.onboarding-packs.XXXXXX") || die "refused: cannot write in $dir"
     if {
-      if [ -f "$REGISTRY" ]; then
-        K="$k" awk -F '\t' '$0 ~ /^#/ || $1 != ENVIRON["K"]' "$REGISTRY"
+      if [ -f "$reg" ]; then
+        K="$k" awk -F '\t' '$0 ~ /^#/ || $1 != ENVIRON["K"]' "$reg"
       else
-        printf '# onboarding-pack registry: <repository key><TAB><pack folder>. Written by ~/.agents/bin/onboarding-pack.\n'
+        printf '%s\n' "$header"
       fi
       printf '%s\t%s\n' "$k" "$pack"
-    } >"$tmp" && mv -f -- "$tmp" "$REGISTRY"; then
+    } >"$tmp" && mv -f -- "$tmp" "$reg"; then
       printf 'onboarding-pack: recorded %s -> %s\n' "$k" "$pack"
     else
-      die "refused: cannot write $REGISTRY; the new copy is left at $tmp"
+      die "refused: cannot write $reg; the new copy is left at $tmp"
     fi
+    ;;
+  verify-folder)
+    [ $# -eq 1 ] || usage
+    app=$1
+    [[ $app =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die "refused: '$app' is not an app name (letters, digits, '.', '_' and '-')"
+    printf '%s\n' "$HOME/.agents/verify/$app"
     ;;
   *) usage ;;
 esac

@@ -220,9 +220,9 @@ test_no_absolute_home_paths() {
   while IFS= read -r f; do
     grep -qF -e "/Users/" -e "$tmp" "$f" && return 1
     # ~/ may appear only as ~/.<app>-verify (the evidence and state folder), or as the rm-scratch helper that
-    # agentd-dev-rev already names.
+    # agentd-dev-rev already names, or as the policy none folder, its registry and the two links (7d).
     for tok in $(grep -oh '~/[^[:space:]`)]*' "$f"); do
-      printf '%s\n' "$tok" | grep -qE '^~/\.[A-Za-z0-9<>_]+-verify(/|$)|^~/\.agents/bin/rm-scratch$' || return 1
+      printf '%s\n' "$tok" | grep -qE '^~/\.[A-Za-z0-9<>_]+-verify(/|$)|^~/\.agents/bin/rm-scratch$|^~/\.agents/verify(-skills\.tsv|/<app>/?)$|^~/\.(agents|claude)/skills/verify-<app>$' || return 1
     done
   done < <(skill_files)
   return 0
@@ -556,7 +556,7 @@ IOS="$REFS/ios.md"
 HPS="$REFS/host-powershell.md"
 HSH="$REFS/host-shell.md"
 
-# The twelve-line Verify block and the fifteen-line evidence report, copied from the design (PLAN.local.md, "Input to
+# The thirteen-line Verify block and the fifteen-line evidence report, copied from the design (PLAN.local.md, "Input to
 # /verify-<app>" and "Output: the evidence report"). The templates must hold the same lines, so a paraphrase fails.
 VERIFY_BLOCK=$(
   cat <<'EOF'
@@ -568,6 +568,7 @@ Feature: <feature file(s)>; entry points: <which ones>
 Neighbours: <features from blast-radius> | none
 Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
 Roles: default | <role list>
+API: <the API the run must use, and "debug token" when the engineer will run the API call with a debug token and paste back the value>
 Steps: <numbered user actions>
 Side effects: <tables or rows to check with a read-only SELECT> | none
 Diagnose: <from the diagnose hand-off, verbatim: the Confidence line, the Root cause line, and the reproduction command from the Verification line (not its expected output)> | none
@@ -1020,7 +1021,7 @@ check "the SQL Server trigger never reads a connection string" test_sql_server_t
 check "stack references use neutral wording" test_stack_references_use_neutral_wording
 
 check "verify-skill.md header has the name and the nested marker, no flag" test_verify_skill_template_header
-check "the Verify block has the twelve fields in order and no Expected line" test_verify_block_has_the_fields_in_order_and_no_expected_line
+check "the Verify block has the thirteen lines in order and no Expected line" test_verify_block_has_the_fields_in_order_and_no_expected_line
 check "Base: unknown asks the engineer and never guesses" test_base_unknown_asks_and_never_guesses
 check "the input is the raw ticket and the Verify block" test_input_is_two_parts
 check "expectations come before driving, from the right sources" test_expectations_come_before_driving_and_from_the_right_sources
@@ -1530,6 +1531,92 @@ check "README flag paragraph matches the recorded result" test_readme_flag_parag
 check "README Planned wording is updated" test_readme_planned_wording_is_updated
 check "README row names the stacks and what was run" test_readme_row_names_the_stacks_and_what_was_run
 check "EVAL.md says the later adapters were not run" test_eval_says_the_later_adapters_were_not_run
+# ---------------------------------------------------------------- 7d: policy none and the API line
+
+# The lookup sentences are the same in dev-rev step 9, the Modes of SKILL.md and step 1 of update mode.
+LOOKUP_FIND='Then look for `verify-*/SKILL.md` under the folder that `"$HOME/.agents/bin/onboarding-pack" verify-find` prints.'
+LOOKUP_WINS='A marked skill in the repository wins over one outside it; name the other one in the reply.'
+LOOKUP_EXIT='Exit status 1 means none is recorded; for any other failure (the folder is gone, the tool is missing), say so in the reply and carry on without it.'
+
+test_lookup_sentences_are_the_same_in_three_places() {
+  has_all "$DEV" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT" &&
+    has_all "$SKILL" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT" &&
+    has_all "$UM" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT"
+}
+
+test_dev_rev_step_9_looks_outside_the_repository() {
+  dev_step_has 9 "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT" || return 1
+  # The "no marked skill" closing line is written only after both places were searched.
+  in_order "$(dev_step 9)" '.claude/skills/' 'verify-find' 'No project verify skill.'
+}
+
+test_create_mode_counts_the_outside_folder() {
+  section_has "$SKILL" Modes "$LOOKUP_FIND" 'no marked'
+}
+
+test_policy_none_writes_outside_the_repository() {
+  step_has "Ask where the skill lives" 'If the files policy is not `none`' 'With `files none`' 'write nothing in the repository' 'not even `.git/info/exclude`' \
+    'verify-folder' 'verify-set' 'verify-<app>/' || return 1
+  ! has_all "$SKILL" 'allows no file there' 'stop with one line'
+}
+
+test_report_step_offers_the_links() {
+  step_has "Report" 'With `files none`' '~/.agents/skills/verify-<app>' '$CLAUDE_CONFIG_DIR/skills' 'ln -s' 'mkdir -p' \
+    'only after the engineer says yes' 'never replace an existing path'
+}
+
+test_update_mode_diff_handles_an_outside_folder() {
+  has_all "$UM" 'outside the repository' 'add no exclude' 'skip the filter that leaves out the skill folder'
+}
+
+test_readme_supports_policy_none_for_verify_init() {
+  ! has_all "$README" 'does not support the policy `none` yet' || return 1
+  has_all "$README" 'agentd-verify-init' 'onboarding-pack verify-folder' 'verify-find' 'verify-set' '~/.agents/verify/<app>/' \
+    'verify-skills.tsv'
+}
+
+test_dev_rev_writes_the_api_line_only_when_named() {
+  dev_step_has 9 'twelve lines' 'optional `API:` line' 'only when the engineer names the API' 'leave the line out' 'do not write `API: default`' &&
+    ! dev_step_has 9 'these thirteen lines'
+}
+
+test_verify_skill_reads_an_absent_api_line_as_the_default() {
+  has_all "$VT" '`API:` is optional' 'absent' "stack reference" 'default' 'blocked'
+}
+
+test_ios_api_leg_can_use_a_debug_token() {
+  section_has "$IOS" "Three-way match on iOS" '`API:` line says `debug token`' 'in their own terminal' 'never asks for the token' 'pastes back' 'GET' \
+    'never has the token' 'does not paste the value' 'has no `debug token`, the API leg is `unknown:`' \
+    'customer data' 'only the compared value'
+}
+
+test_ios_has_no_default_api_in_the_template_rule() {
+  has_all "$VT" 'For an iOS app, the API-leg rule of `references/ios.md` applies instead'
+}
+
+test_policy_none_creates_the_folder_and_handles_refusals() {
+  step_has "Ask where the skill lives" 'mkdir -p' 'before `verify-set`' 'refuses' 'ask the engineer for another folder' \
+    'exits 3' 'never write to the default folder' 'one folder per repository' 'every `verify-<app>/`'
+}
+
+test_dev_rev_names_a_dead_command() {
+  dev_step_has 9 'outside the repository' 'neither `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/verify-<app>` nor `~/.agents/skills/verify-<app>` exists' \
+    'load the skill from its path' '`verify-<app>/SKILL.md` in the folder'
+}
+
+check "the lookup sentences are the same in dev-rev, SKILL.md and update mode" test_lookup_sentences_are_the_same_in_three_places
+check "dev-rev step 9 looks outside the repository before the no-skill line" test_dev_rev_step_9_looks_outside_the_repository
+check "Create mode counts the outside folder" test_create_mode_counts_the_outside_folder
+check "policy none writes the skill outside the repository" test_policy_none_writes_outside_the_repository
+check "the report step offers the two links" test_report_step_offers_the_links
+check "update mode handles a skill folder outside the repository" test_update_mode_diff_handles_an_outside_folder
+check "README says verify-init supports policy none" test_readme_supports_policy_none_for_verify_init
+check "dev-rev writes the API line only when the engineer names an API" test_dev_rev_writes_the_api_line_only_when_named
+check "the verify skill reads an absent API line as the default" test_verify_skill_reads_an_absent_api_line_as_the_default
+check "the iOS API leg can use a debug token" test_ios_api_leg_can_use_a_debug_token
+check "the template rule gives iOS an exception" test_ios_has_no_default_api_in_the_template_rule
+check "policy none creates the folder and handles refusals" test_policy_none_creates_the_folder_and_handles_refusals
+check "dev-rev warns when a skill outside the repository has no link" test_dev_rev_names_a_dead_command
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]

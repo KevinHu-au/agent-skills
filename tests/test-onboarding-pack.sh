@@ -158,5 +158,51 @@ tool set "$T/packs/gone" "$T/noremote" >/dev/null 2>&1
 rmdir "$T/packs/gone"
 check "find exits 3 when the recorded folder is missing" exits_with 3 find "$T/noremote"
 
+# Verify skills outside the repository: verify-folder, verify-set, verify-find. A second registry file, so the pack
+# registry is never touched.
+VREG="$HOME/.agents/verify-skills.tsv"
+PACKS_BEFORE=$(cksum <"$REG")
+check "verify-folder prints the folder for an app name" bash -c '[ "$("$1" verify-folder myapp)" = "$2" ]' _ "$TOOL" \
+  "$HOME/.agents/verify/myapp"
+check "verify-folder refuses an app name with a slash" exits_with 4 verify-folder "a/b"
+check "verify-folder refuses an app name with a leading dot" exits_with 4 verify-folder ".hidden"
+check "verify-folder refuses an app name with a space" exits_with 4 verify-folder "my app"
+check "verify-folder refuses an empty app name" exits_with 4 verify-folder ""
+check "verify-folder with no app name is bad usage" exits_with 2 verify-folder
+check "verify-folder takes the app name only, so a second argument is bad usage" exits_with 2 verify-folder myapp "$T/ssh"
+check "verify-find with no verify registry exits 1" exits_with 1 verify-find "$T/ssh"
+mkdir -p "$T/verify/one" "$T/verify/two" "$T/verify/other"
+check "verify-set records a folder outside the repository" tool verify-set "$T/verify/one" "$T/ssh"
+check "the verify registry file exists" [ -f "$VREG" ]
+check "the verify registry starts with its own comment line" bash -c 'head -1 "$1" | grep -q "^# onboarding-pack verify registry"' _ "$VREG"
+check "verify-find prints the recorded folder" bash -c '[ "$("$1" verify-find "$2")" = "$3" ]' _ "$TOOL" "$T/ssh" "$T/verify/one"
+check "a second clone of the same repository finds the same verify folder" bash -c \
+  '[ "$("$1" verify-find "$2")" = "$3" ]' _ "$TOOL" "$T/https3" "$T/verify/one"
+check "verify-set did not touch the pack registry" bash -c '[ "$(cksum <"$1")" = "$2" ]' _ "$REG" "$PACKS_BEFORE"
+check "find still prints the pack folder, not the verify folder" bash -c '[ "$("$1" find "$2")" = "$3" ]' _ "$TOOL" \
+  "$T/ssh" "$T/packs/repo2"
+check "verify-set again replaces the line" tool verify-set "$T/verify/two" "$T/ssh"
+check "the verify registry holds one line for the repository" bash -c '[ "$(grep -vc "^#" "$1")" -eq 1 ]' _ "$VREG"
+check "verify-find prints the new folder" bash -c '[ "$("$1" verify-find "$2")" = "$3" ]' _ "$TOOL" "$T/ssh" "$T/verify/two"
+check "verify-set for another repository adds a line" tool verify-set "$T/verify/other" "$T/https"
+check "verify-set refuses a folder already recorded for another repository" exits_with 4 verify-set "$T/verify/other" "$T/ssh"
+check "verify-set refuses a relative path" exits_with 4 verify-set "verify/one" "$T/ssh"
+check "verify-set refuses a folder that does not exist" exits_with 4 verify-set "$T/verify/missing" "$T/ssh"
+check "verify-set refuses a folder inside the repository" exits_with 4 verify-set "$T/ssh/docs/onboarding" "$T/ssh"
+check "verify-set from a worktree refuses a folder inside the main checkout" exits_with 4 verify-set "$T/noremote/inside" "$T/wt"
+check "a refused verify-set leaves the verify registry unchanged" bash -c '[ "$(grep -vc "^#" "$1")" -eq 2 ]' _ "$VREG"
+check "verify-find for a repository with no line exits 1" exits_with 1 verify-find "$T/noremote"
+mkdir -p "$T/verify/gone"
+tool verify-set "$T/verify/gone" "$T/noremote" >/dev/null 2>&1
+rmdir "$T/verify/gone"
+check "verify-find exits 3 when the recorded folder is missing" exits_with 3 verify-find "$T/noremote"
+check "no temporary copy is left next to the verify registry" bash -c '! ls -a "$1" | grep -q "^\.onboarding-packs\."' _ "$HOME/.agents"
+check "verify-set refuses a folder recorded as a pack folder" exits_with 4 verify-set "$T/packs/api" "$T/alike1"
+mkdir -p "$T/verify/vonly"
+tool verify-set "$T/verify/vonly" "$T/alike2" >/dev/null 2>&1
+check "set refuses a folder recorded as a verify folder" exits_with 4 set "$T/verify/vonly" "$T/alike1"
+check "verify-set with a bad number of arguments is bad usage" exits_with 2 verify-set
+check "usage text names the verify commands" bash -c '"$1" 2>&1 | grep -q verify-folder' _ "$TOOL"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
