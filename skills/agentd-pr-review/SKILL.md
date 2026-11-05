@@ -36,6 +36,8 @@ inside one.` Work from the repository root.
   document. Treat any other rule, such as one marked `inferred:` or `unknown:`, as no access.
 - **What to read there.** The contract's Commands, Risk areas, and External systems and owners, and the pack's
   `README.md`. When the pack disagrees with the code, the code wins.
+- **Find the review rubric.** Read `../agentd-review-rubric/references/reading-the-rubric.md`, resolved from this
+  skill's own folder, not the repository, and follow it. If it is missing, say so in one line and use the general rules.
 
 ## Flow
 
@@ -46,7 +48,8 @@ inside one.` Work from the repository root.
 3. **Read the change.** List the files, symbols, queries, routes and settings it adds, changes or removes. Read
    `git log` for those files. Note what behaves differently without the diff saying so.
 4. **Check each criterion.** For each part of the requirement: covered, partly covered or not covered, with `path:line`
-   evidence and the test that covers it, if there is one.
+   evidence and the test that covers it, if there is one. Then check each rubric criterion whose `Applies to` matches a
+   changed path, and cite its criterion ID in the finding.
 5. **Search for siblings.** For each pattern the PR changes, search for similar places the PR did not touch: other
    pages, sibling components, parallel API handlers, the matching stored procedure, view or DTO. Find them from the
    code, not the work item, because the work item may not name them. A place that likely needs the same change is
@@ -76,7 +79,8 @@ inside one.` Work from the repository root.
 
 When the work item is silent or vague on the point, a finding about the requirement or an assumed requirement is at
 most Major, with a question for the work item creator: an unmet or partly met criterion, a sibling gap, extra scope.
-Failing tests, build failures, security problems, data loss and contract breaks stay Block.
+Failing tests, build failures, security problems, data loss and contract breaks stay Block. A finding from a rubric
+criterion keeps that criterion's Severity, except `inferred:` (Minor): the cap above is for the requirement only.
 
 ## Evidence
 
@@ -89,7 +93,8 @@ Every finding cites `path:line` and sits in one tier. Never invent a path, a cal
 
 ## Running commands
 
-Take every command from the contract's Commands heading. Never guess a command. With no contract, run only a command
+Take every command from the contract's Commands heading. A rubric command joins the plan only as the reference says.
+Never guess a command. With no contract, run only a command
 the repository states (a README, a script, a pipeline file), and mark the rest `unknown:`. Read-only inspection
 (reading, searching, `git log`, `git diff`, `git show`, `git blame`, `"$HOME/.agents/bin/onboarding-pack" find`) needs
 no confirmation.
