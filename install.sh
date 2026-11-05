@@ -19,7 +19,11 @@ Usage: ./install.sh [--apply] [--adopt] [--harness LIST]
 
 Environment:
   CLAUDE_CONFIG_DIR  Link Claude Code skills and CLAUDE.md into this folder
-                     instead of ~/.claude. One folder per run.
+                     too. Without any folder setting, ~/.claude is used.
+  CLAUDE_CONFIG_DIRS More folders, separated by colons.
+  ~/.agents/claude-config-dirs
+                     One folder per line (# starts a comment). Use it to link
+                     every Claude Code folder in each run.
 
 Nothing is ever deleted. Plugins are listed, never installed.
 Exit status: 0 = clean, 1 = conflicts remain, 2 = bad usage.

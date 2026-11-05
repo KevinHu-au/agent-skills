@@ -233,6 +233,56 @@ check "a relative CLAUDE_CONFIG_DIR is refused with a warning" has "$OUT" 'must 
 check "a relative CLAUDE_CONFIG_DIR exits 0" [ "$RC" -eq 0 ]
 check "a relative CLAUDE_CONFIG_DIR links nothing in the default folder" not test -e "$H/.claude/skills"
 
+echo "8. Several Claude Code config folders in one run"
+new_home
+mkdir -p "$H/.claude-work" "$H/.claude-other" "$H/.agents"
+printf '# my Claude Code folders\n\n%s\n~/.claude-work\n%s' "$H/.claude" "$H/.claude-other" >"$H/.agents/claude-config-dirs"
+runl() { env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS HOME=$H PATH="$H/bin:$PATH" "$REPO/install.sh" "$@"; }
+OUT=$(runl --harness claude-code 2>&1); RC=$?
+check "dry run plans the folders in the list file" has "$OUT" "$H/.claude-work/skills/agentd-pr-prep"
+check "dry run creates nothing in a listed folder" [ ! -e "$H/.claude-work/skills" ]
+OUT=$(runl --apply --harness claude-code 2>&1); RC=$?
+check "list file: apply exits 0" [ "$RC" -eq 0 ]
+for d in .claude .claude-work .claude-other; do
+  check "list file links skills in $d" resolves_to "$H/$d/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+  check "list file links CLAUDE.md in $d" resolves_to "$H/$d/CLAUDE.md" "$REPO/global/claude/CLAUDE.md"
+done
+OUT=$(runl --apply --harness claude-code 2>&1)
+check "list file: second apply changes nothing" has "$OUT" 'link/write=0'
+# The variable adds to the list, and a folder named twice is linked once.
+OUT=$(env HOME=$H PATH="$H/bin:$PATH" CLAUDE_CONFIG_DIR="$H/.claude-work" "$REPO/install.sh" --harness claude-code 2>&1)
+check "CLAUDE_CONFIG_DIR plus the list: nothing to change" has "$OUT" 'link/write=0'
+check "a folder named twice is planned once" test "$(printf '%s\n' "$OUT" | grep -c "$H/.claude-work/CLAUDE.md")" -le 1
+new_home
+mkdir -p "$H/.claude-a" "$H/.claude-b"
+OUT=$(env -u CLAUDE_CONFIG_DIR HOME=$H PATH="$H/bin:$PATH" CLAUDE_CONFIG_DIRS="$H/.claude-a:$H/.claude-b" "$REPO/install.sh" --apply --harness claude-code 2>&1)
+check "CLAUDE_CONFIG_DIRS links the first folder" resolves_to "$H/.claude-a/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+check "CLAUDE_CONFIG_DIRS links the second folder" resolves_to "$H/.claude-b/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+check "CLAUDE_CONFIG_DIRS leaves ~/.claude alone" not test -e "$H/.claude/skills"
+new_home
+mkdir -p "$H/.agents"
+printf '%s\n%s\n' "$H/missing" "$H/.claude" >"$H/.agents/claude-config-dirs"
+OUT=$(runl --apply --harness claude-code 2>&1); RC=$?
+check "a missing listed folder warns" has "$OUT" "$H/missing not found"
+check "a missing listed folder does not stop the others" resolves_to "$H/.claude/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+check "a missing listed folder exits 0" [ "$RC" -eq 0 ]
+check "a missing listed folder is not created" [ ! -e "$H/missing" ]
+
+echo "9. Warning about an unlisted Claude Code folder"
+new_home
+mkdir -p "$H/.claude-work/skills" "$H/.claude-empty"
+OUT=$(runl --apply --harness claude-code 2>&1); RC=$?
+check "an unlisted folder with skills gets a warning" has "$OUT" "$H/.claude-work holds skills or a CLAUDE.md but is not linked"
+check "an unlisted folder with skills is not linked" [ ! -e "$H/.claude-work/skills/agentd-pr-prep" ]
+check "an unlisted empty folder gets no warning" not has "$OUT" "$H/.claude-empty holds"
+check "the warning does not change the exit status" [ "$RC" -eq 0 ]
+check "a listed folder gets no warning" not has "$OUT" "$H/.claude holds"
+mkdir -p "$H/.agents"
+printf '%s\n' "$H/.claude" "$H/.claude-work" >"$H/.agents/claude-config-dirs"
+OUT=$(runl --apply --harness claude-code 2>&1)
+check "listing the folder removes the warning" not has "$OUT" "holds skills or a CLAUDE.md"
+check "listing the folder links it" resolves_to "$H/.claude-work/skills/agentd-pr-prep" "$REPO/skills/agentd-pr-prep"
+
 echo
 echo "passed=$PASS failed=$FAIL"
 echo "temp folders left in place:$TMPS"

@@ -72,17 +72,31 @@ Options:
 Exit status: `0` clean, `1` conflicts remain, `2` bad usage.
 
 Claude Code reads `$CLAUDE_CONFIG_DIR` when it is set. Some setups use a second
-folder, for example `~/.claude-work` for a company account. Set the same variable
-when you run the installer, once per folder:
+folder, for example `~/.claude-work` for a company account. Each folder needs its
+own links, so a skill you add later is missing from any folder the installer did not
+link. To link every folder in one run, list them once in `~/.agents/claude-config-dirs`,
+one absolute path per line (`~/` works; blank lines and lines starting with `#` are skipped):
+
+```
+~/.claude
+~/.claude-work
+```
+
+Then `./install.sh --apply` links all of them. A folder that does not exist yet is skipped with a warning.
+The installer also warns about any `~/.claude*` folder that holds a `skills` folder or a `CLAUDE.md` and is not on
+the list. It links nothing there until you add the folder to the list.
+
+Folders also come from two variables, and every source counts: `CLAUDE_CONFIG_DIR` (one folder) and
+`CLAUDE_CONFIG_DIRS` (folders separated by colons) add to the list file. A folder named twice is linked once.
+Without the file or either variable, the installer uses `~/.claude`. For a single run on one folder:
 
 ```bash
-CLAUDE_CONFIG_DIR=~/.claude-work ./install.sh --harness claude-code
 CLAUDE_CONFIG_DIR=~/.claude-work ./install.sh --harness claude-code --apply
 ```
 
+Because the variable adds to the list, that run links the listed folders too.
 Use an absolute path or one that starts with `~/`. The installer skips a relative path with a warning.
-Without the variable, the installer uses `~/.claude`. The folder must already
-exist; start Claude Code once with the variable set to create it.
+Each folder must already exist; start Claude Code once with the variable set to create it.
 
 ## How the links work
 
