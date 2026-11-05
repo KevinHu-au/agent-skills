@@ -547,11 +547,41 @@ check "word target leaves out open-questions.md" test_word_target_leaves_out_ope
 check "findings do not go in Risks and delivery" test_findings_do_not_go_in_risks_and_delivery
 
 # Task 5: explorer fields, Synthesizer sub-steps, stack rows, Flow step 3.
-test_explorers_report_layers_load_and_calculation_points() {
+test_explorers_report_entry_data_and_key_logic_points() {
   local f="$REFS/explorer-prompts.md"
-  has_all "$f" "Layer chain" "Load points" "Calculation points" "Key concept candidate" "Label-to-field list" "600 words" \
+  has_all "$f" "Layer chain" "Entry points" "Data points" "Key logic points" "Key concept candidate" "Label-to-field list" "600 words" \
     "Each documented calculation or business rule" "which calculations have a test" &&
+    [ -f "$REFS/update-mode.md" ] && [ -f "$REFS/brief-template.md" ] && [ -f "$REFS/feature-to-code-template.md" ] && [ -f "$SKILL" ] &&
+    ! grep -qF "Load points" "$REFS/explorer-prompts.md" "$REFS/feature-to-code-template.md" "$REFS/brief-template.md" "$REFS/update-mode.md" "$SKILL" &&
+    ! grep -qF "Calculation points" "$REFS/explorer-prompts.md" "$REFS/feature-to-code-template.md" "$REFS/brief-template.md" "$REFS/update-mode.md" "$SKILL" &&
     [ "$(grep -o 'up to about 800 words' "$f" | wc -l | tr -d ' ')" = "3" ]
+}
+
+# The use case tables must not assume every feature has a calculation. Key logic is whatever the feature mainly does.
+test_feature_rows_do_not_assume_a_calculation() {
+  local t="$REFS/feature-to-code-template.md" s
+  has_all "$t" "pass-through" "Owner of the logic" "Key logic in" &&
+    ! grep -qF "Owner of the calculation" "$t" &&
+    has_all "$REFS/explorer-prompts.md" "Key logic is whatever the feature mainly does" "permission check" "when you did not find it" &&
+    s=$(grep '3b\. Feature rows' "$REFS/explorer-prompts.md") &&
+    printf '%s\n' "$s" | grep -qF "choose the columns for each use case" &&
+    grep '^9\. ' "$SKILL" | grep -qF "key logic" &&
+    grep -qF "where the key logic sits" "$REFS/brief-template.md"
+}
+
+# Update mode re-shapes a feature-to-code.md whose blocks use the old fixed column titles, even with no changed Sources.
+test_update_mode_reshapes_fixed_columns() {
+  local f="$REFS/update-mode.md" s4 s5
+  s4=$(awk '/^4\. / { on = 1 } /^5\. / { on = 0 } on' "$f")
+  s5=$(awk '/^5\. / { on = 1 } /^6\. / { on = 0 } on' "$f")
+  printf '%s\n' "$s4" | grep -qF 'old fixed column titles `Data loads in` and `Calculations and rules in`' &&
+    printf '%s\n' "$s4" | grep -qF "re-shape" &&
+    printf '%s\n' "$s4" | grep -qF "Use neither old title in a re-shaped block" &&
+    printf '%s\n' "$s4" | grep -qF "It is not the older layout above" &&
+    printf '%s\n' "$s4" | grep -qF 'rename `Owner of the calculation:` to `Owner of the logic:`' &&
+    grep -qF "An Entry point cell holds only a file path in backticks" "$REFS/explorer-prompts.md" &&
+    printf '%s\n' "$s4" | grep -qF "even when its \`Sources:\` paths did not change" &&
+    printf '%s\n' "$s5" | grep -qF "feature-to-code-template.md"
 }
 
 test_synthesizer_sub_steps_keep_step_numbers() {
@@ -582,7 +612,9 @@ test_synthesizer_checks_nine_questions() {
   has_all "$REFS/explorer-prompts.md" "nine questions" && ! grep -qF "eight questions" "$REFS/explorer-prompts.md"
 }
 
-check "explorers report layers, load points and calculation points" test_explorers_report_layers_load_and_calculation_points
+check "explorers report entry points, data points and key logic points" test_explorers_report_entry_data_and_key_logic_points
+check "feature rows do not assume a calculation" test_feature_rows_do_not_assume_a_calculation
+check "update mode re-shapes fixed columns once" test_update_mode_reshapes_fixed_columns
 check "Synthesizer sub-steps keep step numbers" test_synthesizer_sub_steps_keep_step_numbers
 check "stack references name load and calculation rows" test_stack_references_name_load_and_calculation_rows
 check "Flow step 3 shows the key concept" test_flow_step_3_shows_the_key_concept
