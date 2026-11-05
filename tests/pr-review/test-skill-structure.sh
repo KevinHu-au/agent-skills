@@ -169,9 +169,10 @@ test_skill_is_manual_only() {
 }
 
 # Raised from 120 to 130 for the shared "Find the project facts" paragraph, which every skill that reads the pack
-# carries word for word (see tests/test-shared-text.sh).
-test_skill_is_at_most_140_lines() {
-  [ -s "$SKILL" ] && [ "$(wc -l <"$SKILL")" -le 140 ]
+# carries word for word (see tests/test-shared-text.sh). Raised again to 145 for the rubric pointer, one sentence in
+# Flow step 4; the rubric rules live in skills/agentd-review-rubric/references/reading-the-rubric.md.
+test_skill_is_at_most_145_lines() {
+  [ -s "$SKILL" ] && [ "$(wc -l <"$SKILL")" -le 145 ]
 }
 
 test_required_h2_sections_in_order() {
@@ -505,7 +506,7 @@ check "line_has needs every text on one line" test_line_has_needs_one_line
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
-check "SKILL.md is at most 140 lines" test_skill_is_at_most_140_lines
+check "SKILL.md is at most 145 lines" test_skill_is_at_most_145_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "Flow has nine numbered steps in order" test_flow_has_nine_numbered_steps_in_order
 check "a missing paste asks once" test_missing_paste_asks_once

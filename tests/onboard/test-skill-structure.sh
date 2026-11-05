@@ -391,6 +391,11 @@ test_a_repository_with_no_commits_stops_with_one_line() {
   has_all "$SKILL" "needs at least one commit"
 }
 
+test_a_rubric_only_folder_is_not_a_pack() {
+  has_all "$SKILL" "A folder with no \`README.md\` is not a pack" "holds only \`review-rubric.md\`" \
+    "other than a lone \`review-rubric.md\`"
+}
+
 test_eval_makes_a_real_shallow_clone() {
   has_all "$HERE/EVAL.md" "git clone --depth 1 file://" "is-shallow-repository"
 }
@@ -457,6 +462,7 @@ check "a foreign docs/onboarding/README.md is not touched" test_a_foreign_onboar
 check "a dirty header and old changed: markers are handled" test_dirty_header_and_old_markers_are_handled
 check "package restore and project code are said in both places" test_package_restore_and_project_code_are_said_in_both_places
 check "a repository with no commits stops with one line" test_a_repository_with_no_commits_stops_with_one_line
+check "a rubric-only folder is not a pack" test_a_rubric_only_folder_is_not_a_pack
 check "EVAL.md makes a real shallow clone" test_eval_makes_a_real_shallow_clone
 check "every skill in the repository sets disable-model-invocation: true" test_every_skill_in_the_repository_is_manual_only
 
