@@ -41,7 +41,7 @@ Look for screens, pages, routes and navigation; forms and what they submit; menu
 
 Report: the types of user; the screens each type uses; three to five candidate use cases, each as a short numbered journey of screens and actions. Mark every use case `inferred:` until the engineer confirms it, even when a document states it. Name the document. Name the entry point of each in the code.
 
-Also report, for each candidate use case: the screen, route or trigger; the UI file; where its state lives; where it loads data (the client call); and any calculation done in the client. Give a Label-to-field list for the values on those screens, as screen label to field name (for example `Shipping date` to `shp_dt`). Say whether a UI layer exists at all. This angle may report up to about 800 words.
+Also report, for each candidate use case: the Entry point (the screen, route or trigger, and the UI file); where its state lives; the Data points (where it loads data, the client call); and the Key logic points (any key logic done in the client). Give a Label-to-field list for the values on those screens, as screen label to field name (for example `Shipping date` to `shp_dt`). Say whether a UI layer exists at all. This angle may report up to about 800 words.
 
 ## API and permissions
 
@@ -51,7 +51,7 @@ Look for endpoints: route, verb, the handler, and the request and response types
 
 Report: a compact table of endpoints with their required role; which endpoints change state; which look called by another system and not by a user; any endpoint with no authorisation.
 
-Also report, for each endpoint a use case calls: the handler, and where its business rules and calculations sit. List the response field names that differ from the UI names.
+Also report, for each endpoint a use case calls: the Entry point (the route and handler), the Data points it calls, and the Key logic points (where its key logic sits). List the response field names that differ from the UI names.
 
 ## Domain model and schema
 
@@ -61,7 +61,7 @@ Look for entities, their relations, enums and status values, and state changes. 
 
 Report: the main entities and their relations; the rule for changing the schema safely and who applies a change; stored procedures that matter and what calls them; which code reads and writes which table; glossary terms with one-line meanings.
 
-Also report, for each use case: the Load points, meaning the procedures, queries or local-store reads that load its data, including nested calls one level down; and the Calculation points, meaning where the calculation sits in them. List procedures with no caller found. Give one Key concept candidate (the one idea most use cases pass through) with one line on why. This angle may report up to about 800 words.
+Also report, for each use case: the Data points, meaning the procedures, queries or local-store reads that load its data, including nested calls one level down; and the Key logic points, meaning where its key logic sits in them. Key logic is whatever the feature mainly does with the data, such as a calculation, a validation, a state change, a mapping or a permission check. Report `none` only when you read the code and found no such logic. Report `unknown:` when you did not find it. List procedures with no caller found. Give one Key concept candidate (the one idea most use cases pass through) with one line on why. This angle may report up to about 800 words.
 
 ## Data-flow tracer
 
@@ -71,7 +71,7 @@ Pick the three to five entry points with the most business weight: endpoints tha
 
 Report: one numbered flow for each traced entry point; the pattern to copy and an example file; deviations from the pattern; background jobs and what starts them.
 
-Also report the Layer chain, named as the project names its layers (this is how the skill finds the layers). For each traced entry point, give the Load points and the Calculation points at each hop. Give one Key concept candidate with one line on why. This angle may report up to about 800 words.
+Also report the Layer chain, named as the project names its layers (this is how the skill finds the layers). For each traced entry point, give the Entry points, the Data points and the Key logic points at each hop (`none` only when you read the hop and found no key logic, `unknown:` when you did not find it). Give one Key concept candidate with one line on why. This angle may report up to about 800 words.
 
 ## Integrations and dependencies
 
@@ -101,7 +101,7 @@ Inputs: the six reports, the engineer's answers (or none), `brief-template.md`, 
 2. Check every claim that an endpoint or feature depends on an external system by reading the call chain from the endpoint down to the client. Drop what you cannot show, or mark it `inferred:`.
 3. Draft the three to five use cases and a short journey for each. Mark each `inferred:` until the engineer confirms it.
    - 3a. Layers. A layer exists when at least one report cites a file in it. Use the Data-flow tracer's names. Never invent a layer the reports do not show.
-   - 3b. Feature rows. For each drafted use case, merge the Load points and Calculation points from the UI and routes, API and permissions, Domain model and schema, and Data-flow tracer reports. When two reports name a different point, read the code and decide. If one value is calculated in more than one layer, say which layer owns it.
+   - 3b. Feature rows. For each drafted use case, merge the Entry points, Data points and Key logic points (the Domain model and schema report gives no Entry points) from the UI and routes, API and permissions, Domain model and schema, and Data-flow tracer reports. When two reports name a different point, read the code and decide. Then choose the columns for each use case, as `feature-to-code-template.md` says, and drop a column that has nothing real to say. Skip a pass-through layer that only forwards the call. An Entry point cell holds only a file path in backticks: write a route or trigger as a note without backticks. If one value is calculated or decided in more than one layer, say which layer owns it.
    - 3c. Key concept. Pick the Key concept candidate that most main use cases pass through. On a tie, show both candidates with the use-case drafts in Flow step 3 and ask. With no answer, keep the first and mark it `inferred:`. Then show the layers from 3a with the drafts and the key concept to the engineer, and ask for corrections.
 
 **Pass 2, after the engineer answers (or does not)**

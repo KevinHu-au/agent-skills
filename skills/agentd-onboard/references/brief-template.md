@@ -67,7 +67,7 @@ Find the code for a feature:
 1. Take the business words from the request.
 2. Look the words up in [feature-to-code.md](feature-to-code.md), or in the glossary.
 3. Search for the code name in each layer, in order.
-4. In each layer, read where the data loads and where the calculation sits.
+4. In each layer, read where the data loads and where the key logic sits.
 
 When a word is not in the map, search the UI label first, then the field name it binds to. Example (made up): the label `Shipping date` binds to the field `shp_dt`.
 
