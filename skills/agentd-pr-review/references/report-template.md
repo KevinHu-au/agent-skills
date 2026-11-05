@@ -58,6 +58,11 @@ _Evidence: confirmed by a test run | confirmed: seen in the UI | supported by <s
 Use `[Block]`, `[Major]` or `[Minor]` as the tag. A sibling gap names the place the PR did not change, and says which
 changed place it should match.
 
+A finding from a rubric criterion adds the criterion ID and title after the path, for example
+`**[Major]** `src/path/File.cs:42` (R3: <title>)`. The teammate may not have the rubric file, so write the rule in
+the comment text as well as the ID. When the diff shows the breach plainly, the evidence line is `supported by the diff
+and R<number>`.
+
 ## For you only
 
 Not to paste. Bold labels, in this order:
@@ -70,6 +75,9 @@ Not to paste. Bold labels, in this order:
   engineer can forward. Each question names the finding it settles.
 - **Old failures:** tests that fail on the base as well. Not findings.
 - **Not run or not checked:** each suite or check you skipped, and why.
+- **Rubric:** the rubric you used and where it was read from, and any criterion that this PR edits. With none, the
+  last line of this `For you only` part is `No project rubric. Run /agentd-review-rubric to draft one.` Put it last
+  even when a `Check in the UI` list follows.
 
 ## Check in the UI
 

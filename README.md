@@ -185,6 +185,13 @@ The `agentd-pr-prep` skill has a structure test in `tests/pr-prep/`. It reads th
 tests/pr-prep/test-skill-structure.sh
 ```
 
+The `agentd-review-rubric` skill has a structure test in `tests/review-rubric/`. It reads the skill files, and the two
+review skills that point to its reading reference, and writes nothing.
+
+```bash
+tests/review-rubric/test-skill-structure.sh
+```
+
 `shellcheck` is not run by the tests. Run it yourself if it is installed.
 
 The `agentd-onboard` skill has its own tests in `tests/onboard/`. They check the skill files, the brief
@@ -364,15 +371,16 @@ own words. Superpowers is also listed in `setup.manifest`.
 |---|---|
 | `agentd-blast-radius` | Find what else one change could break, including what search misses. Proves the one fact the change is safe because of by running code, edits no code, and ends with an add-on block for `agentd-dev-rev`. |
 | `agentd-data-fix` | Turn a work item into a safe, re-runnable data fix: look queries, a guarded script, a capture query, a reverse script and check queries, all written in chat. Never runs anything against a database; edits no code. |
-| `agentd-dev-rev` | Build a change with TDD, stage it, and get up to two independent review rounds. Reads the diagnose, blast-radius and intake blocks when pasted, and asks a few questions when run alone. Never commits. |
+| `agentd-dev-rev` | Build a change with TDD, stage it, and get up to two independent review rounds. Reads the diagnose, blast-radius and intake blocks when pasted, and asks a few questions when run alone. Reads the project's review rubric when it has one, and gives its criteria to the reviewer. Never commits. |
 | `agentd-diagnose` | Find the root cause of a bug, a data issue or a slow path. Reproduces first, edits no code, and ends with a report and a hand-off block for `agentd-dev-rev`. |
 | `agentd-explain` | Explain a business term, a figure, a status or a whole domain to the engineer, with the code path from the screen to the database or external system. Read only, apart from an export you ask for; edits no code. |
 | `agentd-handoff` | Stop a long task and continue later. Shows the next steps for you to correct, then writes one dated file (`<date>-<task-slug>.md`) with the status so far, the next steps, the resume command for the session and a fresh-start prompt. The folder follows the repo policy. Edits no code and never commits. |
 | `agentd-intake` | Turn a vague work item into an actionable one, written as an Azure DevOps comment, or into the questions and investigation needed first. Checks the work item against the code and edits no code. |
 | `agentd-onboard` | Onboard to an existing customer project, or refresh the onboarding. Asks the repo policy once, then writes a short brief, the project contract and side files in the onboarding pack: `docs/onboarding/`, or a folder outside the repository. Never writes `AGENTS.md`. |
 | `agentd-pr-prep` | Write a PR title and description from the branch diff. Proposes the remote default branch as the base and asks. Follows the repository's PR template when it has one. Adds Root cause and Risks only from a pasted diagnose or blast-radius block, and a work item link when the number is known. |
-| `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Edits no code and posts nothing. |
+| `agentd-pr-review` | Review a teammate's PR against its work item when you are the approver. Builds the requirement, looks for places the PR missed, checks breakage and runs the tests, then writes paste-ready markdown comments marked Block, Major or Minor. Checks the project's review rubric when it has one and cites the criterion ID. Edits no code and posts nothing. |
 | `agentd-resume` | Continue a task that `agentd-handoff` stopped. Reads the hand-off file, checks the branch, commit and working tree against it, reports what matches and what differs, and starts on the next steps only after you agree. Never fixes a mismatch and never commits. |
+| `agentd-review-rubric` | Write or refresh a project's review rubric, `review-rubric.md`, from the repository's own norms (`CONTRIBUTING.md`, the PR template, `CODEOWNERS`, lint config) and your answers. Needs no onboarding. Each criterion has an ID, a path glob, a severity and a source. You correct the draft before it is saved. `agentd-pr-review` and `agentd-dev-rev` read the file and cite the criterion ID. Edits no code and never edits `AGENTS.md`. |
 | `agentd-prompt` | Rewrite a rough prompt into a clearer one without running it. |
 | `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. It has references for .NET Core and .NET Framework (on IIS Express), SQL Server in Docker or LocalDB, React web apps and iOS apps, with helpers in PowerShell or bash. Only the .NET Core, Docker and React path has been run end to end. The rest is written from general knowledge and one iOS prototype. |
 
