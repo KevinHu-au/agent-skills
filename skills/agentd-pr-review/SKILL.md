@@ -96,7 +96,7 @@ Every finding cites `path:line` and sits in one tier. Never invent a path, a cal
 Take every command from the contract's Commands heading. A rubric command joins the plan only as the reference says.
 Never guess a command. With no contract, run only a command
 the repository states (a README, a script, a pipeline file), and mark the rest `unknown:`. Read-only inspection
-(reading, searching, `git log`, `git diff`, `git show`, `git blame`, `"$HOME/.agents/bin/onboarding-pack" find`) needs
+(reading, searching, `git log`, `git diff`, `git show`, `git blame`, `git merge-base`, `"$HOME/.agents/bin/onboarding-pack" find`) needs
 no confirmation.
 
 - **Run plan.** List the build, each test suite, `docker info` when a suite needs Docker, the base re-run, the lint
@@ -125,12 +125,12 @@ no confirmation.
 - **Lint.** Run the contract's lint or format check, when it has one. Report only problems on lines the PR changed.
 - **Check in the UI.** Add this list only when a claim can be settled only in the running app. You do not start the
   app; the engineer does. If the engineer reports what they saw, update that finding's tier and severity.
-- **Never:** write to a shared environment, change data, call an outside system, or install or upgrade a package.
+- **Never:** write to a shared environment, change data, call an outside system, or install or upgrade a package. A Block comment's Reproduce steps are for the engineer to run in a test environment; you run none.
 - **Scratch folder.** After the report, run `git worktree remove --force` on `<scratch>/wt-head` and `<scratch>/wt-base`, whichever you added, then remove the folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where it is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
 
 ## Output
 
-Everything goes in chat, shaped by `references/report-template.md`: summary, findings, notes for the engineer. Each
+Everything goes in chat, shaped by `references/report-template.md`: summary, findings, notes for the engineer. Every Block comment has a `Reproduce` part. Each
 paste-ready piece sits in its own ````markdown fence of four backticks, so it stays raw markdown and an inner code block
 cannot close it. Suggest Approve, Approve with suggestions or Wait for author; the engineer picks the vote.
 
