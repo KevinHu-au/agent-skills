@@ -31,7 +31,9 @@ drives the changed feature through the user interface, and writes an evidence re
    staged the change (it holds the diff or the `/agentd-dev-rev` work), stop and ask the engineer to start a fresh
    session.
 2. **Choose the features.** Read `features/README.md`. Ask the engineer which features to verify: one or more. Show
-   every feature in the table by name with its "Why it is here" text. Mark the features named on the Verify block's
+   every feature in the table by name with its "Why it is here" text. Mark each row whose File column says
+   `none yet` as "index only: no feature file", and ask about those rows in one numbered list after the others. On
+   the `Feature:` and `Neighbours:` lines, ` (index only)` after a name is a mark, not part of the name. Mark the features named on the Verify block's
    `Feature:` line as the suggested choice, and still ask the engineer to confirm or change it. Use a multi-select
    question when the tool has one (four options at most per question, so ask in several questions), otherwise a
    numbered list. With no Verify block, ask the engineer to pick from the table. Write the chosen list down: every
@@ -55,6 +57,7 @@ drives the changed feature through the user interface, and writes an evidence re
      recipe builds on the recipe that its own `Needs:` line in `features/data-setup.md` names. `empty schema` there is
      not a recipe. With `Data: empty` or a database backup on the `Data:` line, ask the engineer before a `Needs:`
      recipe becomes pending, and say what the drive lacks without it. A recipe the engineer declines is not pending.
+     A chosen index-only feature has no `Needs:` line: ask the engineer which recipes it needs.
    - `ui-start.ps1`. When it stops because a dependency is missing, it prints a fix command. Show it to the engineer,
      run it once, then run `ui-start.ps1` again. After it runs, check `git status --porcelain`: a changed tracked file is
      `blocked`, and you tell the engineer. A second `blocked` ends the run.
@@ -75,7 +78,10 @@ drives the changed feature through the user interface, and writes an evidence re
      2, and every later step that needs what it makes (data or a screen state). List each skipped step in Not verified.
    - A chosen feature is covered when a `Steps:` step acts on it (an edit, a click on its controls or a value check).
      Drive each chosen feature that is not covered from its feature file, one at a time, in the order of the table in
-     `features/README.md`.
+     `features/README.md`. A chosen index-only feature has no file: start from the entry feature (pick the record),
+     then go to its Route or screen, drive it from the labels on screen, and mark each step `inferred:`. In the
+     report, label its steps "index only: no feature file", and suggest `/agentd-verify-init` (update mode) to write
+     its file. It is driven, so it does not go in Not verified.
    - Work that locks a period, or closes or deletes a record other features need, goes last. When a `Steps:` step
      locks, closes or deletes, the whole `Steps:` line goes last, in its own order. The neighbours pass and the edges
      (step 10) run before it too, so they still find the data open.
@@ -131,11 +137,14 @@ drives the changed feature through the user interface, and writes an evidence re
          example a month this run locked), tell the engineer and ask before you restore. When the engineer says no,
          mark the item "cannot be driven now: restore declined", and write no expectations for it.
       2. Write its expectations (see Expectations, "An item picked in Flow step 11").
-      3. Treat its feature as chosen in step 2 from now on. Set up the data it needs under the step 8 rules. When a
+      3. Treat its feature as chosen in step 2 from now on. An index-only item has no `Needs:` line: first ask the
+         engineer which recipes it needs. Set up the data it needs under the step 8 rules. When a
          recipe is pending and the API runs without the admin roles, restart the API with `<admin roles>`, reload the
          page, save a new current-user response and run Doctor. After the recipe, restart the API with the roles of the
          `Roles:` line and run Doctor again.
-      4. Drive it from its feature file's entry points. When those do not reach it, ask the engineer how to reach it.
+      4. Drive it from its feature file's entry points. An index-only item follows the step 9 rules for an index-only
+         feature. When those do not reach it, ask the engineer
+         how to reach it.
          Never read the branch's code to find it.
       5. Check it: the three-way match and the edges for this item. Do not make a new neighbours pass. Label its steps
          in the report with the item name.
@@ -173,7 +182,7 @@ Verify:
 Ticket: <number>
 Base: <base branch> @ <merge-base sha>
 Change: <the user-visible behaviour that changed, 1-2 sentences; navigation, and one source of claims>
-Feature: <feature file(s)>; entry points: <which ones>
+Feature: <feature file(s), or <feature> (index only)>; entry points: <which ones>
 Neighbours: <features from blast-radius> | none
 Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
 Roles: default | <role list>
@@ -266,7 +275,9 @@ the part it changes. It does not come from the calculation reference.
 
 - **Neighbours.** After the ticket's journey, make a short pass over the features named in `Neighbours:`. With
   `none`, use the features in the map that the engineer did not choose in step 2, except a feature the ticket touches
-  that the engineer left out. A neighbour runs on the data the run already has: skip a neighbour step whose `Needs:`
+  that the engineer left out, and except index-only features. A neighbour named on `Neighbours:` that is index only
+  is not driven: list it in Not verified as "index only: no feature file". A neighbour runs on the data the run
+  already has: skip a neighbour step whose `Needs:`
   recipe did not run, and list it in Not verified.
 - **Edges.** Try cases the ticket did not ask for, when the change touches them: another role, a record the user is
   not a member of, a locked period, empty data, the first and last period.
