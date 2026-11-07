@@ -103,7 +103,7 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
    Verify:
    Ticket: <number>
    Base: <base branch> @ <merge-base sha>
-   Change: <the user-visible behaviour that changed, 1-2 sentences; navigation only>
+   Change: <the user-visible behaviour that changed, 1-2 sentences; navigation, and one source of claims>
    Feature: <feature file(s)>; entry points: <which ones>
    Neighbours: <features from blast-radius> | none
    Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>

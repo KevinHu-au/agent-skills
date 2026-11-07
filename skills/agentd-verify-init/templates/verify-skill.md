@@ -51,7 +51,10 @@ drives the changed feature through the user interface, and writes an evidence re
    - `dbup-run.ps1`: on every run, after `db-start.ps1` and after `db-restore.ps1` when that ran.
    - `api-start.ps1`: with the admin roles (`<admin roles>`) when any setup recipe is still pending, otherwise with the
      roles of the `Roles:` line. A recipe is pending when the `Data:` line names it, or the `Needs:` line of a feature
-     file chosen in step 2 names it, and `state.json` `recipes` does not list it.
+     file chosen in step 2 names it, or a pending recipe builds on it, and `state.json` `recipes` does not list it. A
+     recipe builds on the recipe that its own `Needs:` line in `features/data-setup.md` names. `empty schema` there is
+     not a recipe. With `Data: empty` or a database backup on the `Data:` line, ask the engineer before a `Needs:`
+     recipe becomes pending, and say what the drive lacks without it. A recipe the engineer declines is not pending.
    - `ui-start.ps1`. When it stops because a dependency is missing, it prints a fix command. Show it to the engineer,
      run it once, then run `ui-start.ps1` again. After it runs, check `git status --porcelain`: a changed tracked file is
      `blocked`, and you tell the engineer. A second `blocked` ends the run.
@@ -60,15 +63,25 @@ drives the changed feature through the user interface, and writes an evidence re
 6. **Sign in.** The page opens. The engineer signs in with their own account. Never type credentials.
 7. **Run Doctor.** Save the response of the API's current-user call (`<current-user route>`) as a saved response in the evidence
    folder, then run `doctor.ps1` with that file and the roles `api-start.ps1` started the API with. The token is never printed or saved. Stop when Doctor fails.
-8. **Set up the data.** Run the setup recipes the `Data:` line names, and the recipes on the `Needs:` line of each chosen
-   feature file, that `state.json` `recipes` does not list, as admin through the user interface, and record each one in
-   `state.json` `recipes`. Then restart the API with the roles of the
+8. **Set up the data.** Run the pending recipes (see step 4) in dependency order: a recipe runs after the recipe it
+   builds on. Run each one as admin through the user interface, and record each one in `state.json` `recipes`. Then restart the API with the roles of the
    `Roles:` line when they differ from the roles it runs with. After the restart, reload the page, save a new
    current-user response to a new file in the evidence folder, and run `doctor.ps1` with that file and the roles of the
    `Roles:` line.
-9. **Drive.** First follow the `Steps:` line, in its own order. Skip a step that needs a feature the engineer did not
-   choose in step 2, and list it in Not verified. Then drive each other chosen feature from its feature file, one at a
-   time, in the order of the table in `features/README.md`. Label each step in the report with its feature. Save a screenshot or a saved response for each step in the evidence folder.
+9. **Drive.** Each chosen feature keeps the rules of its feature file (roles, data and gotchas).
+   - Follow the `Steps:` line in its own order. A step that only reaches a screen (for example opening the entry
+     feature and picking the record) always runs. So does a step on a screen with no feature file: drive it from the
+     labels on screen and mark it `inferred:`. Skip a step that acts on a feature the engineer did not choose in step
+     2, and every later step that needs what it makes (data or a screen state). List each skipped step in Not verified.
+   - A chosen feature is covered when a `Steps:` step acts on it (an edit, a click on its controls or a value check).
+     Drive each chosen feature that is not covered from its feature file, one at a time, in the order of the table in
+     `features/README.md`.
+   - Work that locks a period, or closes or deletes a record other features need, goes last. When a `Steps:` step
+     locks, closes or deletes, the whole `Steps:` line goes last, in its own order. The neighbours pass and the edges
+     (step 10) run before it too, so they still find the data open.
+   - After such a lock, close or delete, clear `state.json` `recipes`, so a later run on this container sets the data
+     up again.
+   - Label each step in the report with its feature. Save a screenshot or a saved response for each step in the evidence folder.
 10. **Check.** Do the three-way match, recompute the figures on a calculation ticket, check the neighbours, and try the
    edges. See the sections below.
 11. **Check coverage, and offer to continue.** Do this before the report and before cleanup, while the app still runs.
@@ -97,13 +110,14 @@ drives the changed feature through the user interface, and writes an evidence re
       2. A file in `<shared folders>` goes in one item, "shared: affects many screens", with its folder.
       3. A file under a feature's "Code folders" entry in `features/README.md`, at any depth, belongs to the feature
          with the longest matching entry. When two features list that same folder, name both features in one item.
-      4. Any other file, or one that matches only a generic parent folder, goes in an item "other: `<folder>`".
+      4. Any other file goes in an item "other: `<folder>`".
     - Inside a feature, map the path to a screen, tab, side panel or dialog by its folder name. Name the item by what
       the user sees, for example "<screen>, <tab> tab".
     - With no `Code folders` column in the map, say so, and suggest `/agentd-verify-init` (update mode adds the column).
       Group the files by folder, and ask the engineer which feature each folder belongs to.
     - An item may lie inside a feature the engineer left out in step 2. Then name the item and its feature. In Not
-      verified, list the item under that feature's entry, not as a separate line.
+      verified, list the item under that feature's entry, not as a separate line. Once the engineer picks the item in
+      this step, the report shows that feature as driven by the item, not as left out.
     - Mark an item `driven` only when a numbered step acted on it (an edit, a click or a value check) and saved an
       evidence file. Write that step number next to it. A screen that only loaded on the way to another step is
       `not driven`.
@@ -151,13 +165,14 @@ Two parts. Read both before anything else.
    shows them to the engineer. Only a line the engineer confirms becomes an expectation. With no raw ticket, the skill
    asks the engineer for the raw ticket and does not start.
 2. **The Verify block**, written by `/agentd-dev-rev`. It says what changed and how to reach it, not what is right.
-   It has no `Expected:` line. The `Change:` line is for navigation only: it tells you which feature to drive.
+   It has no `Expected:` line. The `Change:` line tells you which feature to drive. It is never an expected result. It is also one source of the
+   change's claims, which the engineer confirms (see Expectations).
 
 ```
 Verify:
 Ticket: <number>
 Base: <base branch> @ <merge-base sha>
-Change: <the user-visible behaviour that changed, 1-2 sentences; navigation only>
+Change: <the user-visible behaviour that changed, 1-2 sentences; navigation, and one source of claims>
 Feature: <feature file(s)>; entry points: <which ones>
 Neighbours: <features from blast-radius> | none
 Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
@@ -205,7 +220,8 @@ Write each expected result before it drives, and write its source next to it. So
   3. The engineer confirms, changes or removes each line. Each confirmed line is an expectation with source
      `engineer`. A claim the engineer has not confirmed is not an expectation.
   4. A confirmed line may need a feature the engineer did not choose in step 2. Then ask whether to add that feature to
-     the step 2 list.
+     the step 2 list. When the engineer does not add it, the line is not an expectation. List it in Not verified as
+     "left out by the engineer in step 2".
 - **An item picked in Flow step 11.** Write its expectations before you drive it.
   - Ask the engineer what the item should now do. You may show the claims that name the item, as a checklist. Each
     line the engineer confirms has source `engineer`.
@@ -249,7 +265,9 @@ the part it changes. It does not come from the calculation reference.
 ## Neighbours and edges
 
 - **Neighbours.** After the ticket's journey, make a short pass over the features named in `Neighbours:`. With
-  `none`, use the features in the map that the engineer did not choose in step 2.
+  `none`, use the features in the map that the engineer did not choose in step 2, except a feature the ticket touches
+  that the engineer left out. A neighbour runs on the data the run already has: skip a neighbour step whose `Needs:`
+  recipe did not run, and list it in Not verified.
 - **Edges.** Try cases the ticket did not ask for, when the change touches them: another role, a record the user is
   not a member of, a locked period, empty data, the first and last period.
 - A neighbour or edge failure is tagged "outside the ticket; may be pre-existing, not checked on the base".

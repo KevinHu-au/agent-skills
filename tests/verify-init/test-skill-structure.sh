@@ -568,7 +568,7 @@ VERIFY_BLOCK=$(
 Verify:
 Ticket: <number>
 Base: <base branch> @ <merge-base sha>
-Change: <the user-visible behaviour that changed, 1-2 sentences; navigation only>
+Change: <the user-visible behaviour that changed, 1-2 sentences; navigation, and one source of claims>
 Feature: <feature file(s)>; entry points: <which ones>
 Neighbours: <features from blast-radius> | none
 Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
@@ -597,7 +597,7 @@ Reference conflicts: <anchor>: reference says <x>, base code <path:line> says <y
 Side effects: <SELECT> -> <counts and IDs only>
 Coverage: <n> items in the change, <n> driven; continued in Flow step 11: <items the engineer picked> | none. Then a table with the columns Item, Files, Driven (step) and Reason not driven.
   Or: not checked: run stopped at Flow step <n>
-Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a user guide change, as "user guide changed; not checked in a verify run">
+Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a feature the ticket touches that the engineer left out, and a `Steps:` step skipped for that reason, as "left out by the engineer in step 2"; a user guide change, as "user guide changed; not checked in a verify run">
 Evidence folder: <path>
 EOF
 )
@@ -1268,7 +1268,7 @@ test_generated_flow_evidence_folder_and_doctor_inputs() {
   vt_step_has "Make the evidence folder" "New-EvidenceFolder" "evidenceFolder" "state.json" &&
     vt_step_has "Run Doctor" "doctor.ps1" "saved response" "<current-user route>" "evidence folder" \
       "The token is never printed or saved" &&
-    vt_step_has "Set up the data" "setup recipes" "as admin" "record each one in" "state.json" \
+    vt_step_has "Set up the data" "pending recipes" "as admin" "record each one in" "state.json" \
       "restart the API with the roles of the \`Roles:\` line" "reload the page" \
       "save a new current-user response to a new file in the evidence folder" \
       "run \`doctor.ps1\` with that file and the roles of the \`Roles:\` line" &&
@@ -1323,10 +1323,19 @@ test_generated_flow_step_2_chooses_the_features() {
     "Do not add a feature the engineer did not pick." 'left out by the engineer in step 2' 'does not block a `pass`' &&
     vt_step_has "Write the expectations" "for the features chosen in step 2 only" &&
     section_has "$RP" Results "features the engineer left out in step 2 (they get no expectations)" &&
-    vt_step_has "Drive" 'First follow the `Steps:` line, in its own order.' "did not choose in step 2, and list it in Not verified" \
-      "one at a time" "label each step in the report with its feature" &&
-    vt_step_has "Start the data and the app" 'the `Needs:` line of a feature file chosen in step 2 names it' &&
-    vt_step_has "Set up the data" 'the recipes on the `Needs:` line of each chosen feature file' &&
+    vt_step_has "Drive" 'Follow the `Steps:` line in its own order.' "always runs" "every later step that needs what it makes" \
+      "A chosen feature is covered when" "one at a time" "goes last" "The neighbours pass and the edges" \
+      'clear `state.json` `recipes`' "label each step in the report with its feature" &&
+    vt_step_has "Start the data and the app" 'the `Needs:` line of a feature file chosen in step 2 names it' \
+      "or a pending recipe builds on it" '`empty schema` there is not a recipe' 'With `Data: empty`' \
+      "A recipe the engineer declines is not pending." &&
+    vt_step_has "Set up the data" "in dependency order" &&
+    section_has "$VT" Expectations "When the engineer does not add it, the line is not an expectation." &&
+    section_has "$VT" Input "It is never an expected result. It is also one source of the" &&
+    section_has "$VT" "Neighbours and edges" "except a feature the ticket touches that the engineer left out" \
+      'skip a neighbour step whose `Needs:` recipe did not run' &&
+    vt_step_has "Check coverage" 'Any other file goes in an item "other: `<folder>`".' "shows that feature as driven by the item" &&
+    ! has_all "$VT" "only a generic parent folder" &&
     has_all "$FMT" "Needs: <recipe names from data-setup.md> | none" &&
     section_has "$VT" "Neighbours and edges" "that the engineer did not choose in step 2"
 }
