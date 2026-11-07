@@ -22,7 +22,7 @@ Reference conflicts: <anchor>: reference says <x>, base code <path:line> says <y
 Side effects: <SELECT> -> <counts and IDs only>
 Coverage: <n> items in the change, <n> driven; continued in Flow step 11: <items the engineer picked> | none. Then a table with the columns Item, Files, Driven (step) and Reason not driven.
   Or: not checked: run stopped at Flow step <n>
-Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a user guide change, as "user guide changed; not checked in a verify run">
+Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a feature the ticket touches that the engineer left out, and a `Steps:` step skipped for that reason, as "left out by the engineer in step 2"; a user guide change, as "user guide changed; not checked in a verify run">
 Evidence folder: <path>
 ```
 
