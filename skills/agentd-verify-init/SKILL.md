@@ -93,7 +93,8 @@ skill never verifies a ticket itself. Read the references and templates named in
   starts (for SQL Server: one container per ticket, with its own host port).
 - The generated skill names six independence mechanisms: expectations before evidence, a separate verifier in a fresh
   session, three-way match of screen, API and database, recompute the figures on calculation tickets, check the
-  neighbours, and try the edges. Expectations never come from the diff.
+  neighbours, and try the edges. Expectations never come from the diff. The one exception is a claim the engineer
+  confirms (see the template's Expectations section). Its source is then `engineer`.
 - A calculation reference is an index to the code, never the oracle. A disagreement is a `conflict:` line, not a fail.
 - Results are `fail`, `disagree`, `blocked` and `pass`, one per report, picked in that order.
 - Cite `path:line` for every claim about code. Mark what you could not check `unknown:`.
