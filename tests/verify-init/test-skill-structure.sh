@@ -569,7 +569,7 @@ Verify:
 Ticket: <number>
 Base: <base branch> @ <merge-base sha>
 Change: <the user-visible behaviour that changed, 1-2 sentences; navigation, and one source of claims>
-Feature: <feature file(s)>; entry points: <which ones>
+Feature: <feature file(s), or <feature> (index only)>; entry points: <which ones>
 Neighbours: <features from blast-radius> | none
 Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
 Roles: default | <role list>
@@ -597,7 +597,7 @@ Reference conflicts: <anchor>: reference says <x>, base code <path:line> says <y
 Side effects: <SELECT> -> <counts and IDs only>
 Coverage: <n> items in the change, <n> driven; continued in Flow step 11: <items the engineer picked> | none. Then a table with the columns Item, Files, Driven (step) and Reason not driven.
   Or: not checked: run stopped at Flow step <n>
-Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a feature the ticket touches that the engineer left out, and a `Steps:` step skipped for that reason, as "left out by the engineer in step 2"; a user guide change, as "user guide changed; not checked in a verify run">
+Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a feature the ticket touches that the engineer left out, and a `Steps:` step skipped for that reason, as "left out by the engineer in step 2"; a neighbour that is index only, as "index only: no feature file"; a user guide change, as "user guide changed; not checked in a verify run">
 Evidence folder: <path>
 EOF
 )
@@ -1373,6 +1373,46 @@ test_report_has_coverage_and_engineer_core_checks() {
       'such a failure is not tagged "outside the ticket"'
 }
 
+test_feature_map_indexes_every_feature() {
+  section_has "$REFS/feature-map.md" Confirm "Every feature found goes into the index" "about five" \
+    'its index row says `none yet` in the File column' &&
+    ! has_all "$REFS/feature-map.md" "Do not write a feature file for a feature the engineer left out" &&
+    step_has "Pick the features" "Every feature found goes into the" "for full" &&
+    has_all "$FMT" "| <feature-c> | none yet |" "is index only: it has" &&
+    has_all "$UM" "for every feature a user can reach that no row covers, new or not" \
+      "Write a full file only for a feature the engineer names" \
+      'Add a `Needs:` line to every feature file that has none' '"not driven: index only"' &&
+    ! has_all "$UM" "Add a feature that is new and has a user route."
+}
+
+test_verify_skill_handles_index_only_features() {
+  vt_step_has "Choose the features" '"index only: no feature file"' &&
+    vt_step_has "Start the data and the app" 'A chosen index-only feature has no `Needs:` line' &&
+    vt_step_has "Drive" "start from the entry feature (pick the record)" 'label its steps "index only: no feature file"' \
+      "It is driven, so it does not go in Not verified." &&
+    vt_step_has "Choose the features" '` (index only)` after a name is a mark, not part of the name' "in one numbered list after the others" &&
+    vt_step_has "Check coverage" "follows the step 9 rules for an index-only" &&
+    ! has_all "$VT" "driven without a feature file" &&
+    section_has "$VT" "Neighbours and edges" "and except index-only features" &&
+    dev_step_has 9 'write it as `<feature> (index only)`' "from either list or from the engineer" \
+      'On the `Feature:` line, give its Route or screen column as its entry point.'
+}
+
+test_update_mode_moves_an_old_map_to_the_full_index() {
+  has_all "$UM" "already has the Route or screen column and no line that lists features left out" \
+    "Turn a line that lists features left out" \
+    "fill it for every row, old and new" "ask which, if any, should get a full feature file now" \
+    'has no rules for index-only rows' 'it does not contain the label `index only: no feature file`' \
+    "the Not verified line of the Report" 'Do not rewrite `SKILL.md`' "except the index sources below" \
+    "Read the route, menu and user-document sources in full" "fill its Route or screen, Code folders and Why it is here columns" \
+    "do step 5 first, then go to step 8" "Skip this step when no code changed and step 5 changed no feature file" \
+    "shaped by \`templates/feature-map.md\` (One feature file)" &&
+    vt_step_has "Check coverage" 'An index-only item has no `Needs:` line: first ask the engineer which recipes it needs.' &&
+    has_all "$UM" "When the skill does carry the draft line, go to step 8." &&
+    section_has "$SKILL" Modes "drive every feature that has a file once" &&
+    section_has "$REFS/feature-map.md" "Find the features" "A mobile app has screens instead"
+}
+
 test_skill_flow_step_1_does_not_load_the_stack_reference() {
   step_has "Read the project" "Note the stack." &&
     ! step_has "Read the project" "load its reference"
@@ -1447,13 +1487,13 @@ test_a_changed_data_source_forces_a_fresh_restore() {
 }
 
 test_feature_map_has_a_code_folders_column() {
-  has_all "$FMT" '| Feature | File | Code folders | Why it is here |' "Code folders are repository paths relative to the repository root, not customer values" &&
+  has_all "$FMT" '| Feature | File | Route or screen | Code folders | Why it is here |' "Code folders are repository paths relative to the repository root, not customer values" &&
     section_has "$REFS/feature-map.md" Rank "Code folders column" &&
     dev_step_has 9 "\`Code folders\` column" "Risks to cover" "Neighbours:"
 }
 
 test_update_mode_does_not_drive_when_no_code_changed() {
-  section_has "$SKILL" Modes "drive every feature once, unless no code changed since the scan and the skill is not a draft" \
+  section_has "$SKILL" Modes "drive every feature that has a file once, unless no code changed since the scan, the skill is not a draft and the map is already a full index" \
     "stop and change nothing"
 }
 
@@ -1497,7 +1537,7 @@ test_update_mode_draft_and_local_only_rules() {
 }
 
 test_code_folders_stay_current_and_dev_rev_has_a_fallback() {
-  has_all "$UM" 'Re-check the `Code folders` column of `features/README.md`' "add the column when the file has none" \
+  has_all "$UM" 'Re-check the `Code folders` and Route or screen columns of `features/README.md`' "add a column the table lacks" \
     "or a Code folder, and that no longer exists counts as changed" &&
     dev_step_has 9 'With no `Code folders` column' 'say that the map has no `Code folders` column' \
       'ask the engineer which feature to drive' 'write the answer as `Feature:`' \
@@ -1546,6 +1586,9 @@ check "generated Flow step 2 chooses the features" test_generated_flow_step_2_ch
 check "generated Flow step 11 checks coverage" test_generated_flow_step_11_checks_coverage
 check "Expectations have the claims checklist and step 11 items" test_expectations_have_the_claims_checklist_and_step_11_items
 check "report has the coverage table and engineer core checks" test_report_has_coverage_and_engineer_core_checks
+check "feature map indexes every feature" test_feature_map_indexes_every_feature
+check "verify skill handles index-only features" test_verify_skill_handles_index_only_features
+check "update mode moves an old map to the full index" test_update_mode_moves_an_old_map_to_the_full_index
 check "Flow step 1 does not load the stack reference" test_skill_flow_step_1_does_not_load_the_stack_reference
 check "an unmarked verify skill is never overwritten" test_unmarked_verify_skill_is_never_overwritten
 check "update mode updates the scan lines in the body" test_update_mode_updates_the_scan_lines_in_the_body

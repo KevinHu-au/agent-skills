@@ -1,12 +1,12 @@
 # Picking the features
 
-Load this file in Flow step 3. It says how to pick about five features for the feature map. The engineer decides the final list.
+Load this file in Flow step 3. It says how to index every feature, and how to pick about five of them for full feature files. The engineer decides the final list.
 
 ## Find the features
 
 List every feature a user can reach. Use three sources and note which one named each feature.
 
-- Routes: the router table, route folders and page components.
+- Routes: the router table, route folders and page components. A mobile app has screens instead: the entry view, tab bar items, navigation links, sheets and full-screen covers.
 - Menus: the navigation menu, tabs and any action menu a user opens.
 - User documents: a user guide, help pages, release notes and screenshot folders. They use the words a user uses.
 
@@ -22,6 +22,9 @@ Rank the features by recent change. Count the merged pull requests, or the commi
 
 ## Confirm
 
-Show about five features. Give one reason for each: the churn count, the entry feature, or a calculation or permission rule. Put the entry feature first.
+Every feature found goes into the index in `features/README.md`, with its route or screen and its code folders. Nothing
+found is left out of the index.
 
-Ask the engineer to confirm, swap or add. They may know a feature that matters more than its churn says. Add every feature they name. Do not write a feature file for a feature the engineer left out.
+Show about five features for full feature files. Give one reason for each: the churn count, the entry feature, or a calculation or permission rule. Put the entry feature first.
+
+Ask the engineer to confirm, swap or add. They may know a feature that matters more than its churn says. Add every feature they name. Do not write a feature file for a feature the engineer did not pick: its index row says `none yet` in the File column. Update mode writes its file later, when the engineer asks.
