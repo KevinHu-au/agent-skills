@@ -32,11 +32,14 @@ feature.
 
 ## One feature file
 
-Four sections, in this order. Mark a step built only from general knowledge of the platform `inferred:`. Mark a step
+A `Needs:` line under the title names the setup recipes the feature needs. The verify skill runs them when the
+engineer chooses the feature. Then four sections, in this order. Mark a step built only from general knowledge of the platform `inferred:`. Mark a step
 nobody could check `unknown:`.
 
 ```
 # <feature-a>
+
+Needs: <recipe names from data-setup.md> | none
 
 ## Sub-features
 - <sub-feature>: <what a user can do, in one line>

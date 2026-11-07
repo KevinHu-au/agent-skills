@@ -586,7 +586,7 @@ Verify result: pass | fail | disagree | blocked
 Ticket and branch: <...>; HEAD <sha> plus working-tree changes: <n> staged, <n> unstaged, <n> untracked files; app-code fingerprint <short hash>
 Environment: container <name>, image <tag>, data <empty | setup recipes | bacpac file name and date>, DbUp scripts applied <n>
 Ticket reading vs Change line: agree | conflict: <how they differ>
-Expectations (written before driving): <each expected result, with its source: ticket | diagnose | base code path:line>
+Expectations (written before driving): <each expected result, with its source: ticket | diagnose | base code path:line | engineer>
 Steps:
   1. <action> -> <what was seen> (evidence: <file>)
 Three-way match: <value>: screen <x> | API <y> | database <z> -> match | mismatch
@@ -595,7 +595,9 @@ Neighbours checked: <feature>: pass | fail | none
 Edges tried: <case>: <result> | none, and why
 Reference conflicts: <anchor>: reference says <x>, base code <path:line> says <y> | none
 Side effects: <SELECT> -> <counts and IDs only>
-Not verified: <what, and why>
+Coverage: <n> items in the change, <n> driven; continued in Flow step 11: <items the engineer picked> | none. Then a table with the columns Item, Files, Driven (step) and Reason not driven.
+  Or: not checked: run stopped at Flow step <n>
+Not verified: <what, and why; each item still not driven, as "in the change, not driven"; a user guide change, as "user guide changed; not checked in a verify run">
 Evidence folder: <path>
 EOF
 )
@@ -1247,7 +1249,7 @@ vt_step_has() {
 test_generated_flow_orders_start_sign_in_then_doctor() {
   [ -s "$VT" ] || return 1
   [ "$(section_of "$VT" Flow | grep -E '^[0-9]+\. \*\*' | sed -E 's/^([0-9]+)\. \*\*([^*]*)\*\*.*/\1 \2/; s/\.$//' |
-    tr '\n' '|')" = '1 Read the input|2 Write the expectations|3 Start the data and the app|4 Make the evidence folder|5 Sign in|6 Run Doctor|7 Set up the data|8 Drive|9 Check|10 Report and clean up|' ]
+    tr '\n' '|')" = '1 Read the input|2 Choose the features|3 Write the expectations|4 Start the data and the app|5 Make the evidence folder|6 Sign in|7 Run Doctor|8 Set up the data|9 Drive|10 Check|11 Check coverage, and offer to continue|12 Report and clean up|' ]
 }
 
 test_generated_flow_start_sequence_has_one_owner_per_job() {
@@ -1310,9 +1312,56 @@ test_independence_rules_are_pinned_as_whole_sentences() {
 }
 
 test_report_wording_follows_the_specification() {
-  section_has "$RP" Results 'when any check failed that does not depend on the contested reading (a three-way mismatch, a recomputed figure, a neighbour or an edge, or an expectation both readings share).' \
-    "Only three core checks make the result \`blocked\` when not done: an expectation, a three-way leg for a ticket value, and a recomputed figure on a calculation ticket." &&
+  section_has "$RP" Results 'when any check failed that does not depend on the contested reading (a three-way mismatch, a recomputed figure, a neighbour or an edge, an expectation both readings share, or an expectation with source `engineer` or one added in Flow step 11).' \
+    "Only three core checks make the result \`blocked\` when not done: an expectation (any source, including one added in Flow step 11), a three-way leg for a ticket value, and a recomputed figure on a calculation ticket." \
+    "So do Flow step 11 items that hold no written expectation, and features the engineer left out in step 2" &&
     ! has_all "$RP" "Every other core check"
+}
+
+test_generated_flow_step_2_chooses_the_features() {
+  vt_step_has "Choose the features" 'features/README.md' '"Why it is here"' '`Feature:` line as the suggested choice' \
+    "Do not add a feature the engineer did not pick." 'left out by the engineer in step 2' 'does not block a `pass`' &&
+    vt_step_has "Write the expectations" "for the features chosen in step 2 only" &&
+    section_has "$RP" Results "features the engineer left out in step 2 (they get no expectations)" &&
+    vt_step_has "Drive" 'First follow the `Steps:` line, in its own order.' "did not choose in step 2, and list it in Not verified" \
+      "one at a time" "label each step in the report with its feature" &&
+    vt_step_has "Start the data and the app" 'the `Needs:` line of a feature file chosen in step 2 names it' &&
+    vt_step_has "Set up the data" 'the recipes on the `Needs:` line of each chosen feature file' &&
+    has_all "$FMT" "Needs: <recipe names from data-setup.md> | none" &&
+    section_has "$VT" "Neighbours and edges" "that the engineer did not choose in step 2"
+}
+
+test_generated_flow_step_11_checks_coverage() {
+  vt_step_has "Check coverage" "Never open the files." '`LocalOnlyFiles`' "<skill folders>" "<user guide folder>" \
+    "<shared folders>" "<test file patterns>" "for coverage only, never for expectations" "longest match" \
+    "only when a numbered step acted on it" "Never read the branch's code to find it." "in the change, not driven" \
+    "user guide changed; not checked in a verify run" "Coverage: not checked: run stopped at Flow step <n>" &&
+    has_all "$VT" 'Fill `<current-user route>`' "<skill folders>" "<user guide folder>" "<shared folders>" \
+      "<test file patterns>" &&
+    ! has_all "$VT" "src/clients" && ! has_all "$VT" "pwsh -NoProfile" &&
+    has_all "$VT" "every folder inside the repository that holds a copy of this skill" \
+      "git refuses a path outside the repository" "the user guide bullet of the claims in Expectations" \
+      "the restore line and the API restart in Flow step 11" &&
+    vt_step_has "Check coverage" "by the first rule that matches" "Do not list or group the files again." \
+      "--no-renames" "Never write an empty \`':(exclude)'\`" "With no \`Code folders\` column in the map" \
+      "Before a restore, run the Side effects SELECTs" "Save each current-user response to a new file" &&
+    section_has "$VT" Expectations 'the Verify block'"'"'s `Change:` line' "stages and does not commit" &&
+    section_has "$SKILL" Rules "Expectations never come from the diff. The one exception is a claim the engineer confirms"
+}
+
+test_expectations_have_the_claims_checklist_and_step_11_items() {
+  section_has "$VT" Expectations "names no screen, field or action" "Show no list before the answer." \
+    'git log <merge-base sha>..HEAD --format=%s' "never show the fixing side's expected output as a claim" \
+    "A claim the engineer has not confirmed is not an expectation." "An item picked in Flow step 11" \
+    "Branch input." "Never read the branch's code" 'the result is `fail`, not `disagree`' &&
+    section_has "$VT" Input "Only a line the engineer confirms becomes an expectation." &&
+    section_has "$VT" "Browser and session" "allowed only as Expectations and Flow step 11 name them"
+}
+
+test_report_has_coverage_and_engineer_core_checks() {
+  section_has "$RP" Report "Item, Files, Driven (step) and Reason not driven" &&
+    section_has "$RP" Results 'including one with source `engineer` or one added in Flow step 11' \
+      'such a failure is not tagged "outside the ticket"'
 }
 
 test_skill_flow_step_1_does_not_load_the_stack_reference() {
@@ -1484,6 +1533,10 @@ check "one owner per job in the data helpers" test_one_owner_per_job_in_the_data
 check "the generator copies everything under Report and Results" test_generator_copies_everything_under_report_and_results
 check "independence rules are pinned as whole sentences" test_independence_rules_are_pinned_as_whole_sentences
 check "report wording follows the specification" test_report_wording_follows_the_specification
+check "generated Flow step 2 chooses the features" test_generated_flow_step_2_chooses_the_features
+check "generated Flow step 11 checks coverage" test_generated_flow_step_11_checks_coverage
+check "Expectations have the claims checklist and step 11 items" test_expectations_have_the_claims_checklist_and_step_11_items
+check "report has the coverage table and engineer core checks" test_report_has_coverage_and_engineer_core_checks
 check "Flow step 1 does not load the stack reference" test_skill_flow_step_1_does_not_load_the_stack_reference
 check "an unmarked verify skill is never overwritten" test_unmarked_verify_skill_is_never_overwritten
 check "update mode updates the scan lines in the body" test_update_mode_updates_the_scan_lines_in_the_body
