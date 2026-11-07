@@ -72,6 +72,7 @@ its content.
 
 ## <recipe-basic>
 Needs: <empty schema | another recipe>
+Order: <recipes this one must follow when they also run, and why> (optional)
 1. <user action>
 Result: <what exists afterwards, in words>
 

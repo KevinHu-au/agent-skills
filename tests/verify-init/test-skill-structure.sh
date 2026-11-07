@@ -1387,7 +1387,12 @@ test_feature_map_indexes_every_feature() {
 
 test_verify_skill_handles_index_only_features() {
   vt_step_has "Choose the features" '"index only: no feature file"' &&
-    vt_step_has "Start the data and the app" 'A chosen index-only feature has no `Needs:` line' &&
+    vt_step_has "Start the data and the app" 'A chosen index-only feature has no `Needs:` line and no role rules' "which recipes and which roles it needs" &&
+    vt_step_has "Set up the data" 'A recipe'"'"'s `Order:` line' "does not make them pending" &&
+    vt_step_has "Drive" "only sets up what a later step needs" "this wins over the skip rule below" \
+      'a screen that has no row in `features/README.md`' "it was not driven: list it in Not verified with the reason" &&
+    vt_step_has "Check coverage" "or every feature that lists the same folder" "name them all in one item" &&
+    has_all "$FMT" "Order: <recipes this one must follow when they also run, and why> (optional)" &&
     vt_step_has "Drive" "start from the entry feature (pick the record)" 'label its steps "index only: no feature file"' \
       "It is driven, so it does not go in Not verified." &&
     vt_step_has "Choose the features" '` (index only)` after a name is a mark, not part of the name' "in one numbered list after the others" &&
