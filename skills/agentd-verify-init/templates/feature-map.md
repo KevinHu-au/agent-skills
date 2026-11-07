@@ -19,15 +19,18 @@ Scanned on: <date>
 
 Entry feature: <feature-a>
 
-| Feature | File | Code folders | Why it is here |
-|---|---|---|---|
-| <feature-a> | <feature-a>.md | <folder>, <folder> | entry feature: opens or creates the main record |
-| <feature-b> | <feature-b>.md | <folder> | <churn count, calculation, or permission rule> |
+| Feature | File | Route or screen | Code folders | Why it is here |
+|---|---|---|---|---|
+| <feature-a> | <feature-a>.md | <route or screen> | <folder>, <folder> | entry feature: opens or creates the main record |
+| <feature-b> | <feature-b>.md | <route or screen> | <folder> | <churn count, calculation, or permission rule> |
+| <feature-c> | none yet | <route or screen> | <folder> | index only: <what a user does there> |
 
 Setup recipes: data-setup.md
 ```
 
-Code folders are repository paths relative to the repository root, not customer values. `agentd-dev-rev` reads them to map a blast-radius path to a
+The index has a row for every feature a user can reach. A row whose File column says `none yet` is index only: it has
+no feature file until update mode writes one. Route or screen is the route of a web app or the screen name of a mobile
+app. Code folders are repository paths relative to the repository root, not customer values. `agentd-dev-rev` reads them to map a blast-radius path to a
 feature.
 
 ## One feature file
