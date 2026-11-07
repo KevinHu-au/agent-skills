@@ -57,7 +57,8 @@ drives the changed feature through the user interface, and writes an evidence re
      recipe builds on the recipe that its own `Needs:` line in `features/data-setup.md` names. `empty schema` there is
      not a recipe. With `Data: empty` or a database backup on the `Data:` line, ask the engineer before a `Needs:`
      recipe becomes pending, and say what the drive lacks without it. A recipe the engineer declines is not pending.
-     A chosen index-only feature has no `Needs:` line: ask the engineer which recipes it needs.
+     A chosen index-only feature has no `Needs:` line and no role rules: ask the engineer which recipes and which
+     roles it needs.
    - `ui-start.ps1`. When it stops because a dependency is missing, it prints a fix command. Show it to the engineer,
      run it once, then run `ui-start.ps1` again. After it runs, check `git status --porcelain`: a changed tracked file is
      `blocked`, and you tell the engineer. A second `blocked` ends the run.
@@ -67,21 +68,25 @@ drives the changed feature through the user interface, and writes an evidence re
 7. **Run Doctor.** Save the response of the API's current-user call (`<current-user route>`) as a saved response in the evidence
    folder, then run `doctor.ps1` with that file and the roles `api-start.ps1` started the API with. The token is never printed or saved. Stop when Doctor fails.
 8. **Set up the data.** Run the pending recipes (see step 4) in dependency order: a recipe runs after the recipe it
-   builds on. Run each one as admin through the user interface, and record each one in `state.json` `recipes`. Then restart the API with the roles of the
+   builds on. A recipe's `Order:` line in `features/data-setup.md` names recipes it must follow when they also run; it
+   does not make them pending. Run each one as admin through the user interface, and record each one in `state.json` `recipes`. Then restart the API with the roles of the
    `Roles:` line when they differ from the roles it runs with. After the restart, reload the page, save a new
    current-user response to a new file in the evidence folder, and run `doctor.ps1` with that file and the roles of the
    `Roles:` line.
 9. **Drive.** Each chosen feature keeps the rules of its feature file (roles, data and gotchas).
    - Follow the `Steps:` line in its own order. A step that only reaches a screen (for example opening the entry
-     feature and picking the record) always runs. So does a step on a screen with no feature file: drive it from the
-     labels on screen and mark it `inferred:`. Skip a step that acts on a feature the engineer did not choose in step
+     feature and picking the record) always runs. So does a step that only sets up what a later step needs (for
+     example giving a user access to the record), even when its feature was not chosen: this wins over the skip rule
+     below. Follow its feature file when it has one, and mark it `inferred:` when it has none. So does a step on a
+     screen that has no row in `features/README.md`: drive it from the labels on screen and mark it `inferred:`. Skip a step that acts on a feature the engineer did not choose in step
      2, and every later step that needs what it makes (data or a screen state). List each skipped step in Not verified.
    - A chosen feature is covered when a `Steps:` step acts on it (an edit, a click on its controls or a value check).
      Drive each chosen feature that is not covered from its feature file, one at a time, in the order of the table in
      `features/README.md`. A chosen index-only feature has no file: start from the entry feature (pick the record),
      then go to its Route or screen, drive it from the labels on screen, and mark each step `inferred:`. In the
      report, label its steps "index only: no feature file", and suggest `/agentd-verify-init` (update mode) to write
-     its file. It is driven, so it does not go in Not verified.
+     its file. It is driven, so it does not go in Not verified. When its screen refuses the user (a not-authorised
+     page) or stays disabled, it was not driven: list it in Not verified with the reason.
    - Work that locks a period, or closes or deletes a record other features need, goes last. When a `Steps:` step
      locks, closes or deletes, the whole `Steps:` line goes last, in its own order. The neighbours pass and the edges
      (step 10) run before it too, so they still find the data open.
@@ -110,12 +115,12 @@ drives the changed feature through the user interface, and writes an evidence re
       list the user guide files the same way. `--no-renames` lists a moved file under its old path
       and its new path, so both features show.
     - Use the file names for coverage only, never for expectations. They are not the diff that step 1 means.
-    - Group the app file names into items. Each item has one feature, or two features that list the same folder.
+    - Group the app file names into items. Each item has one feature, or every feature that lists the same folder.
       Test files (`<test file patterns>`) are not items. Place each other file by the first rule that matches:
       1. A file named in a feature's "Why it is here" text (for example a stored procedure) belongs to that feature.
       2. A file in `<shared folders>` goes in one item, "shared: affects many screens", with its folder.
       3. A file under a feature's "Code folders" entry in `features/README.md`, at any depth, belongs to the feature
-         with the longest matching entry. When two features list that same folder, name both features in one item.
+         with the longest matching entry. When several features list that same folder, name them all in one item.
       4. Any other file goes in an item "other: `<folder>`".
     - Inside a feature, map the path to a screen, tab, side panel or dialog by its folder name. Name the item by what
       the user sees, for example "<screen>, <tab> tab".
