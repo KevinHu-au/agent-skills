@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Structure and drift tests for the agentd-onboard skill files. Reads the skill files. The only writes
-# are throwaway folders from mktemp; nothing is deleted. They are left for the OS to clear and listed at the end.
+# are throwaway folders from mktemp, removed when every check passes, and kept when one fails.
 # Usage: tests/onboard/test-skill-structure.sh
 set -u
 
@@ -11,7 +11,21 @@ SKILL="$SKILL_DIR/SKILL.md"
 REFS="$SKILL_DIR/references"
 PASS=0
 FAIL=0
-TMPS=""
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-onboard-structure
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -116,7 +130,6 @@ test_filled_brief_template_passes_the_checker() {
   local d
   [ -s "$REFS/brief-template.md" ] && [ -s "$REFS/feature-to-code-template.md" ] || return 1
   d=$(mktemp -d)
-  TMPS="$TMPS $d"
   fill_pack "$d"
   "$HERE/check-brief.sh" "$d"
 }
@@ -246,7 +259,6 @@ test_update_mode_last_refreshed_line_passes_the_checker() {
   [ -s "$f" ] || return 1
   line=$(grep -m1 '^Last refreshed: ' "$f") || return 1
   d=$(mktemp -d)
-  TMPS="$TMPS $d"
   [ -s "$REFS/feature-to-code-template.md" ] || return 1
   fill_pack "$d"
   awk -v l="$line" '{ print } /^Working tree: / { print l }' "$d/README.md" >"$d/README.tmp" && mv "$d/README.tmp" "$d/README.md"
@@ -683,7 +695,6 @@ phrase_in_file() {
 test_forbidden_phrase_helper_works() {
   local t rc
   t=$(mktemp)
-  TMPS="$TMPS $t"
   printf 'We built Contoso Widgets for a client.\nThe cat sat on the mat.\n' >"$t"
   phrase_in_file "$t" "contoso widgets" || return 1
   phrase_in_file "$t" "-nope"
@@ -731,7 +742,6 @@ scan_forbidden() {
 test_forbidden_scan_covers_all_files_and_fails_on_errors() {
   local t rc
   t=$(mktemp)
-  TMPS="$TMPS $t"
   printf 'We built Contoso Widgets for a client.\n' >"$t"
   # Every scanned file exists (an empty word list still checks that).
   ( ONBOARD_FORBIDDEN_WORDS="" scan_forbidden "${FORBIDDEN_FILES[@]}" ) || return 1
@@ -844,5 +854,4 @@ check "EVAL.md notes are accurate and step 5 is reflowed" test_eval_notes_are_ac
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folders left in place:$TMPS"
 [ "$FAIL" -eq 0 ]

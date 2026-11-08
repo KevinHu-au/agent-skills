@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Tests for tests/blast-radius/make-fixture.sh: the fixture builds the same way every time, and the three
-# scenarios' facts are real. Builds into a throwaway folder from mktemp. Nothing is deleted; the folders are listed
-# at the end. The scenario branch is only ever read with git (git archive) and unpacked into the throwaway folder.
+# scenarios' facts are real. Builds into a throwaway folder from mktemp. It is removed when every check passes,
+# and kept when one fails. The scenario branch is only ever read with git (git archive) and unpacked into the
+# throwaway folder.
 # Usage: tests/blast-radius/test-make-fixture.sh
 set -u
 
@@ -10,7 +11,21 @@ BUILDER="$HERE/make-fixture.sh"
 export PYTHONDONTWRITEBYTECODE=1
 PASS=0
 FAIL=0
-TMPS=""
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-blast-radius-fixture
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -25,7 +40,6 @@ check() {
 }
 
 ROOT=$(mktemp -d "${TMPDIR:-/tmp}/blast-radius.XXXXXX")
-TMPS=" $ROOT"
 F="$ROOT/shop"
 OUT1=$(bash "$BUILDER" "$F" 2>&1)
 STATUS1=$?
@@ -491,5 +505,4 @@ check "the repository is still clean and unchanged after every check" test_the_r
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folders left in place:$TMPS"
 [ "$FAIL" -eq 0 ]
