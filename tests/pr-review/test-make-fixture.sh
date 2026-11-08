@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for tests/pr-review/make-fixture.sh: the fixture builds the same way every time, and the seeded facts are
-# real. Builds into a throwaway folder from mktemp. Nothing is deleted; the folder is listed at the end. The main
-# branch is only ever read with git archive and unpacked into the throwaway folder.
+# real. Builds into a throwaway folder from mktemp. It is removed when every check passes, and kept when one
+# fails. The main branch is only ever read with git archive and unpacked into the throwaway folder.
 # Usage: tests/pr-review/test-make-fixture.sh
 set -u
 
@@ -10,6 +10,21 @@ BUILDER="$HERE/make-fixture.sh"
 export PYTHONDONTWRITEBYTECODE=1
 PASS=0
 FAIL=0
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-pr-review-fixture
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -170,5 +185,4 @@ check "the fixture names no answer" test_fixture_names_no_answer
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folder left in place: $ROOT"
 [ "$FAIL" -eq 0 ]
