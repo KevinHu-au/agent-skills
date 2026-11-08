@@ -2,6 +2,15 @@
 name: agentd-blast-radius
 description: Use when the engineer has a proposed or existing change and needs to know what else it could break before it ships. Finds breakage that search misses, proves the one fact the change is safe because of by running code, and ends with an add-on block for agentd-dev-rev. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-blast-radius

@@ -2,6 +2,15 @@
 name: agentd-resume
 description: Use when the engineer continues a task that agentd-handoff stopped. Reads the hand-off file, checks the current branch, commit and working tree against it, reports what matches and what differs, and carries on from the next steps only after the engineer agrees. Never fixes a mismatch and never commits.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-resume

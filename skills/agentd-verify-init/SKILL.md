@@ -2,6 +2,15 @@
 name: agentd-verify-init
 description: Use when the engineer wants a project skill that drives the real application the way a user does and returns an evidence report for a ticket. Run it once per project to create the skill, and again later to update it.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-verify-init

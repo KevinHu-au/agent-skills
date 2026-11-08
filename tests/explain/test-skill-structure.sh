@@ -140,8 +140,9 @@ test_skill_is_manual_only() {
     grep -qx 'disable-model-invocation: true'
 }
 
+# Counts the body only: the frontmatter (name, description, hooks) is for the tool, not instructions.
 test_skill_is_at_most_120_lines() {
-  [ -s "$SKILL" ] && [ "$(wc -l <"$SKILL")" -le 120 ]
+  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 120 ]
 }
 
 test_required_h2_sections_in_order() {
@@ -477,7 +478,7 @@ test_one_screen_target() { has_all "$TPL" "one screen"; }
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
-check "SKILL.md is at most 120 lines" test_skill_is_at_most_120_lines
+check "the SKILL.md body is at most 120 lines" test_skill_is_at_most_120_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "Flow has five numbered steps in order" test_flow_has_five_numbered_steps_in_order
 check "the four question kinds are listed" test_question_kinds_are_listed

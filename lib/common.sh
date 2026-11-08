@@ -115,8 +115,12 @@ render_item() {
   local tmpl=$1 dst=$2 tmp esc
   # Escape for JSON (\ and "), then for the sed replacement (\ & and the # delimiter).
   esc=$(printf '%s' "$HOME" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | sed -e 's/[\\&#]/\\&/g')
+  # The hook command quotes the path in double quotes, which cannot hold " $ ` or \ safely.
   case "$HOME" in
-    *[[:space:]]*) warn "HOME contains whitespace: Copilot may split the hook command on it" ;;
+    *[\"\$\`\\]*)
+      warn "HOME holds a \", \$, \` or \\, which the hook command cannot quote. Not written: $dst"
+      return 0
+      ;;
   esac
   tmp=$(mktemp)
   sed "s#@HOME@#$esc#g" "$tmpl" >"$tmp"

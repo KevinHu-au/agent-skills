@@ -2,6 +2,15 @@
 name: agentd-data-fix
 description: Use when the engineer pastes one work item that needs a data fix in a SQL Server database. Maps it to tables, columns and rows, then writes look queries, a guarded re-runnable script, a capture query, a reverse script, check queries and pull request notes in chat. Never runs anything against a database. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-data-fix
