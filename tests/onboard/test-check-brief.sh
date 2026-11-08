@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for check-brief.sh. Each test builds a brief in a throwaway folder and runs the checker.
-# It deletes nothing: the temp folders are left for the OS to clear, and listed at the end.
+# Its temp folders are removed when every check passes, and kept when one fails.
 # Usage: tests/onboard/test-check-brief.sh
 set -u
 
@@ -8,7 +8,21 @@ HERE=$(cd "$(dirname "$0")" && pwd -P)
 CHECKER="$HERE/check-brief.sh"
 PASS=0
 FAIL=0
-TMPS=""
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-onboard-check-brief
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -24,7 +38,6 @@ check() {
 
 new_dir() {
   D=$(mktemp -d)
-  TMPS="$TMPS $D"
 }
 
 # write_brief <dir> [section...]: a good brief. Sections default to the ten in order.
@@ -543,7 +556,6 @@ g() { git -C "$REPO" -c core.hooksPath=/dev/null -c core.excludesFile=/dev/null 
 # PACK ($REPO/docs/onboarding, an untracked good brief). The identity is local, as in make-fixture.sh:477-479.
 new_repo() {
   REPO=$(mktemp -d)
-  TMPS="$TMPS $REPO"
   git init -q --template= -b main "$REPO"
   g config user.name Fixture
   g config user.email fixture@example.invalid
@@ -1231,5 +1243,4 @@ check "an H4 sub-heading in contract.md does not warn" test_contract_sub_heading
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folders left in place:$TMPS"
 [ "$FAIL" -eq 0 ]

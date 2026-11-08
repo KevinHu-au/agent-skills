@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for tests/intake/make-fixture.sh: the intake fixture is the diagnose fixture plus a small onboarding pack in
 # one more commit, it builds the same way every time, and the lines that expected-findings.md cites hold their facts.
-# Builds into a throwaway folder from mktemp. Nothing is deleted; the folders are listed at the end.
+# Builds into a throwaway folder from mktemp. It is removed when every check passes, and kept when one fails.
 # Usage: tests/intake/test-make-fixture.sh
 set -u
 
@@ -13,6 +13,21 @@ DIAGNOSE_HEAD=6458ad8b5eb5574d684c3cbd31e272fcde6a93b2
 INTAKE_HEAD=a0156d30a93c85924b8417fc65b1f75563318ff0
 PASS=0
 FAIL=0
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-intake-fixture
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -107,5 +122,4 @@ check "the lines cited in expected-findings.md hold their facts" test_the_expect
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folders left in place: $ROOT"
 [ "$FAIL" -eq 0 ]
