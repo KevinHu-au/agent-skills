@@ -2,6 +2,15 @@
 name: agentd-pr-prep
 description: Use when the engineer asks to prepare a PR, or for a PR title and description for the current branch compared with its base branch.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-pr-prep

@@ -2,6 +2,15 @@
 name: agentd-diagnose
 description: Use when the engineer has a bug, a data issue or a slow path and needs the root cause before any fix. Reproduces first, collects evidence, names the root cause, proposes a fix, and ends with a hand-off block for agentd-dev-rev. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-diagnose

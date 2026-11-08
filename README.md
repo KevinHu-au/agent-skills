@@ -2,7 +2,7 @@
 
 Agent skills, a global guide and safety hooks. The skills are suitable for digital
 application support developers or engineers to do application maintenance and bug fixes
-with confidence. One repository sets up Claude Code and GitHub Copilot CLI on a new
+with confidence. One repository sets up Claude Code, GitHub Copilot CLI and Codex on a new
 machine.
 
 ## What is here
@@ -10,8 +10,9 @@ machine.
 ```
 skills/         General skills, one folder each. Each holds a SKILL.md.
 global/         The global guide (AGENTS.md), the Claude Code CLAUDE.md that imports it, bin/rm-scratch and bin/onboarding-pack.
-hooks/copilot/  Copilot CLI safety hooks. git-safety.json.tmpl is a template.
-harness/        One script per tool: claude-code.sh, copilot-cli.sh.
+hooks/copilot/  The shell safety hook, used by Claude Code, Copilot CLI and Codex. git-safety.json.tmpl is the Copilot template.
+hooks/codex/    hooks.json.tmpl, the Codex template for the same hook.
+harness/        One script per tool: claude-code.sh, copilot-cli.sh, codex-cli.sh.
 lib/common.sh   Link, backup and conflict logic shared by the scripts.
 setup.manifest  Plugins and marketplaces to reinstall by hand.
 install.sh      The setup script. Dry run by default.
@@ -30,9 +31,10 @@ repository, not here. This keeps client details out of this repository. See
 
 ## Set up a new machine
 
-1. Install Claude Code and Copilot CLI, and start each once so `~/.claude` and `~/.copilot` exist.
+1. Install Claude Code, Copilot CLI and Codex, and start each once so `~/.claude`, `~/.copilot` and `~/.codex`
+   exist. A tool you do not use is skipped.
 2. Clone this repository, for example to `~/Projects/agent-skills`.
-3. Install `jq` (`brew install jq`). The Copilot shell hook needs it.
+3. Install `jq` (`brew install jq`). The shell hook needs it.
 4. See the plan. This changes nothing:
 
    ```bash
@@ -67,7 +69,7 @@ Options:
 | (none) | Show the plan. Change nothing. |
 | `--apply` | Create the missing links and files. Leave conflicts alone. |
 | `--adopt` | With `--apply`, move conflicting items to the backup folder and link ours. |
-| `--harness LIST` | Limit to `claude-code`, `copilot-cli`, or both (comma separated). |
+| `--harness LIST` | Limit to some of `claude-code`, `copilot-cli` and `codex-cli` (comma separated). |
 
 Exit status: `0` clean, `1` conflicts remain, `2` bad usage.
 
@@ -106,8 +108,9 @@ repo/global/AGENTS.md  <-  ~/.agents/AGENTS.md  <-  ~/.copilot/copilot-instructi
 repo/global/claude/CLAUDE.md  <-  ~/.claude/CLAUDE.md   (imports ~/.agents/AGENTS.md)
 repo/global/bin/rm-scratch  <-  ~/.agents/bin/rm-scratch
 repo/global/bin/onboarding-pack  <-  ~/.agents/bin/onboarding-pack
-repo/hooks/copilot/block-dangerous-shell.sh  <-  ~/.copilot/hooks/block-dangerous-shell.sh
+repo/hooks/copilot/block-dangerous-shell.sh  <-  ~/.agents/hooks/block-dangerous-shell.sh
 repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   (rendered copy)
+repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
 ```
 
 - `rm-scratch` removes one scratch file or folder that an agent made with `mktemp`, and refuses anything else: a
@@ -125,17 +128,72 @@ repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   
   status: 0 success, 1 no pack recorded, 2 bad usage, 3 the recorded folder is gone, 4 refused.
   `verify-folder <app>`, `verify-find` and `verify-set <folder>` do the same for a generated verify skill, with the
   registry `~/.agents/verify-skills.tsv` and the default folder `~/.agents/verify/<app>/`.
-- `block-dangerous-shell.sh` checks each Copilot shell command. It denies `git push`, `git reset --hard`, a
+- `block-dangerous-shell.sh` is the shell safety hook for the agentd skills. It checks shell commands only in a
+  session that has started an agentd skill. Each tool gets it a different way:
+
+  | Tool | Where the hook is set | When it checks commands |
+  |---|---|---|
+  | Claude Code | The `hooks:` block in each agentd `SKILL.md`. Nothing is added to `settings.json`. | From the moment an agentd skill starts until the session ends |
+  | Copilot CLI | `~/.copilot/hooks/git-safety.json` | From the moment an agentd skill starts (see below) |
+  | Codex | `~/.codex/hooks.json` | From the moment an agentd skill starts (see below) |
+
+  Copilot and Codex cannot attach a hook to a skill, so their hook file is installed for the user. A gate in the
+  script keeps it dormant in every other session. An agentd skill counts only when its folder in `~/.agents/skills`
+  holds a `SKILL.md` with this hook's line, so a skill from another kit with an `agentd-` name does not wake it.
+  The gate sees a start when:
+  - a prompt names `/agentd-<name>` or `$agentd-<name>` (either tool);
+  - Copilot's skill tool starts `agentd-<name>`;
+  - a shell command reads the skill's `SKILL.md` with `cat`, `head`, `sed`, `less`, `more`, `bat`, `type` or
+    `Get-Content`. Other mentions, such as `grep` or `git add` on the file, do not count.
+
+  Then the gate writes an empty marker file `~/.agents/hook-state/<session-id>`. It checks commands only in a
+  session that has a marker, and each checked command refreshes the marker's time. The marker stays after the
+  session ends, so a resumed session (same session ID) is still checked. A marker unused for 30 days is removed
+  the next time a skill starts. If the session ID cannot be read, the gate cannot tell: it checks commands while
+  any marker exists, and stays dormant when none does. It also prints a warning on stderr, so the cause shows in
+  the tool's hook log. This fails loudly on purpose: odd prompts in an ordinary session are easier to notice than
+  an agentd session that is quietly not checked.
+  Each agentd skill also has `agents/openai.yaml` with `allow_implicit_invocation: false`, so Codex starts it only
+  when you name it, and the gate sees the start.
+  Codex runs a new or changed hook only after you trust it. After the first install, run `/hooks` in Codex once
+  and trust the two agentd entries.
+  Not yet checked live:
+  - whether a subagent that an agentd skill starts is checked. Claude Code may not carry a skill's hook into a
+    subagent, and Codex may give the subagent its own session ID;
+  - whether Claude Code keeps a skill's hook after `claude --resume` or after the conversation is compacted.
+
+  The rules: it denies `git push`, `git reset --hard`, a
   forced `git clean`, `git branch -D` or a forced branch delete, a forced `git checkout` or `git switch`, and
   `git checkout .` or `git restore .`. It also catches forms such as `git -C "<path>" push`, `/usr/bin/git push`,
   `(git push)`, `bash -c 'git push'` and a line continuation. It asks before `rm`, `rmdir`, `unlink`, `trash`,
-  `shred`, `find -delete`, and the PowerShell `Remove-Item`, `ri`, `del`, `erase` and `rd`. It prints nothing for
-  any other command, so Copilot applies its default. It denies when `jq` is missing or it cannot read the command.
-  A command word inside a quoted message can cause a false deny or ask, which is accepted as safe. A regex cannot
-  catch every shell form, so treat it as a guard rail, not a sandbox.
+  `shred`, `find -delete`, and the PowerShell `Remove-Item`, `ri`, `del`, `erase` and `rd`. It also asks before
+  `git commit`, `git rebase`, `git filter-branch`, `git stash drop` and `git stash clear`, `git checkout -- <path>`
+  and `git restore`, `gh pr create`, `gh pr merge`, `az repos pr create`, `az repos pr update --status completed`,
+  `az repos pr update --auto-complete true`, a `gh api` call to a pull request's `merge` endpoint, and `sqlcmd` or `Invoke-Sqlcmd` with an `INSERT`, `UPDATE`,
+  `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `MERGE`, `CREATE`, `EXEC` or `EXECUTE` in the command. A SQL script passed
+  with `-i` is not read, so it is not caught. Nor are `bcp ... in` or `dotnet ef database update`. It prints nothing
+  for any other command, so the tool applies its default. In a checked session it denies when `jq` is missing or it
+  cannot read the command. In a dormant session it stays silent then too. A command word inside a quoted message can cause a false deny or ask, which is accepted as safe. A regex
+  cannot catch every shell form, so treat it as a guard rail, not a sandbox.
+
+  Codex hooks cannot ask, so in Codex every "ask" is a deny that tells the agent to leave the command to you.
+  Copilot CLI reads the flat `permissionDecision`. Claude Code and Codex read `hookSpecificOutput`. The
+  `--harness` flag tells the script which shape to print. When the script cannot run (for example the repository
+  moved and the link broke), Copilot CLI denies the call and Codex lets it run. In Copilot that means every shell
+  command and every skill call in every Copilot session is denied until you fix the link. Claude Code should
+  block the command (`onFailure: block`), but that is not yet checked live for a hook in a skill's frontmatter.
+  The installer will not write a hook file when your home folder path holds a `"`, `$`, `` ` `` or `\`, because the
+  hook command cannot quote it. It warns instead.
+- Older installs linked the script into `~/.copilot/hooks/` and call it with no flags. Until you re-install, that
+  older hook keeps checking every Copilot session, with the older rules only (dangerous git and file removal). A
+  `git pull` adds no new rules to it. The installer does not remove the old link, so remove it yourself if you
+  like. An older `git-safety.json` differs from the new one, so the first run reports a `CONFLICT`. Re-run with
+  `--apply --adopt` to replace it.
 
 - `~/.agents/skills` is the shared home. Copilot CLI reads it from version 1.0.11. Claude Code does not, so it gets links in `~/.claude/skills` (or `$CLAUDE_CONFIG_DIR/skills`).
-- `git-safety.json` holds an absolute path, so the script writes a rendered copy. It replaces `@HOME@` with your home folder.
+- `git-safety.json` and the Codex `hooks.json` hold an absolute path, so the script writes rendered copies. It replaces
+  `@HOME@` with your home folder. Codex reads only one `hooks.json`, so an existing, different file is a `CONFLICT`.
+  Merge our two entries into it by hand, or use `--adopt` to move it aside.
 - Edit skills in this repository, not through the links. `git pull` then updates both tools.
 
 ## Safety rules for the scripts
@@ -143,6 +201,7 @@ repo/hooks/copilot/git-safety.json.tmpl  ->  ~/.copilot/hooks/git-safety.json   
 - Dry run by default.
 - Safe to run twice. A second run changes nothing.
 - No deletes. A conflicting item is only moved to the backup folder, and only with `--adopt`.
+- It never edits a live settings file, such as `~/.claude/settings.json`.
 - The script checks that Copilot CLI is at least version 1.0.11 and that `jq` exists. It warns if not.
 - It skips a tool whose folder does not exist and says so.
 
@@ -153,7 +212,7 @@ tests/test-install.sh
 ```
 
 The test builds throwaway home folders, runs the installer in them, and checks the
-result. It also checks the rules of the Copilot shell hook. It never touches your real home. It deletes nothing,
+result. It also checks the rules of the shell hook in each tool's output shape, and the gate for Copilot and Codex. It never touches your real home. It deletes nothing,
 so it prints the temp folders it used. The operating system clears them later.
 
 ```bash

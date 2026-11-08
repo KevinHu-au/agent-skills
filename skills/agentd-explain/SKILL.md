@@ -2,6 +2,15 @@
 name: agentd-explain
 description: Use when the engineer needs to understand a business term, a figure, a status or a whole domain in a project. Answers with the business meaning and the code path from the frontend through the backend to the database or external system. Read only, apart from an export the engineer asks for. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-explain

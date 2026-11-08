@@ -1,0 +1,4 @@
+# Codex: start this skill only when the engineer names it ($agentd-...). The shell safety hook in
+# ~/.codex/hooks.json wakes up on that mention, so an implicit start would skip it.
+policy:
+  allow_implicit_invocation: false

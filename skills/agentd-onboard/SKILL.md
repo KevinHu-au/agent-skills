@@ -2,6 +2,15 @@
 name: agentd-onboard
 description: Use when the engineer is onboarding to an existing project, taking over support for a customer application, or refreshing a project's onboarding pack. Writes one short brief, a project contract and side files in the onboarding pack, which is docs/onboarding/ or a folder outside the repository when the customer allows no file in it.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-onboard
