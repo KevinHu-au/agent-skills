@@ -549,6 +549,33 @@ printf '{"hooks":{}}\n' >"$H/.codex/hooks.json"
 OUT=$(run --apply --harness codex-cli 2>&1); RC=$?
 check "an existing different hooks.json is a CONFLICT" has "$OUT" 'CONFLICT.*hooks.json'
 check "the existing hooks.json is left alone" test "$(cat "$H/.codex/hooks.json")" = '{"hooks":{}}'
+check "a hooks.json with no hooks gets no merge note" bash -c '! printf "%s" "$1" | grep -q "holds other hooks"' _ "$OUT"
+# A hooks.json merged by hand: the engineer's own hooks next to our two entries.
+new_home
+sed "s#@HOME@#$H#g" "$REPO/hooks/codex/hooks.json.tmpl" | jq '
+  .hooks.PreToolUse = [{"matcher":"Bash","hooks":[{"type":"command","command":"/x/own-git-check.sh","timeout":5}]}]
+    + .hooks.PreToolUse
+  | .hooks.Stop = [{"hooks":[{"type":"command","command":"/x/review-reminder.sh"}]}]' >"$H/merged.json"
+cp "$H/merged.json" "$H/.codex/hooks.json"
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "a hand-merged hooks.json is ok" has "$OUT" 'ok.*hooks.json (holds the agentd entries)'
+check "a hand-merged hooks.json exits 0, even with --apply --adopt" [ "$RC" -eq 0 ]
+check "a hand-merged hooks.json is left unchanged" cmp -s "$H/merged.json" "$H/.codex/hooks.json"
+check "a hand-merged hooks.json is not moved to a backup folder" [ ! -e "$H/.agent-skills-backup" ]
+jq 'del(.hooks.UserPromptSubmit)' "$H/merged.json" >"$H/.codex/hooks.json"
+OUT=$(run --apply --harness codex-cli 2>&1); RC=$?
+check "a hooks.json missing one agentd entry is a CONFLICT" has "$OUT" 'CONFLICT.*hooks.json'
+check "a CONFLICT with other hooks comes with the merge note" has "$OUT" 'holds other hooks'
+check "a hooks.json missing one agentd entry exits 1" [ "$RC" -eq 1 ]
+jq '(.hooks.PreToolUse[] | select(.hooks[0].command | test("block-dangerous-shell")) | .matcher) = "Shell"' \
+  "$H/merged.json" >"$H/.codex/hooks.json"
+OUT=$(run --apply --harness codex-cli 2>&1)
+check "an agentd entry under another matcher is a CONFLICT" has "$OUT" 'CONFLICT.*hooks.json'
+cp "$H/merged.json" "$H/.codex/hooks.json"
+printf '#!/bin/sh\nexit 1\n' >"$H/bin/jq"
+chmod +x "$H/bin/jq"
+OUT=$(run --apply --harness codex-cli 2>&1)
+check "when jq cannot run, a hand-merged hooks.json falls back to a CONFLICT" has "$OUT" 'CONFLICT.*hooks.json'
 new_home nocopilot
 OUT=$(run --apply --harness codex-cli 2>&1)
 check "missing ~/.codex skips with a warning" has "$OUT" '.codex not found'
