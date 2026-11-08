@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for make-fixture.sh. Each test builds the fixture in a throwaway folder.
-# It deletes nothing: the temp folders are left for the OS to clear, and listed at the end.
+# Its temp folders are removed when every check passes, and kept when one fails.
 # Usage: tests/onboard/test-make-fixture.sh
 set -u
 
@@ -8,7 +8,21 @@ HERE=$(cd "$(dirname "$0")" && pwd -P)
 BUILDER="$HERE/make-fixture.sh"
 PASS=0
 FAIL=0
-TMPS=""
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-onboard-fixture
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -26,7 +40,6 @@ check() {
 build() {
   local base
   base=$(mktemp -d)
-  TMPS="$TMPS $base"
   F="$base/shop"
   BOUT=$("$BUILDER" "$F" "$@" 2>&1)
   BRC=$?
@@ -87,7 +100,6 @@ test_fixture_identity_is_not_real() {
 test_refuses_existing_dest() {
   local base
   base=$(mktemp -d)
-  TMPS="$TMPS $base"
   "$BUILDER" "$base" >/dev/null 2>&1
   [ $? -eq 1 ] && [ ! -e "$base/.git" ] && [ -z "$(ls -A "$base")" ]
 }
@@ -111,7 +123,6 @@ test_build_is_deterministic() {
 test_ignores_the_users_git_hooks() {
   local base hooks
   base=$(mktemp -d)
-  TMPS="$TMPS $base"
   hooks="$base/hooks"
   mkdir "$hooks"
   printf '#!/bin/sh\nexit 1\n' >"$hooks/pre-commit"
@@ -128,7 +139,6 @@ test_build_ignores_the_callers_git_environment() {
   first=$(git -C "$F" rev-parse HEAD)
   [ "$BRC" -eq 0 ] && [ -n "$first" ] || return 1
   base=$(mktemp -d)
-  TMPS="$TMPS $base"
   mkdir -p "$base/xdg/git"
   printf '*.sql\nappsettings.json\n' >"$base/xdg/git/ignore"
   F="$base/shop"
@@ -155,13 +165,11 @@ fake_git_failing_commit() {
 test_a_failing_git_commit_fails_the_build() {
   local base
   base=$(mktemp -d)
-  TMPS="$TMPS $base"
   fake_git_failing_commit "$base" 1
   PATH="$base/bin:$PATH" "$BUILDER" "$base/shop" >"$base/out" 2>&1
   [ $? -ne 0 ] && ! grep -q '^v1 ' "$base/out" || return 1
   # The second commit is the case that matters: the first one has already given HEAD a value.
   base=$(mktemp -d)
-  TMPS="$TMPS $base"
   fake_git_failing_commit "$base" 2
   PATH="$base/bin:$PATH" "$BUILDER" "$base/shop" --v2 >"$base/out" 2>&1
   [ $? -ne 0 ] && grep -q '^v1 ' "$base/out" && ! grep -q '^v2 ' "$base/out"
@@ -254,5 +262,4 @@ check "the user guide says order value, and no file under src/ does" test_user_g
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folders left in place:$TMPS"
 [ "$FAIL" -eq 0 ]

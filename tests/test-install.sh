@@ -1,13 +1,27 @@
 #!/usr/bin/env bash
 # Runs install.sh against throwaway HOME folders. Never touches the real home.
-# It deletes nothing: the temp folders are left for the OS to clear, and listed at the end.
+# Its temp folders are removed when every check passes, and kept when one fails.
 # Usage: tests/test-install.sh
 set -u
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
 PASS=0
 FAIL=0
-TMPS=""
+
+# Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
+# fails it is kept and its path printed. The next run removes folders kept by earlier runs.
+rm_tmp() { chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
+TMP_NAME=agent-skills-test-install
+TMP_BASE=${TMPDIR:-/tmp}
+TMP_BASE=${TMP_BASE%/}
+for old in "$TMP_BASE/$TMP_NAME".*; do [ -d "$old" ] && rm_tmp "$old"; done
+TMP_ROOT=$(mktemp -d "$TMP_BASE/$TMP_NAME.XXXXXX") || exit 1
+export TMPDIR=$TMP_ROOT TMP_ROOT
+# macOS mktemp ignores TMPDIR, so a call without a template gets one inside TMP_ROOT.
+mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "$TMP_ROOT/tmp.XXXXXX" ;; esac; }
+export -f mktemp
+cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
+trap cleanup EXIT
 
 check() {
   local desc=$1
@@ -29,7 +43,6 @@ has() { printf '%s' "$1" | grep -q -- "$2"; }
 # new_home [nocopilot]: a fresh fake HOME with a fake copilot on PATH.
 new_home() {
   H=$(mktemp -d)
-  TMPS="$TMPS $H"
   mkdir -p "$H/.claude" "$H/bin"
   [ "${1:-}" = nocopilot ] || mkdir -p "$H/.copilot" "$H/.codex"
   printf '#!/bin/sh\necho "GitHub Copilot CLI 1.0.101."\n' >"$H/bin/copilot"
@@ -171,7 +184,6 @@ echo "6. block-dangerous-shell.sh"
 # TEST_HOOK may point at a draft copy, so a new hook is tested before it replaces the live one.
 TEST_HOOK=${TEST_HOOK:-$REPO/hooks/copilot/block-dangerous-shell.sh}
 HH=$(mktemp -d)
-TMPS="$TMPS $HH"
 mkdir -p "$HH/.agents/hook-state" && : >"$HH/.agents/hook-state/t6"
 hook() {
   jq -cn --arg c "$1" '{sessionId:"t6",toolName:"bash",toolArgs:({command:$c}|tojson)}' \
@@ -368,7 +380,6 @@ check "listing the folder links it" resolves_to "$H/.claude-work/skills/agentd-p
 echo "10. the skill gate (Copilot and Codex)"
 PV=0
 GH=$(mktemp -d)
-TMPS="$TMPS $GH"
 mkdir -p "$GH/.agents"
 ln -s "$REPO/skills" "$GH/.agents/skills"
 # Another kit's skill with an agentd- name, without this repository's hook line.
@@ -416,14 +427,12 @@ check "codex: a missing session ID prints a warning" \
 check "copilot: a readable session ID prints no warning" \
   test -z "$(gate copilot tool "$(cp_tool s1 'ls')" 2>&1 >/dev/null)"
 EH=$(mktemp -d)
-TMPS="$TMPS $EH"
 check "copilot: a missing session ID is dormant while no marker exists" \
   test -z "$(printf '{"toolName":"bash","toolArgs":{"command":"git push"}}' | HOME=$EH "$TEST_HOOK" --harness copilot --event tool 2>/dev/null)"
 check "copilot: input that is not JSON is dormant while no marker exists" \
   test -z "$(printf 'not json' | HOME=$EH "$TEST_HOOK" --harness copilot --event tool 2>/dev/null)"
 # A PATH with the usual tools but no jq.
 NJ=$(mktemp -d)
-TMPS="$TMPS $NJ"
 for t in cat find grep head ls mkdir sed tr; do ln -s "$(command -v "$t")" "$NJ/$t"; done
 nojq() { printf '%s' "$2" | HOME=$GH PATH=$NJ /bin/bash "$TEST_HOOK" --harness copilot --event "$1"; }
 check "copilot: missing jq on a prompt prints nothing" test -z "$(nojq prompt '{"sessionId":"j1","prompt":"/agentd-intake"}')"
@@ -452,7 +461,6 @@ check "copilot: the view tool does not wake the gate" bash -c '[ -z "$1" ] && [ 
 check "copilot: the skill tool with toolArgs as a JSON string writes a marker" bash -c '[ -e "$1" ]' _ \
   "$GH/.agents/hook-state/v2" "$(gate copilot tool '{"sessionId":"v2","toolName":"skill","toolArgs":"{\"skill\":\"agentd-intake\"}"}')"
 RO=$(mktemp -d)
-TMPS="$TMPS $RO"
 mkdir -p "$RO/.agents"
 ln -s "$REPO/skills" "$RO/.agents/skills"
 chmod 500 "$RO/.agents"
@@ -469,7 +477,6 @@ check "copilot: a checked command refreshes the marker's time" test -z "$(find "
 check "copilot: an unknown agentd-<name> does not wake the gate" bash -c '[ ! -e "$1" ]' _ "$GH/.agents/hook-state/w1" \
   "$(gate copilot prompt "$(cp_prompt w1 '/agentd-repo is my folder')")"
 TH=$(mktemp -d)
-TMPS="$TMPS $TH"
 mkdir -p "$TH/.agents/skills"
 ln -s "$GH/other/agentd-tasks" "$TH/.agents/skills/agentd-tasks"
 ln -s "$REPO/skills/agentd-intake" "$TH/.agents/skills/agentd-intake"
@@ -577,5 +584,4 @@ check "a HOME with a double quote: no codex hooks.json" [ ! -e "$H/.codex/hooks.
 
 echo
 echo "passed=$PASS failed=$FAIL"
-echo "temp folders left in place:$TMPS"
 [ "$FAIL" -eq 0 ]
