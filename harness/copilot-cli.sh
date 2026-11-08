@@ -27,8 +27,8 @@ harness_copilot_cli() {
 
   # Same pattern as today: the Copilot guide points at the shared AGENTS.md.
   link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.copilot/copilot-instructions.md" "$HOME/.agents/AGENTS.md"
-  link_item "$REPO_ROOT/hooks/copilot/block-dangerous-shell.sh" "$HOME/.copilot/hooks/block-dangerous-shell.sh"
-  # Absolute path inside, so rendered rather than linked.
+  # The hook calls ~/.agents/hooks/block-dangerous-shell.sh (linked in core) and stays dormant until an
+  # agentd skill starts in the session. Absolute path inside, so rendered rather than linked.
   render_item "$REPO_ROOT/hooks/copilot/git-safety.json.tmpl" "$HOME/.copilot/hooks/git-safety.json"
   print_manifest copilot-cli
 }

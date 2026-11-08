@@ -2,6 +2,15 @@
 name: agentd-handoff
 description: Use when the engineer stops a long task and wants to continue later, in the same session or a new one. Shows the next steps for correction, then writes one dated hand-off file with the status so far, the next steps, and a resume command and a fresh-start prompt for the agent. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-handoff

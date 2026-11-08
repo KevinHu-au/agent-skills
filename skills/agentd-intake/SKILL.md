@@ -2,6 +2,15 @@
 name: agentd-intake
 description: Use when the engineer has an Azure DevOps work item that is vague or not yet actionable. Checks the work item against the code, then writes an actionable work item as a comment, or the questions and investigation needed first. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-intake
