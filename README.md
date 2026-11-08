@@ -193,7 +193,9 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
 - `~/.agents/skills` is the shared home. Copilot CLI reads it from version 1.0.11. Claude Code does not, so it gets links in `~/.claude/skills` (or `$CLAUDE_CONFIG_DIR/skills`).
 - `git-safety.json` and the Codex `hooks.json` hold an absolute path, so the script writes rendered copies. It replaces
   `@HOME@` with your home folder. Codex reads only one `hooks.json`, so an existing, different file is a `CONFLICT`.
-  Merge our two entries into it by hand, or use `--adopt` to move it aside.
+  Merge our two entries into it by hand, or use `--adopt` to move it aside. `--adopt` moves your other Codex hooks
+  aside too, so merge by hand when the file has hooks of your own. A file that holds both agentd entries, with the
+  same command and matcher, is reported as `ok`, whatever other hooks it has. This check needs `jq`.
 - Edit skills in this repository, not through the links. `git pull` then updates both tools.
 
 ## Safety rules for the scripts
