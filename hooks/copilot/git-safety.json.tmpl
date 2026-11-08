@@ -1,11 +1,18 @@
 {
   "version": 1,
   "hooks": {
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "\"@HOME@/.agents/hooks/block-dangerous-shell.sh\" --harness copilot --event prompt",
+        "timeoutSec": 5
+      }
+    ],
     "preToolUse": [
       {
         "type": "command",
-        "matcher": "bash|powershell",
-        "bash": "@HOME@/.copilot/hooks/block-dangerous-shell.sh",
+        "matcher": "bash|powershell|skill",
+        "bash": "\"@HOME@/.agents/hooks/block-dangerous-shell.sh\" --harness copilot --event tool",
         "timeoutSec": 5
       }
     ]

@@ -2,6 +2,15 @@
 name: agentd-pr-review
 description: Use when the engineer is the approver of a teammate's PR and wants it reviewed against the work item before voting. Checks the requirement, missing parts, breakage and the tests, and writes paste-ready comments marked Block, Major or Minor, each with path:line. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-pr-review

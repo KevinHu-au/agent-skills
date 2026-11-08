@@ -2,6 +2,15 @@
 name: agentd-review-rubric
 description: Use when the project has no review rubric, or the engineer wants to write or refresh one. Drafts review-rubric.md from the repository's own norms and the engineer's answers, lets the engineer correct it, and saves it. Needs no onboarding pack. Edits no code.
 disable-model-invocation: true
+hooks:
+  # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
+  PreToolUse:
+    - matcher: "Bash|PowerShell"
+      hooks:
+        - type: command
+          command: '"$HOME/.agents/hooks/block-dangerous-shell.sh" --harness claude --event tool'
+          timeout: 5
+          onFailure: block
 ---
 
 # agentd-review-rubric

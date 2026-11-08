@@ -15,7 +15,7 @@ Usage: ./install.sh [--apply] [--adopt] [--harness LIST]
                    ~/.agent-skills-backup/<time>/ and link ours in its place.
                    Needs --apply to take effect. Without --adopt, such items
                    are reported as CONFLICT and left alone.
-  --harness LIST   Comma list: claude-code,copilot-cli (default: both).
+  --harness LIST   Comma list: claude-code,copilot-cli,codex-cli (default: all three).
 
 Environment:
   CLAUDE_CONFIG_DIR  Link Claude Code skills and CLAUDE.md into this folder
@@ -30,7 +30,7 @@ Exit status: 0 = clean, 1 = conflicts remain, 2 = bad usage.
 EOF
 }
 
-HARNESSES="claude-code copilot-cli"
+HARNESSES="claude-code copilot-cli codex-cli"
 
 # shellcheck source=lib/common.sh
 . "$REPO_ROOT/lib/common.sh"
@@ -57,14 +57,14 @@ done
 
 for h in $HARNESSES; do
   case "$h" in
-    claude-code|copilot-cli) ;;
+    claude-code|copilot-cli|codex-cli) ;;
     *) say "unknown harness: $h"; exit 2 ;;
   esac
 done
 
 if is_apply; then say "APPLY mode. Repo: $REPO_ROOT"; else say "DRY RUN (nothing changes). Repo: $REPO_ROOT"; fi
 
-# Core: ~/.agents is the shared home that both harnesses read.
+# Core: ~/.agents is the shared home that every harness reads.
 say "core"
 for dir in "$REPO_ROOT"/skills/*/; do
   name=$(basename "$dir")
@@ -74,6 +74,9 @@ link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.agents/AGENTS.md"
 for f in "$REPO_ROOT"/global/bin/*; do
   link_item "$f" "$HOME/.agents/bin/$(basename "$f")"
 done
+# The shell safety hook. Every tool calls it from this one path: the agentd skills (Claude Code),
+# ~/.copilot/hooks/git-safety.json and ~/.codex/hooks.json.
+link_item "$REPO_ROOT/hooks/copilot/block-dangerous-shell.sh" "$HOME/.agents/hooks/block-dangerous-shell.sh"
 
 for h in $HARNESSES; do
   # shellcheck disable=SC1090
@@ -81,6 +84,7 @@ for h in $HARNESSES; do
   case "$h" in
     claude-code) harness_claude_code ;;
     copilot-cli) harness_copilot_cli ;;
+    codex-cli) harness_codex_cli ;;
   esac
 done
 

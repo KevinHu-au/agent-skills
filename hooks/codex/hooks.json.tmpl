@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"@HOME@/.agents/hooks/block-dangerous-shell.sh\" --harness codex --event prompt",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"@HOME@/.agents/hooks/block-dangerous-shell.sh\" --harness codex --event tool",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

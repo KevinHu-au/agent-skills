@@ -97,5 +97,25 @@ done
 check "README names the supported stacks and the fallback" bash -c \
   'b=$(tr "\n" " " <"$1" | tr -s " "); for t in "not for every stack" ".NET (Framework and Core)" "SQL Server" "React web" "SwiftUI" "generic.md" "inferred:" "agentd-onboard" "a part of a project"; do printf "%s" "$b" | grep -qF -- "$t" || exit 1; done; ! printf "%s" "$b" | grep -qF "They work for any client and any stack"' _ "$HERE/../README.md"
 
+# Every agentd skill carries the same shell safety hook in its frontmatter (Claude Code runs it while the skill is
+# active), and a Codex policy that stops an implicit start, because the Codex hook wakes up only on $agentd-<name>.
+# hooks_block <file>: the hooks: block of the frontmatter, up to the closing ---.
+hooks_block() { awk 'NR > 1 && /^---$/ { exit } /^hooks:/ { on = 1 } on' "$1"; }
+HREF=$(hooks_block "$SKILLS/agentd-diagnose/SKILL.md")
+check "agentd-diagnose has the hooks block" bash -c 'printf "%s" "$1" | grep -qF -- "--harness claude --event tool"' _ "$HREF"
+check "the hooks block calls the script by its home path" bash -c \
+  'printf "%s" "$1" | grep -qF "\"\$HOME/.agents/hooks/block-dangerous-shell.sh\""' _ "$HREF"
+check "the hooks block blocks the call when the hook cannot run" bash -c 'printf "%s" "$1" | grep -qF "onFailure: block"' _ "$HREF"
+check "the hooks block has the expected lines, in order" bash -c \
+  'printf "%s\n" "$1" | grep -v "^[[:space:]]*#" | sed "s/^[[:space:]]*//" | grep -v "^command:" | tr "\n" "|" \
+    | grep -qxF "hooks:|PreToolUse:|- matcher: \"Bash|PowerShell\"|hooks:|- type: command|timeout: 5|onFailure: block|"' _ "$HREF"
+for d in "$SKILLS"/agentd-*/; do
+  s=$(basename "$d")
+  check "$s has the same hooks block as agentd-diagnose" [ "$(hooks_block "$d/SKILL.md")" = "$HREF" ]
+  check "$s turns off implicit start in Codex" bash -c \
+    'grep -qE "^[[:space:]]+allow_implicit_invocation: false$" "$1"' _ "$d/agents/openai.yaml"
+done
+check "the hook script exists and runs" [ -x "$HERE/../hooks/copilot/block-dangerous-shell.sh" ]
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
