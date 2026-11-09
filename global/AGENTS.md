@@ -30,13 +30,13 @@
 - Call out potential breaking changes explicitly.
 
 ## Independent review after complex tasks
-- When you finish a non-trivial task that produced or substantially changed a file — code OR prose/plan/markdown, any artifact — silently self-check this rubric:
-  1. Does the artifact encode non-obvious decisions or tradeoffs? (a plan, algorithm, schema)
-  2. Do its parts depend on each other / must they stay consistent?
-  3. Did it take several revisions to converge?
-  4. Did producing it need multi-step reasoning?
-  5. Would a subtle error be costly or hard to catch by eye?
-- If ≥2 are true (or #5 alone), append ONE line suggesting an INDEPENDENT review: `/code-review high` (or the `superpowers:requesting-code-review` skill), and ask to see the reviewer's raw findings. Do NOT auto-run it — the user decides.
+- When you finish a non-trivial task that produced or substantially changed a file (code or prose, a plan, any markdown or other artifact), decide silently whether to suggest an independent review. Suggest it when item 1 holds, or when at least two of items 2 to 5 hold:
+  1. A subtle error would be costly or hard to catch by eye.
+  2. It encodes non-obvious decisions or tradeoffs (a plan, an algorithm, a schema).
+  3. Its parts depend on each other and must stay consistent.
+  4. It took several revisions to converge.
+  5. It needed multi-step reasoning.
+- To suggest it, end with one line: `/code-review high` (or the `superpowers:requesting-code-review` skill), and ask to see the reviewer's raw findings. Do not run it: the user decides.
 - Skip entirely for trivial work: typo / format / rename, config one-liners, throwaway scripts, or anything with no decisions encoded.
 - Rationale: plans and markdown have no compiler or tests to catch flaws, so an independent second pass matters most there. This is the semantic backstop to the deterministic `Stop` review-reminder hook.
 
