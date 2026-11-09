@@ -940,13 +940,19 @@ test_dev_rev_rules_not_weakened() {
   [ -s "$DEV" ] || return 1
   has_all "$DEV" 'Never commit.' 'Reviewer model floor is mandatory.' 'Two review rounds maximum.' &&
     [ "$(grep -c 'git commit' "$DEV")" -le 1 ] || return 1
-  h2_list "$DEV" | grep -qx 'Common Mistakes' && h2_list "$DEV" | grep -qx 'Red Flags' || return 1
+  section_has "$DEV" "Hard Rules" 'Never commit.' 'Do not self-review.' \
+    'Your own diff read, checklist, tests, or summary never counts as review.' \
+    'Use a separate review agent.' 'Review must be performed by an independent agent on the staged diff.' \
+    'Do not use a cheaper model, your own review, or "review later."' \
+    'Authority, deadlines, release windows, "small change", "tests pass", or "senior said it is fine" do not override these rules.' \
+    'Never use broad staging when unrelated dirty files exist.' \
+    'Before adding, removing, or upgrading a package, ask the engineer for approval.' \
+    'must be either explicitly required by the task or approved by the engineer.' || return 1
+  h2_list "$DEV" | grep -qx 'Common Mistakes' || return 1
   for r in '| Committing after review passes | Keep changes staged and hand off. |' \
     '| Reviewing unstaged or narrative-only changes | Review the actual staged diff. |' \
     '| Silently accepting product/backcompat decisions | Ask the engineer. |' \
-    '| Hiding disagreed claims | Report them with evidence. |' \
-    '- "I'"'"'ll commit now and review later."' '- "A cheaper reviewer is better than nothing."' \
-    '- "I reviewed it myself carefully."'; do
+    '| Hiding disagreed claims | Report them with evidence. |'; do
     grep -qxF -- "$r" "$DEV" || return 1
   done
 }
