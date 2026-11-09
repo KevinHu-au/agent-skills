@@ -78,7 +78,7 @@ test_skill_is_at_most_260_lines() {
 
 test_required_h2_sections_in_order() {
   [ "$(h2_list | tr '\n' '|')" = \
-    "Hard Rules|Project facts|Inputs|Workflow|Reviewer Prompt Template|Harness Mapping|Triage Rules|Red Flags|Common Mistakes|" ]
+    "Hard Rules|Project facts|Inputs|Workflow|Reviewer Prompt Template|Harness Mapping|Triage Rules|Common Mistakes|" ]
 }
 
 test_no_absolute_home_paths() {
