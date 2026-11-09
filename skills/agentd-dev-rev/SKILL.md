@@ -216,21 +216,6 @@ The key invariant is independence plus the strongest available model. "Fast revi
 | Product behavior choice | Ask engineer; do not decide silently. |
 | Still unresolved after Round 2 | Stop and report as unresolved. |
 
-## Red Flags
-
-- "I'll commit now and review later."
-- "The senior engineer asked me to commit."
-- "A cheaper reviewer is better than nothing."
-- "I reviewed it myself carefully."
-- "Tests pass, so independent review is unnecessary."
-- "I'll implement first and add tests later because coverage is enough."
-- "The dependency is tiny, so approval is not needed."
-- "The response shape is better, so compatibility does not matter."
-- "Only one file changed, so this is too small for the loop."
-- "I'll stage everything because status is noisy."
-
-Any red flag means stop and return to the hard rules.
-
 ## Common Mistakes
 
 | Mistake | Correct behavior |
