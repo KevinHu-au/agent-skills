@@ -64,12 +64,12 @@ Read the commit messages and the diff. Group related changes. Find the main inte
 - **Summary:** one to three sentences on what changed and why.
 - **Root cause:** only with a pasted diagnose block. Write the cause from its `## Root cause` in one or two sentences. If `**Confidence:**` says hypothesis, not confirmed, begin with `Hypothesis, not confirmed:`.
 - **Changes:** a bullet list of the notable changes, grouped. Do not write one bullet for each commit. When many files change in the same simple way (a rename, an import fix, formatting, one edit repeated), describe the pattern once and list no files.
-- **Key changes:** see below.
+- **Key files:** see below.
 - **Risks:** only with a pasted blast-radius block. Start with its `**Blast radius:**` verdict. Then write each item of `## Risks to cover` in one line, and each item of `## Warn or coordinate`. Do not turn Unproven or Breaks into a safe-sounding line. A PR can be read by people outside the team: write the action without names, internal hosts or secrets (for example `coordinate with the mobile release`), and tell the engineer to check the Risks lines before posting.
 - **Testing:** see below.
 - **Work item link:** see below.
 
-**Key changes.** Add this section only when the change has one of these:
+**Key files.** Add this section only when the change has one of these:
 
 - an interface or contract change: a public API, a wire shape, a schema or migration, or a configuration key,
 - a change to key logic,
@@ -104,7 +104,7 @@ Title: <short title>
 - <change 1>
 - <change 2>
 
-## Key changes
+## Key files
 - `path`: <what changed there>
 
 ## Risks
