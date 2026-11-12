@@ -152,7 +152,7 @@ test_root_cause_and_risks_come_only_from_pasted_blocks() {
     'check the Risks lines before posting'
 }
 
-test_key_changes_follow_the_kind_of_change_not_the_file_count() {
+test_key_files_follow_the_kind_of_change_not_the_file_count() {
   section_has "Step 4: Write the draft" 'interface or contract change' 'a schema or migration' 'a change to key logic' \
     'so complicated that the reader needs a map' 'List only the key files' 'Never list test files' \
     'The number of files is not the test' 'same simple way' &&
@@ -180,7 +180,7 @@ test_title_gets_the_number_only_when_known() {
 }
 
 test_output_is_one_fenced_block_with_the_layout() {
-  section_has Output 'four backticks' 'Title:' '## Summary' '## Root cause' '## Changes' '## Key changes' '## Risks' \
+  section_has Output 'four backticks' 'Title:' '## Summary' '## Root cause' '## Changes' '## Key files' '## Risks' \
     '## Testing' '<work item link>'
 }
 
@@ -209,7 +209,7 @@ check "only committed work is described, and uncommitted work is asked about" te
 check "Summary and Changes come only from the diff" test_the_diff_is_the_only_source_of_summary_and_changes
 check "a PR template is followed when the repository has one" test_template_is_followed_when_the_repository_has_one
 check "Root cause and Risks come only from pasted blocks" test_root_cause_and_risks_come_only_from_pasted_blocks
-check "Key changes follow the kind of change, not the file count" test_key_changes_follow_the_kind_of_change_not_the_file_count
+check "Key files follow the kind of change, not the file count" test_key_files_follow_the_kind_of_change_not_the_file_count
 check "many alike files are described once" test_many_alike_files_are_described_once
 check "the work item number is not assumed from the branch" test_work_item_number_is_not_assumed_from_the_branch
 check "the work item link form follows the remote" test_work_item_link_form_follows_the_remote
