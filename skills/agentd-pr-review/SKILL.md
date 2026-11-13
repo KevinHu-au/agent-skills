@@ -1,6 +1,6 @@
 ---
 name: agentd-pr-review
-description: Use when the engineer is the approver of a teammate's PR and wants it reviewed against the work item before voting. Checks the requirement, missing parts, breakage and the tests, and writes paste-ready comments marked Block, Major or Minor, each with path:line. Edits no code.
+description: Use when the engineer is the approver of a teammate's PR and wants it reviewed against the work item when given, before voting. Checks the requirement, missing parts, breakage and the tests, and writes paste-ready comments marked Block, Major or Minor, each with path:line. Edits no code.
 disable-model-invocation: true
 hooks:
   # Claude Code runs this hook itself while the skill is active. Do not run the command yourself.
@@ -15,7 +15,7 @@ hooks:
 
 # agentd-pr-review
 
-Review a teammate's PR against its work item, then stop. The result is a summary comment and one comment per finding,
+Review a teammate's PR against its work item, or against its inferred intent when there is none, then stop. The result is a summary comment and one comment per finding,
 each in markdown the engineer pastes into the Azure DevOps PR, plus notes for the engineer only. Spend your time on
 what the work item really asks for, and on what the PR should have changed but did not.
 
@@ -28,7 +28,10 @@ inside one.` Work from the repository root.
 - **The work item.** The engineer pastes the title, description and acceptance criteria. Screenshots in the
   description are part of the requirement: read them for the screens, records and behaviour they show. The engineer may
   also paste the PR description, the parent feature, comments, or several work items, one paste each. With no work
-  item, ask for it once. If none comes, stop. Do not review against the diff alone.
+  item, ask for it once, unless the engineer has already said there is none, and say that "no work item" is an answer.
+  If the engineer says there is no work item, review in no-work-item mode: Flow steps 2 and 7, Severity, Output and the
+  report template say what changes, and the PR author takes the place of the work item creator everywhere. If none comes and
+  the engineer does not say there is none, stop. Do not review against the diff alone without that answer.
 - **The base.** Propose the remote's default branch from `git symbolic-ref refs/remotes/origin/HEAD`. The engineer
   confirms it or names the PR's target branch. Never guess the base. Read the change with `git diff <base>...HEAD`.
 - **Branch state.** If the working tree has uncommitted changes, say they are not part of the PR. Do not ask the engineer
@@ -53,7 +56,10 @@ inside one.` Work from the repository root.
 1. **Read the inputs.** Read the paste, the screenshots and the contract. Say in one sentence what the PR is for.
 2. **Build the requirement.** Write what "done" means for this PR in a few lines. Split it into what the work item says
    and what you assumed. Acceptance criteria are often incomplete or missing. Do not stop: review against your stated
-   assumptions, and write each gap as a question for the work item creator.
+   assumptions, and write each gap as a question for the work item creator. In no-work-item mode, do step 3 first,
+   then infer the intent instead and use it as the requirement. Call it the inferred intent, not an `inferred:` finding, and take it from the
+   branch name, the commit messages, a pasted PR description and the names of new tests. Then check the PR against its own claims: a half-finished change,
+   such as a rename done in some places only, a new field nothing reads or a flag nothing turns on, is a finding.
 3. **Read the change.** List the files, symbols, queries, routes and settings it adds, changes or removes. Read
    `git log` for those files. Note what behaves differently without the diff saying so.
 4. **Check each criterion.** For each part of the requirement: covered, partly covered or not covered, with `path:line`
@@ -70,7 +76,10 @@ inside one.` Work from the repository root.
    generated files, libraries and the runtime, authorisation reach, external systems, and tests that encode the old
    behaviour. Callers found by search are the start, not the finding. On a wide PR, read-only sub-agents may run steps
    5 and 6; each returns a short summary with `path:line` evidence.
-7. **Run plan.** List the commands, as Running commands says, and ask for one confirmation.
+7. **Run plan.** List the commands, as Running commands says, and ask for one confirmation. In no-work-item mode, ask
+   in the same message whether the inferred intent is right. If the engineer corrects it, rebuild step 2 and redo
+   steps 4 to 6 before running the tests. A correction in the engineer's words is still the inferred intent. If the
+   engineer pastes the work item instead, leave no-work-item mode and redo steps 2 to 6.
 8. **Run the tests.** Run them, read every result, and compare failures with the base.
 9. **Report.** Write the output with `references/report-template.md`. Then remove the worktrees and the scratch folder (see Scratch folder).
 
@@ -90,6 +99,10 @@ When the work item is silent or vague on the point, a finding about the requirem
 most Major, with a question for the work item creator: an unmet or partly met criterion, a sibling gap, extra scope.
 Failing tests, build failures, security problems, data loss and contract breaks stay Block. A finding from a rubric
 criterion keeps that criterion's Severity, except `inferred:` (Minor): the cap above is for the requirement only.
+
+In no-work-item mode, a finding that rests on the inferred intent is at most Major, with a question for the PR author.
+The `inferred:` (Minor) rule above is for rubric criteria only. A contract break stays Block, written as a question:
+is this shape change intended, and who reads it? The other Block rules and the rubric severities do not change.
 
 ## Evidence
 
@@ -141,7 +154,7 @@ no confirmation.
 
 Everything goes in chat, shaped by `references/report-template.md`: summary, findings, notes for the engineer. Every Block comment has a `Reproduce` part. Each
 paste-ready piece sits in its own ````markdown fence of four backticks, so it stays raw markdown and an inner code block
-cannot close it. Suggest Approve, Approve with suggestions or Wait for author; the engineer picks the vote.
+cannot close it. Suggest Approve, Approve with suggestions or Wait for author; the engineer picks the vote. In no-work-item mode, the vote line says to check the work item first.
 
 ## Rules
 
