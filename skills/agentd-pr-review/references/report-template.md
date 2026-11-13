@@ -8,7 +8,8 @@ is wrong and why it matters; do not lecture. Write `none` for an empty part.
 ## Summary comment
 
 One comment for the PR overview. It says what the PR does compared with the work item, the test results per suite,
-any failure that is new compared with the base, and the count of findings by severity.
+any failure that is new compared with the base, and the count of findings by severity. With no work item, it compares
+the PR with the inferred intent instead.
 
 Suggested vote, from the findings:
 
@@ -16,15 +17,16 @@ Suggested vote, from the findings:
 - No Block, at least one Major: **Wait for author** or **Approve with suggestions**; the engineer chooses.
 - Minor findings only: **Approve with suggestions**.
 - No findings: **Approve**.
+- With no work item: the same votes, because the requirement was not checked. The vote line ends with `Only after you check the work item.`
 
 The engineer picks the vote. Write `Suggested vote: <vote>, because <reason>.` on one line just above the paste
 block, outside it, so the vote is not pasted into the PR by mistake. With no Block and at least one Major, name both
 votes on that line.
 
 ````markdown
-**Review of <work item number>: <title>**
+**Review of <work item number>: <title>** | **Review of <branch>: no work item given. The requirement was not checked.**
 
-<What the PR does, compared with the work item, in two or three sentences. Name what it covers and what it leaves out.>
+<What the PR does, compared with the work item or the inferred intent, in two or three sentences. Name what it covers and what it leaves out.>
 
 **Tests**
 
@@ -34,7 +36,7 @@ votes on that line.
 
 **Findings:** <n> Block, <n> Major, <n> Minor. Details are in the comments on each file.
 
-**Open questions:** <n> open questions about the requirement, for the work item creator. | none
+**Open questions:** <n> open questions about the requirement, for the work item creator. | <n> open questions, for the PR author. | none
 ````
 
 ## Finding comment
@@ -54,7 +56,7 @@ and add one only when it is clearer than words.
 
 **Suggestion:** <what to change>
 
-_Evidence: confirmed by a test run | confirmed: seen in the UI | supported by <sources> | inferred: from reading the code | unknown: <where I looked> | assumed requirement: see the question to the work item creator_
+_Evidence: confirmed by a test run | confirmed: seen in the UI | supported by <sources> | inferred: from reading the code | unknown: <where I looked> | assumed requirement: see the question to the work item creator | inferred intent: see the question to the PR author_
 ````
 
 Use `[Block]`, `[Major]` or `[Minor]` as the tag. A sibling gap names the place the PR did not change, and says which
@@ -119,12 +121,17 @@ Rules:
 
 Not to paste. Bold labels, in this order:
 
-- **Requirement:** what "done" means for this PR, as you understood it.
+- **No work item:** only in no-work-item mode, the line `The requirement was not checked. Check the work item yourself
+  before you vote.` With a work item, leave this label out; do not write `none`.
+- **Requirement:** what "done" means for this PR, as you understood it. With no work item, label it
+  **Inferred intent:** and name the source of each part: the branch name, a commit, the PR description or a test.
 - **Criteria:** each part of the requirement, marked covered, partly covered or not covered, with `path:line` and the
   test that covers it.
-- **Assumptions:** what you assumed where the work item is silent, one line each.
+- **Assumptions:** what you assumed where the work item is silent, one line each. With no work item, write `see
+  Inferred intent`.
 - **Questions for the work item creator:** every gap in the requirement, and every sibling gap, as a question the
-  engineer can forward. Each question names the finding it settles.
+  engineer can forward. Each question names the finding it settles. With no work item, label it
+  **Questions for the PR author:**.
 - **Old failures:** tests that fail on the base as well. Not findings.
 - **Not run or not checked:** each suite or check you skipped, and why.
 - **Rubric:** the rubric you used and where it was read from, and any criterion that this PR edits. With none, the
