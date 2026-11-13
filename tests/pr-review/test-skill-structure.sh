@@ -157,7 +157,7 @@ test_description_starts_with_use_when_and_covers_the_job() {
   local d t
   d=$(frontmatter_value description)
   case "$d" in "Use when"*) ;; *) return 1 ;; esac
-  for t in "PR" "approver" "work item" "Block" "Edits no code"; do
+  for t in "PR" "approver" "against the work item when given" "Block" "Edits no code"; do
     printf '%s\n' "$d" | grep -qiF -- "$t" || return 1
   done
 }
@@ -170,10 +170,11 @@ test_skill_is_manual_only() {
 
 # Raised from 120 to 130 for the shared "Find the project facts" paragraph, which every skill that reads the pack
 # carries word for word (see tests/test-shared-text.sh). Raised again to 145 for the rubric pointer, one sentence in
-# Flow step 4; the rubric rules live in skills/agentd-review-rubric/references/reading-the-rubric.md.
+# Flow step 4; the rubric rules live in skills/agentd-review-rubric/references/reading-the-rubric.md. Raised again
+# to 155 for no-work-item mode, which changes the Prerequisite, Flow steps 2 and 7, Severity and Output.
 # Counts the body only: the frontmatter (name, description, hooks) is for the tool, not instructions.
-test_skill_is_at_most_145_lines() {
-  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 145 ]
+test_skill_is_at_most_155_lines() {
+  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 155 ]
 }
 
 test_required_h2_sections_in_order() {
@@ -190,7 +191,54 @@ test_flow_has_nine_numbered_steps_in_order() {
 }
 
 test_missing_paste_asks_once() {
-  has_all "$SKILL" "no work item" "ask for it once" "If none comes, stop." "Do not review against the diff alone."
+  has_all "$SKILL" "With no work item, ask for it once" "unless the engineer has already said there is none" \
+    "If none comes and the engineer does not say there is none, stop." "Do not review against the diff alone"
+}
+
+# ---------------------------------------------------------------- no-work-item mode
+
+test_no_work_item_mode_starts_only_when_the_engineer_says_so() {
+  section_has "$SKILL" Prerequisite "If the engineer says there is no work item" "no-work-item mode" \
+    "Flow steps 2 and 7, Severity, Output and the report template" \
+    'say that "no work item" is an answer' "the PR author takes the place of the work item creator everywhere" &&
+    ! has_all "$SKILL" "If none comes, stop."
+}
+
+test_no_work_item_mode_infers_the_intent() {
+  section_has "$SKILL" Flow "In no-work-item mode, do step 3 first" "inferred intent, not an \`inferred:\` finding" "branch name" \
+    "commit messages" "PR description" \
+    "names of new tests" "against its own claims" "half-finished change"
+}
+
+test_no_work_item_intent_is_confirmed_with_the_run_plan() {
+  section_has "$SKILL" Flow "whether the inferred intent is right" "in the same message" "rebuild step 2" \
+    "redo steps 4 to 6 before running the tests" "A correction in the engineer's words is still the inferred intent." \
+    "If the engineer pastes the work item instead, leave no-work-item mode"
+}
+
+test_no_work_item_severity() {
+  section_has "$SKILL" Severity "In no-work-item mode" "rests on the inferred intent is at most Major" \
+    "question for the PR author" "The \`inferred:\` (Minor) rule above is for rubric criteria only." \
+    "A contract break stays Block" "who reads it" \
+    "The other Block rules and the rubric severities do not change."
+}
+
+test_no_work_item_vote_line_says_check_the_work_item() {
+  line_has "$OUT" "Summary comment" "With no work item" "the same votes" "the requirement was not checked" \
+    "Only after you check the work item." &&
+    section_has "$SKILL" Output "In no-work-item mode, the vote line says to check the work item first." &&
+    ! has_all "$OUT" "never plain **Approve**" && ! has_all "$SKILL" "never plain Approve"
+}
+
+test_no_work_item_summary_says_the_requirement_was_not_checked() {
+  line_has "$OUT" "Summary comment" "**Review of <branch>: no work item given. The requirement was not checked.**"
+}
+
+test_no_work_item_for_you_only_parts() {
+  section_in_order "$OUT" "For you only" "**No work item:**" "**Requirement:**" "**Criteria:**" &&
+    section_has "$OUT" "For you only" "With a work item, leave this label out; do not write \`none\`." &&
+    section_has "$OUT" "For you only" "**Inferred intent:**" "**Questions for the PR author:**" "see Inferred intent" \
+    "Check the work item yourself before you vote."
 }
 
 test_screenshots_are_part_of_the_requirement() {
@@ -507,10 +555,17 @@ check "line_has needs every text on one line" test_line_has_needs_one_line
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
-check "the SKILL.md body is at most 145 lines" test_skill_is_at_most_145_lines
+check "the SKILL.md body is at most 155 lines" test_skill_is_at_most_155_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "Flow has nine numbered steps in order" test_flow_has_nine_numbered_steps_in_order
 check "a missing paste asks once" test_missing_paste_asks_once
+check "no-work-item mode starts only when the engineer says so" test_no_work_item_mode_starts_only_when_the_engineer_says_so
+check "no-work-item mode infers the intent" test_no_work_item_mode_infers_the_intent
+check "the inferred intent is confirmed with the run plan" test_no_work_item_intent_is_confirmed_with_the_run_plan
+check "no-work-item severity" test_no_work_item_severity
+check "with no work item the vote line says to check the work item" test_no_work_item_vote_line_says_check_the_work_item
+check "with no work item the summary says the requirement was not checked" test_no_work_item_summary_says_the_requirement_was_not_checked
+check "with no work item For you only names the intent and the author" test_no_work_item_for_you_only_parts
 check "screenshots are part of the requirement" test_screenshots_are_part_of_the_requirement
 check "optional inputs" test_optional_inputs
 check "the requirement splits what was said from what was assumed" test_requirement_splits_said_and_assumed
