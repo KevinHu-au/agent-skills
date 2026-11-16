@@ -24,6 +24,9 @@ cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folde
 trap cleanup EXIT
 # Git Bash: a plain ln -s copies, or fails for a missing target. The test's own fixture links must be real links.
 export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
+# Windows (Git Bash) ignores Unix modes on NTFS: chmod cannot make a folder read-only or private there.
+ON_WINDOWS=0
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) ON_WINDOWS=1 ;; esac
 
 check() {
   local desc=$1
@@ -403,7 +406,11 @@ check "copilot: an ordinary prompt does not wake the gate" test -z "$(gate copil
 check "copilot: still dormant after an ordinary prompt" test -z "$(gate copilot tool "$(cp_tool s1 'git push')")"
 check "copilot: the prompt hook prints nothing" test -z "$(gate copilot prompt "$(cp_prompt s1 '/agentd-diagnose login fails')")"
 check "copilot: /agentd-<name> writes a marker" [ -e "$GH/.agents/hook-state/s1" ]
-check "copilot: the marker folder is private" test "$(stat -f %Lp "$GH/.agents/hook-state" 2>/dev/null || stat -c %a "$GH/.agents/hook-state")" = 700
+if [ "$ON_WINDOWS" = 1 ]; then
+  printf '  skip  copilot: the marker folder is private (Windows has no Unix folder modes, so it is not private there)\n'
+else
+  check "copilot: the marker folder is private" test "$(stat -f %Lp "$GH/.agents/hook-state" 2>/dev/null || stat -c %a "$GH/.agents/hook-state")" = 700
+fi
 check "copilot: after /agentd-, a dangerous command is denied" \
   test "$(gate copilot tool "$(cp_tool s1 'git push')" | jq -r .permissionDecision)" = deny
 check "copilot: after /agentd-, a removal asks" \
@@ -475,10 +482,14 @@ check "copilot: the skill tool with toolArgs as a JSON string writes a marker" b
 RO=$(mktemp -d)
 mkdir -p "$RO/.agents"
 ln -s "$REPO/skills" "$RO/.agents/skills"
-chmod 500 "$RO/.agents"
-check "copilot: a marker that cannot be written prints a warning" \
-  has "$(printf '{"sessionId":"r1","prompt":"/agentd-intake"}' | HOME=$RO "$TEST_HOOK" --harness copilot --event prompt 2>&1)" 'could not write'
-chmod 700 "$RO/.agents"
+if [ "$ON_WINDOWS" = 1 ]; then
+  printf '  skip  copilot: a marker that cannot be written prints a warning (chmod cannot make a folder read-only on Windows)\n'
+else
+  chmod 500 "$RO/.agents"
+  check "copilot: a marker that cannot be written prints a warning" \
+    has "$(printf '{"sessionId":"r1","prompt":"/agentd-intake"}' | HOME=$RO "$TEST_HOOK" --harness copilot --event prompt 2>&1)" 'could not write'
+  chmod 700 "$RO/.agents"
+fi
 mkdir -p "$GH/.agents/hook-state" && : >"$GH/.agents/hook-state/old1" && touch -t 202001010000 "$GH/.agents/hook-state/old1"
 gate copilot prompt "$(cp_prompt s7 '/agentd-intake')" >/dev/null
 check "copilot: a marker older than 30 days is removed when a skill starts" [ ! -e "$GH/.agents/hook-state/old1" ]
@@ -644,6 +655,11 @@ fake_ln() {
   esac
   chmod +x "$H/bin/ln"
 }
+# fake_linux: a Linux uname, so install.sh skips its Windows symlink check even on a Windows host.
+fake_linux() {
+  printf '#!/bin/sh\necho Linux\n' >"$H/bin/uname"
+  chmod +x "$H/bin/uname"
+}
 fake_windows() {
   printf '#!/bin/sh\necho %s\n' "${1:-MINGW64_NT-10.0-26100}" >"$H/bin/uname"
   chmod +x "$H/bin/uname"
@@ -683,6 +699,7 @@ OUT=$(env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS HOME="$H" PATH="$H/bin:$PAT
 check "an existing MSYS keeps its options and ends with nativestrict" \
   test "$(tail -n 1 "$H/msys.txt")" = 'enable_pcon winsymlinks:lnk winsymlinks:nativestrict'
 new_home
+fake_linux
 fake_ln copy
 OUT=$(run --apply --harness claude-code 2>&1); RC=$?
 check "an ln that copies is reported, not called linked" has "$OUT" 'could not create a symlink at'
@@ -690,6 +707,7 @@ check "an ln that copies prints no 'linked'" not has "$OUT" 'linked '
 check "an ln that copies exits 1" [ "$RC" -eq 1 ]
 check "an ln that copies is counted as failed" bash -c 'printf "%s" "$1" | grep -q "failed=[1-9]"' _ "$OUT"
 new_home
+fake_linux
 fake_ln fail
 OUT=$(run --apply --harness claude-code 2>&1); RC=$?
 check "an ln that fails is reported" has "$OUT" 'could not create a symlink at'
@@ -825,13 +843,17 @@ new_home
 OUT=$(run --apply 2>&1)
 check "the default install writes no guard file" [ ! -e "$H/.agents/always-on-guard" ]
 check "the default install prints no snippet" not has "$OUT" 'lacks the entry'
-chmod a-w "$H/.agents"
-OUT=$(run --apply --always-on-guard 2>&1); RC=$?
-chmod u+w "$H/.agents"
-check "a guard file that cannot be written is reported" has "$OUT" 'could not write .*always-on-guard'
-check "a guard file that cannot be written is counted as failed" has "$OUT" 'failed=1'
-check "a guard file that cannot be written exits 1" [ "$RC" -eq 1 ]
-check "a guard file that cannot be written is not claimed as written" not has "$OUT" 'wrote .*always-on-guard'
+if [ "$ON_WINDOWS" = 1 ]; then
+  printf '  skip  a guard file that cannot be written: 4 checks (chmod cannot make a folder read-only on Windows)\n'
+else
+  chmod a-w "$H/.agents"
+  OUT=$(run --apply --always-on-guard 2>&1); RC=$?
+  chmod u+w "$H/.agents"
+  check "a guard file that cannot be written is reported" has "$OUT" 'could not write .*always-on-guard'
+  check "a guard file that cannot be written is counted as failed" has "$OUT" 'failed=1'
+  check "a guard file that cannot be written exits 1" [ "$RC" -eq 1 ]
+  check "a guard file that cannot be written is not claimed as written" not has "$OUT" 'wrote .*always-on-guard'
+fi
 new_home
 OUT=$(env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS -u MSYS HOME="$H" PATH="$H/bin:$NOJQ" "$REPO/install.sh" --always-on-guard 2>&1)
 check "--always-on-guard without jq warns that the guard checks nothing" has "$OUT" 'always-on guard checks nothing without it'
