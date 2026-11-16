@@ -39,6 +39,9 @@ not() { ! "$@"; }
 resolves_to() { [ "$(realpath "$1" 2>/dev/null)" = "$(realpath "$2")" ]; }
 is_real_dir() { [ -d "$1" ] && [ ! -L "$1" ]; }
 has() { printf '%s' "$1" | grep -q -- "$2"; }
+# Git Bash rewrites an argument that starts with / (/agentd-x becomes C:/Program Files/Git/agentd-x) before it
+# starts a native Windows program such as jq.exe. jq_text turns that off. Use it only when no argument is a file path.
+jq_text() { MSYS2_ARG_CONV_EXCL='*' jq "$@"; }
 
 # new_home [nocopilot]: a fresh fake HOME with a fake copilot on PATH.
 new_home() {
@@ -187,11 +190,11 @@ TEST_HOOK=${TEST_HOOK:-$REPO/hooks/copilot/block-dangerous-shell.sh}
 HH=$(mktemp -d)
 mkdir -p "$HH/.agents/hook-state" && : >"$HH/.agents/hook-state/t6"
 hook() {
-  jq -cn --arg c "$1" '{sessionId:"t6",toolName:"bash",toolArgs:({command:$c}|tojson)}' \
+  jq_text -cn --arg c "$1" '{sessionId:"t6",toolName:"bash",toolArgs:({command:$c}|tojson)}' \
     | HOME=$HH "$TEST_HOOK" --harness copilot --event tool
 }
 # legacy: an older install calls the script with no flags.
-legacy() { jq -cn --arg c "$1" '{toolName:"bash",toolArgs:({command:$c}|tojson)}' | HOME=$HH "$TEST_HOOK"; }
+legacy() { jq_text -cn --arg c "$1" '{toolName:"bash",toolArgs:({command:$c}|tojson)}' | HOME=$HH "$TEST_HOOK"; }
 decision() { printf '%s' "$1" | jq -r '.permissionDecision' 2>/dev/null; }
 is_deny() { [ "$(decision "$(hook "$1")")" = deny ]; }
 is_ask() { [ "$(decision "$(hook "$1")")" = ask ]; }
@@ -260,7 +263,7 @@ check "a missing jq is denied with a message" \
 
 # Claude Code sends tool_name and tool_input, and reads the decision from hookSpecificOutput.
 chook() {
-  jq -cn --arg t "${2:-Bash}" --arg c "$1" '{hook_event_name:"PreToolUse",tool_name:$t,tool_input:{command:$c}}' \
+  jq_text -cn --arg t "${2:-Bash}" --arg c "$1" '{hook_event_name:"PreToolUse",tool_name:$t,tool_input:{command:$c}}' \
     | "$TEST_HOOK" --harness claude --event tool
 }
 cdecision() { printf '%s' "$1" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null; }
@@ -388,10 +391,10 @@ mkdir -p "$GH/other/agentd-tasks"
 printf -- '---\nname: agentd-tasks\ndescription: x\n---\nbody\n' >"$GH/other/agentd-tasks/SKILL.md"
 # gate HARNESS EVENT JSON: run the hook as that harness, with a throwaway HOME for the markers.
 gate() { printf '%s' "$3" | HOME=$GH "$TEST_HOOK" --harness "$1" --event "$2"; }
-cp_tool() { jq -cn --arg s "$1" --arg c "$2" '{sessionId:$s,toolName:"bash",toolArgs:{command:$c}}'; }
-cp_prompt() { jq -cn --arg s "$1" --arg p "$2" '{sessionId:$s,prompt:$p}'; }
-cx_tool() { jq -cn --arg s "$1" --arg c "$2" '{session_id:$s,hook_event_name:"PreToolUse",tool_name:"Bash",tool_input:{command:$c}}'; }
-cx_prompt() { jq -cn --arg s "$1" --arg p "$2" '{session_id:$s,hook_event_name:"UserPromptSubmit",prompt:$p}'; }
+cp_tool() { jq_text -cn --arg s "$1" --arg c "$2" '{sessionId:$s,toolName:"bash",toolArgs:{command:$c}}'; }
+cp_prompt() { jq_text -cn --arg s "$1" --arg p "$2" '{sessionId:$s,prompt:$p}'; }
+cx_tool() { jq_text -cn --arg s "$1" --arg c "$2" '{session_id:$s,hook_event_name:"PreToolUse",tool_name:"Bash",tool_input:{command:$c}}'; }
+cx_prompt() { jq_text -cn --arg s "$1" --arg p "$2" '{session_id:$s,hook_event_name:"UserPromptSubmit",prompt:$p}'; }
 
 check "copilot: no agentd skill yet, a dangerous command passes through" test -z "$(gate copilot tool "$(cp_tool s1 'git push')")"
 check "copilot: an ordinary prompt does not wake the gate" test -z "$(gate copilot prompt "$(cp_prompt s1 'fix the login bug')")"
@@ -711,7 +714,7 @@ echo "16. Always-on guard (optional)"
 AO="$GH/.agents/always-on-guard"
 # claude_ao JSON: run the hook as Claude Code's user-level entry from hooks/claude/always-on.settings.json.
 claude_ao() { printf '%s' "$1" | HOME=$GH "$TEST_HOOK" --harness claude --event tool --always-on; }
-cl_tool() { jq -cn --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}'; }
+cl_tool() { jq_text -cn --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}'; }
 check "guard off: the Claude Code entry is silent on git push" test -z "$(claude_ao "$(cl_tool 'git push origin main')")"
 check "guard off: copilot without a skill is silent on git push" test -z "$(gate copilot tool "$(cp_tool ao1 'git push')")"
 : >"$AO"
