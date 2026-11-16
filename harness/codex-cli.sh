@@ -10,13 +10,15 @@ codex_has_ours() {
   [ -f "$1" ] || return 1
   # render_item refuses such a HOME, so never call a file with it ours.
   case "$HOME" in *[\"\$\`\\]*) return 1 ;; esac
-  jq -e --arg home "$HOME" --slurpfile want "$2" '
+  # No path in jq's arguments: Git Bash rewrites one that starts with / (HOME=/c/Users/x becomes C:/Users/x) before it
+  # starts jq.exe, and the file holds the Git Bash form. So the files come in on stdin and as JSON text.
+  MSYS2_ARG_CONV_EXCL='*' jq -e --arg home "$HOME" --argjson want "$(cat "$2")" '
     . as $have
-    | [$want[0].hooks | to_entries[] | .key as $ev | .value[] | (.matcher // "") as $m | .hooks[]
+    | [$want.hooks | to_entries[] | .key as $ev | .value[] | (.matcher // "") as $m | .hooks[]
         | {ev: $ev, m: $m, c: (.command | sub("@HOME@"; $home))}]
     | all(.[]; . as $w
         | any($have.hooks[$w.ev][]?; (.matcher // "") == $w.m and any(.hooks[]?; .command == $w.c)))
-  ' "$1" >/dev/null 2>&1
+  ' <"$1" >/dev/null 2>&1
 }
 
 # codex_has_others DST: true when DST holds any hook, so --adopt would move the engineer's own hooks aside too.
