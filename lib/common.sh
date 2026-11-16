@@ -18,6 +18,7 @@ N_LINK=0
 N_ADOPT=0
 N_CONFLICT=0
 N_WARN=0
+N_FAIL=0
 
 say() { printf '%s\n' "$*"; }
 
@@ -99,14 +100,30 @@ link_item() {
     fi
     handle_conflict "$dst" "$src" "link it" || return 0
   fi
-  N_LINK=$((N_LINK + 1))
   if is_apply; then
     mkdir -p "$(dirname "$dst")"
-    ln -s "$target" "$dst"
-    say "  linked    $dst -> $target"
+    # Git Bash without native symlinks makes a copy, and a copy goes stale after git pull. So check for a real link.
+    if ln -s "$target" "$dst" && [ -L "$dst" ]; then
+      N_LINK=$((N_LINK + 1))
+      say "  linked    $dst -> $target"
+    else
+      N_FAIL=$((N_FAIL + 1))
+      warn "could not create a symlink at $dst"
+    fi
   else
+    N_LINK=$((N_LINK + 1))
     say "  link      $dst -> $target"
   fi
+}
+
+# links_work: true when ln -s makes a real symlink here. Git Bash on Windows needs Developer Mode for that.
+links_work() {
+  local d rc=1
+  d=$(mktemp -d) || return 1
+  : >"$d/f"
+  ln -s "$d/f" "$d/l" 2>/dev/null && [ -L "$d/l" ] && rc=0
+  rm -rf "$d"
+  return $rc
 }
 
 # render_item TEMPLATE DST: write TEMPLATE to DST with @HOME@ replaced by $HOME.

@@ -26,7 +26,8 @@ Environment:
                      every Claude Code folder in each run.
 
 Nothing is ever deleted. Plugins are listed, never installed.
-Exit status: 0 = clean, 1 = conflicts remain, 2 = bad usage.
+Exit status: 0 = clean, 1 = conflicts or failed links remain,
+             2 = bad usage or a missing prerequisite.
 EOF
 }
 
@@ -62,6 +63,18 @@ for h in $HARNESSES; do
   esac
 done
 
+# Git Bash on Windows: a plain ln -s copies instead of linking. nativestrict makes it create a real Windows symlink
+# or fail, never copy. Real symlinks need Developer Mode (or admin rights). Always append: the last winsymlinks wins.
+case "$(uname -s)" in
+  MINGW*|MSYS*)
+    export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
+    if ! links_work; then
+      say "Windows did not create a symlink. Turn on Developer Mode (Settings > System > For developers), then re-run."
+      exit 2
+    fi
+    ;;
+esac
+
 if is_apply; then say "APPLY mode. Repo: $REPO_ROOT"; else say "DRY RUN (nothing changes). Repo: $REPO_ROOT"; fi
 
 # Core: ~/.agents is the shared home that every harness reads.
@@ -89,7 +102,7 @@ for h in $HARNESSES; do
 done
 
 say ""
-say "summary: ok=$N_OK link/write=$N_LINK adopt=$N_ADOPT conflict=$N_CONFLICT warn=$N_WARN"
+say "summary: ok=$N_OK link/write=$N_LINK adopt=$N_ADOPT conflict=$N_CONFLICT failed=$N_FAIL warn=$N_WARN"
 if ! is_apply; then say "dry run only. Re-run with --apply to make these changes."; fi
-[ "$N_CONFLICT" -eq 0 ] || exit 1
+[ "$N_CONFLICT" -eq 0 ] && [ "$N_FAIL" -eq 0 ] || exit 1
 exit 0

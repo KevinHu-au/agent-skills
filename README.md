@@ -14,7 +14,7 @@ hooks/copilot/  The shell safety hook, used by Claude Code, Copilot CLI and Code
 hooks/codex/    hooks.json.tmpl, the Codex template for the same hook.
 harness/        One script per tool: claude-code.sh, copilot-cli.sh, codex-cli.sh.
 lib/common.sh   Link, backup and conflict logic shared by the scripts.
-setup.manifest  Plugins and marketplaces to reinstall by hand.
+setup.manifest  Optional plugins to reinstall by hand (Superpowers).
 install.sh      The setup script. Dry run by default.
 tests/          test-install.sh runs the installer against throwaway home folders. One folder per skill.
 ```
@@ -31,10 +31,23 @@ repository, not here. This keeps client details out of this repository. See
 
 ## Set up a new machine
 
+Tested on macOS. On Windows 11 in Git Bash, the installer and the skills were tested in Claude Code, Copilot CLI and
+Codex, but the shell safety hook was not. Linux is not tested.
+
 1. Install Claude Code, Copilot CLI and Codex, and start each once so `~/.claude`, `~/.copilot` and `~/.codex`
    exist. A tool you do not use is skipped.
 2. Clone this repository, for example to `~/Projects/agent-skills`.
+
+   Read `global/AGENTS.md` before you install. The installer makes it the global guide of all three tools, for
+   every project. It holds one engineer's working rules, such as asking before any delete and never committing
+   without being told. Change it in your clone if your rules differ.
 3. Install `jq` (`brew install jq`). The shell hook needs it.
+
+   On Windows, run every step in Git Bash, and install `jq` with `winget install jqlang.jq`. Turn on Developer Mode
+   first (Settings > System > For developers). Git Bash can then make real symlinks. Without it, `ln -s` makes copies,
+   a copy goes stale after `git pull`, and Claude Code does not get the skills. So the installer stops and asks for
+   Developer Mode. If an earlier run made copies, the installer reports each one as a `CONFLICT (identical copy)`.
+   Run `./install.sh --apply --adopt` to replace them with links.
 4. See the plan. This changes nothing:
 
    ```bash
@@ -71,7 +84,8 @@ Options:
 | `--adopt` | With `--apply`, move conflicting items to the backup folder and link ours. |
 | `--harness LIST` | Limit to some of `claude-code`, `copilot-cli` and `codex-cli` (comma separated). |
 
-Exit status: `0` clean, `1` conflicts remain, `2` bad usage.
+Exit status: `0` clean, `1` conflicts or failed links remain, `2` bad usage or a missing prerequisite (`realpath`,
+or symlinks on Windows).
 
 Claude Code reads `$CLAUDE_CONFIG_DIR` when it is set. Some setups use a second
 folder, for example `~/.claude-work` for a company account. Each folder needs its
@@ -105,6 +119,7 @@ Each folder must already exist; start Claude Code once with the variable set to 
 ```
 repo/skills/<name>  <-  ~/.agents/skills/<name>  <-  ~/.claude/skills/<name>
 repo/global/AGENTS.md  <-  ~/.agents/AGENTS.md  <-  ~/.copilot/copilot-instructions.md
+repo/global/AGENTS.md  <-  ~/.agents/AGENTS.md  <-  ~/.codex/AGENTS.md
 repo/global/claude/CLAUDE.md  <-  ~/.claude/CLAUDE.md   (imports ~/.agents/AGENTS.md)
 repo/global/bin/rm-scratch  <-  ~/.agents/bin/rm-scratch
 repo/global/bin/onboarding-pack  <-  ~/.agents/bin/onboarding-pack
@@ -171,7 +186,11 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
   and `git restore`, `gh pr create`, `gh pr merge`, `az repos pr create`, `az repos pr update --status completed`,
   `az repos pr update --auto-complete true`, a `gh api` call to a pull request's `merge` endpoint, and `sqlcmd` or `Invoke-Sqlcmd` with an `INSERT`, `UPDATE`,
   `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `MERGE`, `CREATE`, `EXEC` or `EXECUTE` in the command. A SQL script passed
-  with `-i` is not read, so it is not caught. Nor are `bcp ... in` or `dotnet ef database update`. It prints nothing
+  with `-i` is not read, so it is not caught. Nor are `bcp ... in` or `dotnet ef database update`. Other forms it
+  does not catch include a command in a variable (`g=git; $g push`), a git alias (`git -c alias.p=push p`),
+  a script run with `bash script.sh`, a Python one-liner that calls `subprocess` or `shutil.rmtree`, `mv` to a temp
+  folder, truncation with `: >`, `rsync --delete`, `git reflog expire` with `git gc --prune`,
+  `git worktree remove --force`, `git stash`, `sqlpackage` and `osql`. It prints nothing
   for any other command, so the tool applies its default. In a checked session it denies when `jq` is missing or it
   cannot read the command. In a dormant session it stays silent then too. A command word inside a quoted message can cause a false deny or ask, which is accepted as safe. A regex
   cannot catch every shell form, so treat it as a guard rail, not a sandbox.
@@ -193,6 +212,8 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
 - `~/.agents/skills` is the shared home. Copilot CLI reads it from version 1.0.11. Claude Code does not, so it gets links in `~/.claude/skills` (or `$CLAUDE_CONFIG_DIR/skills`).
 - `git-safety.json` and the Codex `hooks.json` hold an absolute path, so the script writes rendered copies. It replaces
   `@HOME@` with your home folder. Codex reads only one `hooks.json`, so an existing, different file is a `CONFLICT`.
+  An existing `~/.codex/AGENTS.md` that is not the link, such as one with an `@` import, is a `CONFLICT` too. Codex
+  does not follow `@` imports, so use `--adopt` to move it aside and link the guide.
   Merge our two entries into it by hand, or use `--adopt` to move it aside. `--adopt` moves your other Codex hooks
   aside too, so merge by hand when the file has hooks of your own. A file that holds both agentd entries, with the
   same command and matcher, is reported as `ok`, whatever other hooks it has. This check needs `jq`.
@@ -362,7 +383,7 @@ tests/pr-review/test-make-fixture.sh
 
 ## Add a skill
 
-1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`.
+1. Create `skills/<name>/SKILL.md` with `name`, `description` and `disable-model-invocation: true` in the frontmatter. Use lowercase and hyphens. The last field keeps the skill out of the model's context: it runs only when you type `/<name>`. Also create `skills/<name>/agents/openai.yaml` with `allow_implicit_invocation: false` under `policy:`, as in the other skills, so Codex starts it only when you name it.
 2. Keep the skill general. Read project facts from the project's `AGENTS.md`. Do not write `dotnet test` or any one stack's command in the skill.
 3. Put stack-specific detail in `skills/<name>/references/<stack>.md`, and load it only when the stack is detected.
 4. Run `./install.sh` to see the new links, then `./install.sh --apply`.
@@ -460,20 +481,16 @@ own words. Superpowers is also listed in `setup.manifest`.
 | `agentd-verify-init` | Generate a project-local skill `verify-<app>` that drives the app like a user. Asks which tool the customer allows and writes to the matching folder. Also updates the skill later. It has references for .NET Core and .NET Framework (on IIS Express), SQL Server in Docker or LocalDB, React web apps and iOS apps, with helpers in PowerShell or bash. Only the .NET Core, Docker and React path has been run end to end. The rest is written from general knowledge and one iOS prototype. |
 
 Every skill sets `disable-model-invocation: true`. The model never starts one on its own, so run a skill by
-typing `/skill-name`. This field is a Claude Code feature.
+typing `/skill-name` in Claude Code or Copilot CLI, or `$skill-name` in Codex. Each skill also has
+`agents/openai.yaml` with `allow_implicit_invocation: false`, which does the same for Codex.
 
-Tested on Copilot CLI 1.0.102 on 2026-10-26, in a throwaway repository. Copilot's skill tool does not load a skill
-with the field. This matches the open issue
-([github/copilot-cli#4438](https://github.com/github/copilot-cli/issues/4438)). The same skill without the field
-loads, also from a subfolder, and a nested `metadata:` marker is accepted. A Copilot task agent also cannot run a
-flagged skill. Claude Code runs a flagged skill.
+Tested on Copilot CLI 1.0.110 on 2026-11-16: Copilot's skill tool reports that a flagged skill exists and that the
+model cannot start it, and a skill you type yourself loads. Copilot CLI 1.0.102 could not load a flagged skill at
+all ([github/copilot-cli#4438](https://github.com/github/copilot-cli/issues/4438)), so update Copilot if a skill is
+not found. The generated project skill `verify-<app>` is written without the field, so older Copilot versions load
+it too.
 
-So the flagged skills in this repository do not load in Copilot CLI 1.0.102. Use them in Claude Code. The generated
-project skill `verify-<app>` is written without the field for this reason.
-
-Skills that belong to the separate AgentKit repository are not stored here.
-`setup.manifest` lists them as reminders, and `install.sh` prints the reminder.
-Install them from that repository into `~/.agents/skills/`.
+The author's private AgentKit repository adds other skills. Nothing here needs them.
 
 ## Flow
 
@@ -508,3 +525,7 @@ use `AGENTS.md` and mark the fact `conflict:`. The headings are:
 `agentd-onboard` fills these in for a new project, in `contract.md`. It never writes `AGENTS.md`. An access rule under
 Data access counts only when it cites its source (`told by <role>` or a document). The skills treat any other rule,
 such as one marked `inferred:` or `unknown:`, as no access, and run no query on that environment.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # OpenAI Codex CLI: reads personal skills from ~/.agents/skills, so no skills link is needed here.
+# Its global guide is ~/.codex/AGENTS.md. Codex does not follow an @ import, so the file is linked to the shared guide.
 # Codex cannot attach a hook to a skill, so it gets the shell hook in ~/.codex/hooks.json. The hook stays
 # dormant until an agentd skill starts in the session. Sourced by install.sh.
 
@@ -31,6 +32,8 @@ harness_codex_cli() {
     return 0
   fi
   command -v jq >/dev/null 2>&1 || warn "jq not found: block-dangerous-shell.sh needs it (brew install jq)"
+  # Same pattern as Copilot: the Codex guide points at the shared AGENTS.md.
+  link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.codex/AGENTS.md" "$HOME/.agents/AGENTS.md"
   # Codex reads one hooks.json per configuration folder. A file that already holds our two entries is fine, even
   # with other hooks next to them. Any other existing file is a CONFLICT: merge our two entries into it by hand,
   # or use --adopt to move it aside. The script never edits the file.

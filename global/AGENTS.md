@@ -38,7 +38,7 @@
   5. It needed multi-step reasoning.
 - To suggest it, end with one line: `/code-review high` (or the `superpowers:requesting-code-review` skill), and ask to see the reviewer's raw findings. Do not run it: the user decides.
 - Skip entirely for trivial work: typo / format / rename, config one-liners, throwaway scripts, or anything with no decisions encoded.
-- Rationale: plans and markdown have no compiler or tests to catch flaws, so an independent second pass matters most there. This is the semantic backstop to the deterministic `Stop` review-reminder hook.
+- Rationale: plans and markdown have no compiler or tests to catch flaws, so an independent second pass matters most there.
 
 ## Two-round review loop
 

@@ -354,7 +354,7 @@ of `templates/report.md` of the generator when you write this skill, including t
 - Local-only files: an edit to a local-only file (`<local-only file>`) never forces a restore. A branch script that
   changed or was removed, or an app-code change outside the scripts folder, this skill's folder and the local-only
   files, forces a restore. A new branch script is applied by the migration runner without a restore.
-- The header has no `disable-model-invocation` line. Copilot cannot load a skill that has the flag (checked with
-  Copilot 1.0.102). The engineer may add it back when Copilot supports it, to keep the skill out of the auto-loaded
-  context.
+- The header has no `disable-model-invocation` line. Copilot CLI 1.0.102 could not load a skill that has the flag;
+  1.0.110 can. The engineer may add it back once every Copilot in use is 1.0.110 or later, to keep the skill out of
+  the auto-loaded context.
 - The `metadata` marker is nested, with two spaces, so `/agentd-dev-rev` and update mode can find this skill.

@@ -17,7 +17,8 @@ route, label, ticket or value from it. The detailed notes live in the git-ignore
 - **How a run starts:** a fresh agent follows `SKILL.md` by hand. A fresh agent cannot run `agentd-verify-init` as a
   skill, because the skill carries the manual-only flag.
 - **Flag test:** Copilot CLI 1.0.102 cannot load a skill that has the manual-only flag. So the generated project skill
-  is written without that flag. The flag stays on `agentd-verify-init` itself.
+  is written without that flag. The flag stays on `agentd-verify-init` itself. (Copilot CLI 1.0.110 loads a flagged
+  skill that the engineer types; checked on 2026-11-16, see the README.)
 
 ## Results
 
