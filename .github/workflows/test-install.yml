@@ -24,10 +24,7 @@ jobs:
       run:
         shell: bash # Git Bash on Windows
     steps:
-      # Without this, Windows checks the shell scripts out with CRLF line endings and bash cannot run them.
-      - name: Keep LF line endings
-        run: git config --global core.autocrlf false
-
+      # .gitattributes keeps LF line endings, so bash on Windows can run the scripts.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

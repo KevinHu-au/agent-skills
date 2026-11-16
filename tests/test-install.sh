@@ -7,6 +7,7 @@ set -u
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
 PASS=0
 FAIL=0
+SKIP=0
 
 # Temp folders. Every mktemp in this run lands in TMP_ROOT. It is removed when every check passes. When a check
 # fails it is kept and its path printed. The next run removes folders kept by earlier runs.
@@ -26,7 +27,7 @@ trap cleanup EXIT
 export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
 # Windows (Git Bash) ignores Unix modes on NTFS: chmod cannot make a folder read-only or private there.
 ON_WINDOWS=0
-case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) ON_WINDOWS=1 ;; esac
+case "$(uname -s)" in MINGW* | MSYS*) ON_WINDOWS=1 ;; esac # Git Bash or MSYS2: what install.sh treats as Windows
 
 check() {
   local desc=$1
@@ -38,6 +39,12 @@ check() {
     FAIL=$((FAIL + 1))
     printf '  FAIL  %s\n' "$desc"
   fi
+}
+
+# skip N DESC: N checks that cannot run here. They are counted, so the summary shows them.
+skip() {
+  SKIP=$((SKIP + $1))
+  if [ "$1" -gt 1 ]; then printf '  skip  %s checks: %s\n' "$1" "$2"; else printf '  skip  %s\n' "$2"; fi
 }
 
 not() { ! "$@"; }
@@ -407,7 +414,7 @@ check "copilot: still dormant after an ordinary prompt" test -z "$(gate copilot 
 check "copilot: the prompt hook prints nothing" test -z "$(gate copilot prompt "$(cp_prompt s1 '/agentd-diagnose login fails')")"
 check "copilot: /agentd-<name> writes a marker" [ -e "$GH/.agents/hook-state/s1" ]
 if [ "$ON_WINDOWS" = 1 ]; then
-  printf '  skip  copilot: the marker folder is private (Windows uses the profile folder ACL, not Unix modes)\n'
+  skip 1 'copilot: the marker folder is private (Windows uses the profile folder ACL, not Unix modes)'
 else
   check "copilot: the marker folder is private" test "$(stat -f %Lp "$GH/.agents/hook-state" 2>/dev/null || stat -c %a "$GH/.agents/hook-state")" = 700
 fi
@@ -483,7 +490,7 @@ RO=$(mktemp -d)
 mkdir -p "$RO/.agents"
 ln -s "$REPO/skills" "$RO/.agents/skills"
 if [ "$ON_WINDOWS" = 1 ]; then
-  printf '  skip  copilot: a marker that cannot be written prints a warning (chmod cannot make a folder read-only on Windows)\n'
+  skip 1 'copilot: a marker that cannot be written prints a warning (chmod cannot make a folder read-only on Windows)'
 else
   chmod 500 "$RO/.agents"
   check "copilot: a marker that cannot be written prints a warning" \
@@ -883,7 +890,7 @@ OUT=$(run --apply 2>&1)
 check "the default install writes no guard file" [ ! -e "$H/.agents/always-on-guard" ]
 check "the default install prints no snippet" not has "$OUT" 'lacks the entry'
 if [ "$ON_WINDOWS" = 1 ]; then
-  printf '  skip  a guard file that cannot be written: 4 checks (chmod cannot make a folder read-only on Windows)\n'
+  skip 4 'a guard file that cannot be written (chmod cannot make a folder read-only on Windows)'
 else
   chmod a-w "$H/.agents"
   OUT=$(run --apply --always-on-guard 2>&1); RC=$?
@@ -963,5 +970,5 @@ check "ln fails, --adopt: says the old item is back" has "$OUT" 'could not creat
 check "ln fails, --adopt: the hand-written guide is back in place" test "$(cat "$H/.codex/AGENTS.md")" = '@~/.agents/AGENTS.md'
 
 echo
-echo "passed=$PASS failed=$FAIL"
+echo "passed=$PASS failed=$FAIL skipped=$SKIP"
 [ "$FAIL" -eq 0 ]

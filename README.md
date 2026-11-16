@@ -53,6 +53,12 @@ Codex. Linux is not tested.
    a copy goes stale after `git pull`, and Claude Code does not get the skills. So the installer stops and asks for
    Developer Mode. If an earlier run made copies, the installer reports each one as a `CONFLICT (identical copy)`.
    Run `./install.sh --apply --adopt` to replace them with links.
+   The repository keeps LF line endings on every platform (`.gitattributes`). A clone made before that file was
+   added may have CRLF endings. Then `./install.sh` stops with `/usr/bin/env: 'bash\r': No such file or directory`,
+   or `bash install.sh` with `$'\r': command not found`. Fix the clone in place, so the installed links still point
+   at it. First commit any changes you made in the clone: `git reset --hard` throws away uncommitted changes. Then,
+   in the clone's top folder, run `git rm -r --cached -q . && git reset --hard`. Git checks every file out again
+   with LF endings.
 4. See the plan. This changes nothing:
 
    ```bash
