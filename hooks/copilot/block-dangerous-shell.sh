@@ -4,9 +4,10 @@
 # discard changes, create, complete or merge a pull request, or write to a SQL Server database.
 # Prints nothing for everything else (empty output means the tool's default behaviour).
 #
-# Usage: block-dangerous-shell.sh [--harness claude|copilot|codex] [--event tool|prompt|end]
+# Usage: block-dangerous-shell.sh [--harness claude|copilot|codex] [--event tool|prompt|end] [--always-on]
 #   claude   Called from the hooks: block in each agentd SKILL.md, so Claude Code runs it only after an
-#            agentd skill starts. Prints the hookSpecificOutput shape.
+#            agentd skill starts. Prints the hookSpecificOutput shape. With --always-on it is Claude Code's
+#            user-level entry for the optional always-on guard (hooks/claude/always-on.settings.json).
 #   copilot  Called from ~/.copilot/hooks/git-safety.json. Prints the flat Copilot shape. Gated (see below).
 #   codex    Called from ~/.codex/hooks.json. Prints the hookSpecificOutput shape. Codex hooks cannot ask,
 #            so every ask becomes a deny. Gated (see below).
@@ -28,22 +29,41 @@
 # It also prints a warning on stderr, so the cause shows in the tool's hook log.
 #
 # In a checked session it fails closed: missing jq, input that is not JSON, or a command it cannot read is denied.
+# The always-on guard, outside an agentd session, fails open instead: it applies only the deny rules, and stays
+# silent when it cannot read the command, so it never blocks an ordinary session. Missing jq is logged on stderr.
 # A regex can never parse every shell form. It catches the common bypasses, not all of them.
 # A false deny or ask (for example a command word inside a quoted message) is accepted as safe.
 set -u
 
 HARNESS=""
 EVENT=tool
+ALWAYS_ON_ENTRY=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --harness) HARNESS=${2:-}; shift 2 || shift ;;
     --event) EVENT=${2:-}; shift 2 || shift ;;
+    --always-on) ALWAYS_ON_ENTRY=1; shift ;;
     *) shift ;;
   esac
 done
 
+# The optional always-on guard (install.sh --always-on-guard). While the empty file ~/.agents/always-on-guard
+# exists, a session that has not started an agentd skill still gets the deny rules (dangerous git), but never the
+# ask rules. Deleting the file turns it off in all three tools. --always-on marks Claude Code's user-level entry in
+# settings.json; without the file it does nothing.
+# Read the input before any exit, so the tool never writes into a closed pipe.
 INPUT=""
 IFS= read -r -d '' INPUT || true
+
+# Under set -u, an unset HOME would end the script with an error.
+HOME=${HOME:-}
+ALWAYS_ON=0
+[ ! -e "$HOME/.agents/always-on-guard" ] || ALWAYS_ON=1
+DENY_ONLY=0
+if [ "$ALWAYS_ON_ENTRY" = 1 ]; then
+  [ "$ALWAYS_ON" = 1 ] || exit 0
+  DENY_ONLY=1
+fi
 
 GATED=0
 LEGACY=0
@@ -104,11 +124,15 @@ SKILL_READ='^[[:space:]]*(cat|head|sed|less|more|bat|type|get-content)[[:space:]
 
 # The session ID. Only letters, digits, _ and - are kept, so the ID cannot leave the marker folder.
 # Without jq, the first "sessionId" or "session_id" string in the input is used. Both tools send it first.
-if [ "$HAVE_JQ" = 1 ]; then
-  SESSION=$(printf '%s' "$INPUT" | jq -r '(.sessionId // .session_id // "") | tostring' 2>/dev/null)
-else
-  SESSION=$(printf '%s' "$INPUT" | grep -oE '"(sessionId|session_id)"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n 1 \
-    | sed -E 's/.*"([^"]*)"$/\1/')
+# Only the gate (Copilot and Codex) uses it, so Claude Code's entries skip the extra jq process.
+SESSION=""
+if [ "$GATED" = 1 ]; then
+  if [ "$HAVE_JQ" = 1 ]; then
+    SESSION=$(printf '%s' "$INPUT" | jq -r '(.sessionId // .session_id // "") | tostring' 2>/dev/null)
+  else
+    SESSION=$(printf '%s' "$INPUT" | grep -oE '"(sessionId|session_id)"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n 1 \
+      | sed -E 's/.*"([^"]*)"$/\1/')
+  fi
 fi
 SESSION=$(printf '%s' "$SESSION" | tr -cd 'A-Za-z0-9_-')
 MARKER=""
@@ -187,8 +211,14 @@ if [ "$HAVE_JQ" = 0 ]; then
       exit 0
     fi
     if dormant; then
-      exit 0
+      [ "$ALWAYS_ON" = 1 ] || exit 0
+      DENY_ONLY=1
     fi
+  fi
+  # Outside an agentd session, a missing jq must not block every command. Say so in the tool's hook log.
+  if [ "$DENY_ONLY" = 1 ]; then
+    printf 'block-dangerous-shell.sh: the always-on guard is on, but jq is missing, so this command is not checked.\n' >&2
+    exit 0
   fi
   deny_raw "block-dangerous-shell.sh needs jq to read the command, and jq was not found. Install jq (brew install jq)."
   exit 0
@@ -213,6 +243,7 @@ if ! OUT=$(
   if [ "$GATED" = 1 ] && dormant; then
     exit 0
   fi
+  [ "$DENY_ONLY" = 0 ] || exit 0
   deny "block-dangerous-shell.sh could not read the hook input."
   exit 0
 fi
@@ -233,12 +264,14 @@ if [ "$GATED" = 1 ]; then
   if printf '%s\n' "$COMMAND" | grep -Eiq -- "$SKILL_READ"; then
     printf '%s\n' "$COMMAND" | grep -oE 'agentd-[A-Za-z0-9-]+/SKILL\.md' | sed 's#/SKILL\.md$##' | mark_names
   fi
-  # Dormant until an agentd skill starts in this session.
+  # Dormant until an agentd skill starts in this session. With the always-on guard, the deny rules still run.
   if dormant; then
-    exit 0
+    [ "$ALWAYS_ON" = 1 ] || exit 0
+    DENY_ONLY=1
+  else
+    # A checked session: refresh the marker's time, so it is not removed while still in use.
+    [ -z "$MARKER" ] || touch "$MARKER" 2>/dev/null
   fi
-  # A checked session: refresh the marker's time, so it is not removed while still in use.
-  [ -z "$MARKER" ] || touch "$MARKER" 2>/dev/null
 fi
 
 case "$TOOL_NAME" in
@@ -247,6 +280,7 @@ case "$TOOL_NAME" in
 esac
 
 if [ -z "$COMMAND" ]; then
+  [ "$DENY_ONLY" = 0 ] || exit 0
   deny "block-dangerous-shell.sh could not read the shell command."
   exit 0
 fi
@@ -284,6 +318,9 @@ if printf '%s\n' "$COMMAND" | grep -Eq -- "$DANGEROUS_GIT"; then
   deny "Blocked shell command: '$COMMAND' matches a dangerous git pattern. Ask the user explicitly before taking this action."
   exit 0
 fi
+
+# The always-on guard outside an agentd session: the deny rules above only, never the ask rules below.
+[ "$DENY_ONLY" = 0 ] || exit 0
 
 REMOVE="(${START}(rm|rmdir|unlink|trash|shred)${END})|(${START}find[[:space:]][^;&|]*-delete${END})"
 # PowerShell names are not case-sensitive.

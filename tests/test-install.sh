@@ -434,7 +434,11 @@ check "copilot: input that is not JSON is dormant while no marker exists" \
   test -z "$(printf 'not json' | HOME=$EH "$TEST_HOOK" --harness copilot --event tool 2>/dev/null)"
 # A PATH with the usual tools but no jq.
 NJ=$(mktemp -d)
-for t in cat find grep head ls mkdir sed tr; do ln -s "$(command -v "$t")" "$NJ/$t"; done
+# Enough tools for the hook and for install.sh, and no jq. Section 16 uses it too.
+for t in bash env sh cat find grep head ls mkdir touch sed tr dirname basename realpath date ln readlink sort awk \
+  cmp diff uname cp mv mktemp chmod rm wc cut; do
+  p=$(command -v "$t") && ln -s "$p" "$NJ/$t"
+done
 nojq() { printf '%s' "$2" | HOME=$GH PATH=$NJ /bin/bash "$TEST_HOOK" --harness copilot --event "$1"; }
 check "copilot: missing jq on a prompt prints nothing" test -z "$(nojq prompt '{"sessionId":"j1","prompt":"/agentd-intake"}')"
 check "copilot: missing jq still writes the marker from the prompt" [ -e "$GH/.agents/hook-state/j1" ]
@@ -702,6 +706,129 @@ check "CRLF jq, copilot: after /agentd-, git push is denied" \
 crlf codex prompt "$(cx_prompt crlf2 'run $agentd-diagnose on the login bug')" >/dev/null
 check "CRLF jq, codex: after \$agentd-, git push is denied" \
   test "$(crlf codex tool "$(cx_tool crlf2 'git push origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+
+echo "16. Always-on guard (optional)"
+AO="$GH/.agents/always-on-guard"
+# claude_ao JSON: run the hook as Claude Code's user-level entry from hooks/claude/always-on.settings.json.
+claude_ao() { printf '%s' "$1" | HOME=$GH "$TEST_HOOK" --harness claude --event tool --always-on; }
+cl_tool() { jq -cn --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}'; }
+check "guard off: the Claude Code entry is silent on git push" test -z "$(claude_ao "$(cl_tool 'git push origin main')")"
+check "guard off: copilot without a skill is silent on git push" test -z "$(gate copilot tool "$(cp_tool ao1 'git push')")"
+: >"$AO"
+check "guard on: the Claude Code entry denies git push" \
+  test "$(claude_ao "$(cl_tool 'git push origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "guard on: the Claude Code entry denies git reset --hard" \
+  test "$(claude_ao "$(cl_tool 'git reset --hard HEAD~1')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "guard on: the Claude Code entry does not ask on rm" test -z "$(claude_ao "$(cl_tool 'rm -f x.txt')")"
+check "guard on: the Claude Code entry does not ask on git commit" test -z "$(claude_ao "$(cl_tool 'git commit -m x')")"
+check "guard on: the Claude Code entry is silent on ls" test -z "$(claude_ao "$(cl_tool 'ls -la')")"
+check "guard on: the Claude Code entry is silent on input it cannot read" test -z "$(claude_ao 'not json')"
+check "guard on: copilot without a skill denies git push" \
+  test "$(gate copilot tool "$(cp_tool ao1 'git push')" | jq -r .permissionDecision)" = deny
+check "guard on: copilot without a skill does not ask on rm" test -z "$(gate copilot tool "$(cp_tool ao1 'rm -f x.txt')")"
+check "guard on: copilot without a skill writes no session marker" [ ! -e "$GH/.agents/hook-state/ao1" ]
+check "guard on: codex without a skill denies git push" \
+  test "$(gate codex tool "$(cx_tool ao2 'git push')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "guard on: codex without a skill does not deny rm" test -z "$(gate codex tool "$(cx_tool ao2 'rm -f x.txt')")"
+gate copilot prompt "$(cp_prompt ao3 '/agentd-diagnose fix the login bug')" >/dev/null
+check "guard on: an agentd session still asks on rm" \
+  test "$(gate copilot tool "$(cp_tool ao3 'rm -f x.txt')" | jq -r .permissionDecision)" = ask
+rm -f "$AO"
+check "deleting the file turns the guard off" test -z "$(gate copilot tool "$(cp_tool ao1 'git push')")"
+check "the Claude Code snippet is valid JSON" jq -e . "$REPO/hooks/claude/always-on.settings.json"
+check "the Claude Code snippet calls the shared hook with --always-on" \
+  bash -c 'c=$(jq -r ".hooks.PreToolUse[0].hooks[0].command" "$1"); case "$c" in
+    *"/.agents/hooks/block-dangerous-shell.sh"*"--harness claude --event tool --always-on"*) ;; *) exit 1 ;; esac' \
+  _ "$REPO/hooks/claude/always-on.settings.json"
+# Run the snippet's command the way Claude Code does (sh -c), with a throwaway HOME.
+snip_cmd=$(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$REPO/hooks/claude/always-on.settings.json")
+SH=$(mktemp -d)
+mkdir -p "$SH/.agents/hooks"
+check "guard off: the snippet is silent and exits 0 when the hook script is missing" \
+  bash -c 'out=$(printf "{}" | HOME=$1 sh -c "$2" 2>&1); [ $? -eq 0 ] && [ -z "$out" ]' _ "$SH" "$snip_cmd"
+: >"$SH/.agents/always-on-guard"
+check "guard on: the snippet exits 0 and logs a warning when the hook script is missing" \
+  bash -c 'err=$(printf "{}" | HOME=$1 sh -c "$2" 2>&1 >/dev/null); [ $? -eq 0 ] && printf "%s" "$err" | grep -q "missing or not executable"' \
+  _ "$SH" "$snip_cmd"
+ln -s "$TEST_HOOK" "$SH/.agents/hooks/block-dangerous-shell.sh"
+check "an unset HOME does not crash the Claude Code entry" \
+  bash -c 'printf "{}" | env -u HOME "$1" --harness claude --event tool --always-on >/dev/null 2>&1' _ "$TEST_HOOK"
+check "the snippet denies git push through the linked hook" \
+  test "$(cl_tool 'git push origin main' | HOME=$SH sh -c "$snip_cmd" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+
+# Without jq on PATH: NJ from section 10.
+NOJQ=$NJ
+check "the jq-free PATH has no jq" bash -c '! PATH=$1 command -v jq' _ "$NOJQ"
+check "guard on, no jq: the Claude Code entry is silent and logs a warning" \
+  bash -c 'out=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness claude --event tool --always-on 2>/dev/null);
+    err=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness claude --event tool --always-on 2>&1 >/dev/null);
+    [ -z "$out" ] && printf "%s" "$err" | grep -q "jq is missing"' \
+  _ "$(cl_tool 'git push origin main')" "$SH" "$NOJQ" "$TEST_HOOK"
+check "guard on, no jq: copilot without a skill is silent and logs a warning" \
+  bash -c 'out=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness copilot --event tool 2>/dev/null);
+    err=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness copilot --event tool 2>&1 >/dev/null);
+    [ -z "$out" ] && printf "%s" "$err" | grep -q "jq is missing"' \
+  _ "$(cp_tool nj1 'git push origin main')" "$SH" "$NOJQ" "$TEST_HOOK"
+mkdir -p "$SH/.agents/hook-state" && : >"$SH/.agents/hook-state/nj2"
+check "guard on, no jq: an agentd session still denies (fails closed)" \
+  bash -c 'printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness copilot --event tool 2>/dev/null | grep -q "\"deny\""' \
+  _ "$(cp_tool nj2 'ls -la')" "$SH" "$NOJQ" "$TEST_HOOK"
+
+# A session ID that cannot be read, with no markers yet: the guard still applies the deny rules only.
+SID=$(mktemp -d)
+mkdir -p "$SID/.agents"
+ln -s "$REPO/skills" "$SID/.agents/skills"
+: >"$SID/.agents/always-on-guard"
+nosid() { printf '%s' "$2" | HOME=$SID "$TEST_HOOK" --harness "$1" --event tool 2>/dev/null; }
+check "no session ID, guard on: copilot denies git push" \
+  test "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"git push"}}' | jq -r .permissionDecision)" = deny
+check "no session ID, guard on: copilot does not ask on rm" \
+  test -z "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"rm -f x.txt"}}')"
+rm -f "$SID/.agents/always-on-guard"
+check "no session ID, guard off: copilot stays dormant" \
+  test -z "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"git push"}}')"
+new_home
+OUT=$(run --always-on-guard 2>&1); RC=$?
+check "--always-on-guard: the dry run plans the file" has "$OUT" 'always-on-guard (empty marker)'
+check "--always-on-guard: the dry run writes nothing" [ ! -e "$H/.agents/always-on-guard" ]
+OUT=$(run --apply --always-on-guard 2>&1); RC=$?
+check "--always-on-guard: apply exits 0" [ "$RC" -eq 0 ]
+check "--always-on-guard: apply writes the empty file" bash -c '[ -f "$1" ] && [ ! -s "$1" ]' _ "$H/.agents/always-on-guard"
+check "--always-on-guard: apply prints the Claude Code snippet" has "$OUT" 'always-on guard: .*settings.json lacks the entry'
+check "--always-on-guard: the installer writes no settings.json" [ ! -e "$H/.claude/settings.json" ]
+OUT=$(run --apply --always-on-guard 2>&1)
+check "--always-on-guard: a second apply changes nothing" has "$OUT" 'link/write=0'
+OUT=$(run --apply 2>&1); RC=$?
+check "apply without the flag keeps the file" [ -e "$H/.agents/always-on-guard" ]
+check "apply without the flag says the guard is on" has "$OUT" 'always-on guard is on'
+check "apply without the flag exits 0" [ "$RC" -eq 0 ]
+check "guard on, no flag, no entry: the snippet is still printed" has "$OUT" 'lacks the entry'
+jq '.hooks.PreToolUse[0].matcher = "Read"' "$REPO/hooks/claude/always-on.settings.json" >"$H/.claude/settings.json"
+OUT=$(run --apply --always-on-guard 2>&1)
+check "an entry with another matcher is not reported ok" not has "$OUT" 'holds the always-on guard entry'
+check "an entry with another matcher gets the snippet" has "$OUT" 'lacks the entry'
+jq '{model:"x", hooks:{Stop:[], PreToolUse:([{"matcher":"Bash","hooks":[{"type":"command","command":"/x/own.sh"}]}] + .hooks.PreToolUse)}}' \
+  "$REPO/hooks/claude/always-on.settings.json" >"$H/.claude/settings.json"
+OUT=$(run --apply --always-on-guard 2>&1)
+check "--always-on-guard: a settings.json with the entry is reported ok" has "$OUT" 'holds the always-on guard entry'
+check "--always-on-guard: a settings.json with the entry gets no snippet" not has "$OUT" 'lacks the entry'
+OUT=$(run --apply 2>&1)
+check "guard on, no flag: the entry is still checked and reported ok" has "$OUT" 'holds the always-on guard entry'
+new_home
+OUT=$(run --apply 2>&1)
+check "the default install writes no guard file" [ ! -e "$H/.agents/always-on-guard" ]
+check "the default install prints no snippet" not has "$OUT" 'lacks the entry'
+chmod a-w "$H/.agents"
+OUT=$(run --apply --always-on-guard 2>&1); RC=$?
+chmod u+w "$H/.agents"
+check "a guard file that cannot be written is reported" has "$OUT" 'could not write .*always-on-guard'
+check "a guard file that cannot be written is counted as failed" has "$OUT" 'failed=1'
+check "a guard file that cannot be written exits 1" [ "$RC" -eq 1 ]
+check "a guard file that cannot be written is not claimed as written" not has "$OUT" 'wrote .*always-on-guard'
+new_home
+OUT=$(env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS -u MSYS HOME="$H" PATH="$H/bin:$NOJQ" "$REPO/install.sh" --always-on-guard 2>&1)
+check "--always-on-guard without jq warns that the guard checks nothing" has "$OUT" 'always-on guard checks nothing without it'
+check "missing jq is warned about once, not once per tool" test "$(printf '%s\n' "$OUT" | grep -c 'jq not found')" -eq 1
 
 echo
 echo "passed=$PASS failed=$FAIL"

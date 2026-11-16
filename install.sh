@@ -7,7 +7,7 @@ REPO_ROOT=$(cd "$(dirname "$0")" && pwd -P)
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [--apply] [--adopt] [--harness LIST]
+Usage: ./install.sh [--apply] [--adopt] [--harness LIST] [--always-on-guard]
 
   (no flags)       Show what would change. Changes nothing.
   --apply          Create the missing links and files.
@@ -16,6 +16,11 @@ Usage: ./install.sh [--apply] [--adopt] [--harness LIST]
                    Needs --apply to take effect. Without --adopt, such items
                    are reported as CONFLICT and left alone.
   --harness LIST   Comma list: claude-code,copilot-cli,codex-cli (default: all three).
+  --always-on-guard
+                   Opt in: deny dangerous git commands in every session, not
+                   only in agentd skills. Writes the empty file
+                   ~/.agents/always-on-guard and prints a snippet for Claude
+                   Code's settings.json. Delete that file to turn it off.
 
 Environment:
   CLAUDE_CONFIG_DIR  Link Claude Code skills and CLAUDE.md into this folder
@@ -32,6 +37,7 @@ EOF
 }
 
 HARNESSES="claude-code copilot-cli codex-cli"
+ALWAYS_ON_GUARD=0
 
 # shellcheck source=lib/common.sh
 . "$REPO_ROOT/lib/common.sh"
@@ -45,6 +51,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --apply) MODE=apply ;;
     --adopt) ADOPT=1 ;;
+    --always-on-guard) ALWAYS_ON_GUARD=1 ;;
     --harness)
       shift
       [ $# -gt 0 ] || { usage; exit 2; }
@@ -90,6 +97,23 @@ done
 # The shell safety hook. Every tool calls it from this one path: the agentd skills (Claude Code),
 # ~/.copilot/hooks/git-safety.json and ~/.codex/hooks.json.
 link_item "$REPO_ROOT/hooks/copilot/block-dangerous-shell.sh" "$HOME/.agents/hooks/block-dangerous-shell.sh"
+# The opt-in always-on guard: an empty file that the hook reads. The installer never deletes it, so the engineer
+# turns the guard off by deleting the file.
+GUARD_FILE="$HOME/.agents/always-on-guard"
+if [ "$ALWAYS_ON_GUARD" = 1 ]; then
+  write_marker "$GUARD_FILE"
+elif [ -e "$GUARD_FILE" ]; then
+  say "  note      the always-on guard is on. Delete $GUARD_FILE to turn it off."
+fi
+# One jq check for every tool: the hook needs jq. Outside an agentd skill the always-on guard stays silent without
+# it, so it would check nothing.
+if ! command -v jq >/dev/null 2>&1; then
+  if [ "$ALWAYS_ON_GUARD" = 1 ] || [ -e "$GUARD_FILE" ]; then
+    warn "jq not found: the shell hook needs it, and the always-on guard checks nothing without it (brew install jq, or winget install jqlang.jq on Windows)"
+  else
+    warn "jq not found: the shell hook needs it (brew install jq, or winget install jqlang.jq on Windows)"
+  fi
+fi
 
 for h in $HARNESSES; do
   # shellcheck disable=SC1090

@@ -33,6 +33,17 @@ claude_config_dirs() {
   done | awk '!seen[$0]++'
 }
 
+# claude_has_guard FILE: true when the settings file holds the always-on entry of hooks/claude/always-on.settings.json,
+# with the same matcher and the same command (like codex_has_ours). Needs jq. Without jq the answer is "no", so the
+# snippet is printed.
+claude_has_guard() {
+  [ -f "$1" ] || return 1
+  jq -e --slurpfile want "$REPO_ROOT/hooks/claude/always-on.settings.json" '
+    $want[0].hooks.PreToolUse[0] as $w
+    | any(.hooks.PreToolUse[]?; .matcher == $w.matcher and any(.hooks[]?; .command == $w.hooks[0].command))
+  ' "$1" >/dev/null 2>&1
+}
+
 harness_claude_code() {
   say "claude-code"
   local cdir dir name
@@ -55,6 +66,20 @@ harness_claude_code() {
       link_item "$REPO_ROOT/skills/$name" "$cdir/skills/$name" "$HOME/.agents/skills/$name"
     done
     link_item "$REPO_ROOT/global/claude/CLAUDE.md" "$cdir/CLAUDE.md"
+    # The always-on guard needs a user-level hook in Claude Code. The installer never edits settings.json, so it
+    # checks for the entry and prints the snippet only for a folder that lacks it.
+    # Checked whenever the guard is on, so a folder added later is not missed.
+    if [ "${ALWAYS_ON_GUARD:-0}" = 1 ] || [ -e "$HOME/.agents/always-on-guard" ]; then
+      if claude_has_guard "$cdir/settings.json"; then
+        say "  ok        $cdir/settings.json (holds the always-on guard entry)"
+        N_OK=$((N_OK + 1))
+      else
+        say "  manual    always-on guard: $cdir/settings.json lacks the entry. The block below is a whole settings"
+        say "            fragment (hooks/claude/always-on.settings.json). If the file already has \"hooks\" with a"
+        say "            \"PreToolUse\" list, append only the object inside \"PreToolUse\" to that list:"
+        sed 's/^/              /' "$REPO_ROOT/hooks/claude/always-on.settings.json"
+      fi
+    fi
   done < <(claude_config_dirs)
   warn_unlisted_claude_dirs
   print_manifest claude-code

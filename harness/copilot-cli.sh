@@ -23,8 +23,6 @@ harness_copilot_cli() {
     warn "copilot not on PATH: cannot check the version (needs >= $COPILOT_MIN_VERSION)"
   fi
 
-  command -v jq >/dev/null 2>&1 || warn "jq not found: block-dangerous-shell.sh needs it (brew install jq)"
-
   # Same pattern as today: the Copilot guide points at the shared AGENTS.md.
   link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.copilot/copilot-instructions.md" "$HOME/.agents/AGENTS.md"
   # The hook calls ~/.agents/hooks/block-dangerous-shell.sh (linked in core) and stays dormant until an

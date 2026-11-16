@@ -31,7 +31,6 @@ harness_codex_cli() {
     warn "$HOME/.codex not found: install and start Codex once, then re-run. Skipped."
     return 0
   fi
-  command -v jq >/dev/null 2>&1 || warn "jq not found: block-dangerous-shell.sh needs it (brew install jq)"
   # Same pattern as Copilot: the Codex guide points at the shared AGENTS.md.
   link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.codex/AGENTS.md" "$HOME/.agents/AGENTS.md"
   # Codex reads one hooks.json per configuration folder. A file that already holds our two entries is fine, even
