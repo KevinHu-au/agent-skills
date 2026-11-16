@@ -407,7 +407,7 @@ check "copilot: still dormant after an ordinary prompt" test -z "$(gate copilot 
 check "copilot: the prompt hook prints nothing" test -z "$(gate copilot prompt "$(cp_prompt s1 '/agentd-diagnose login fails')")"
 check "copilot: /agentd-<name> writes a marker" [ -e "$GH/.agents/hook-state/s1" ]
 if [ "$ON_WINDOWS" = 1 ]; then
-  printf '  skip  copilot: the marker folder is private (Windows has no Unix folder modes, so it is not private there)\n'
+  printf '  skip  copilot: the marker folder is private (Windows uses the profile folder ACL, not Unix modes)\n'
 else
   check "copilot: the marker folder is private" test "$(stat -f %Lp "$GH/.agents/hook-state" 2>/dev/null || stat -c %a "$GH/.agents/hook-state")" = 700
 fi
