@@ -825,7 +825,7 @@ test_verify_template_marks_the_optional_draft_line() {
 }
 
 test_gotchas_say_why_the_flag_is_left_out() {
-  section_has "$VT" Gotchas "Copilot cannot load a skill that has the flag" "may add it back"
+  section_has "$VT" Gotchas "Copilot CLI 1.0.102 could not load a skill that has the flag" "may add it back"
 }
 
 # ---------------------------------------------------------------- agentd-dev-rev change
@@ -1620,9 +1620,8 @@ test_readme_has_the_tests_paragraph() {
     "tests/verify-init/EVAL.md"
 }
 test_readme_flag_paragraph_matches_the_recorded_result() {
-  has_all "$README" "Copilot CLI 1.0.102" "2026-10-26" "does not load a skill with the field" \
-    "task agent also cannot run a flagged skill" "Claude Code runs a flagged skill" \
-    "do not load in Copilot CLI 1.0.102" "use them in Claude Code" "written without the field" || return 1
+  has_all "$README" "Copilot CLI 1.0.110" "2026-11-16" "the model cannot start it" "a skill you type yourself loads" \
+    "Copilot CLI 1.0.102 could not load a flagged skill" "written without the field" || return 1
   ! has_all "$README" "has not been tested"
 }
 test_readme_planned_wording_is_updated() {

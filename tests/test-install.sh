@@ -50,7 +50,7 @@ new_home() {
 }
 
 # env -u: a CLAUDE_CONFIG_DIR set in the caller's shell must not leak into the real config folder.
-run() { env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS HOME=$H PATH="$H/bin:$PATH" "$REPO/install.sh" "$@"; }
+run() { env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS -u MSYS HOME=$H PATH="$H/bin:$PATH" "$REPO/install.sh" "$@"; }
 
 echo "1. fresh machine"
 new_home
@@ -72,6 +72,7 @@ check "onboarding-pack linked" resolves_to "$H/.agents/bin/onboarding-pack" "$RE
 check "onboarding-pack runs through the link and prints usage" bash -c 'out=$("$1" 2>&1); [ $? -eq 2 ] && printf "%s" "$out" | grep -q usage' _ "$H/.agents/bin/onboarding-pack"
 check "CLAUDE.md linked" resolves_to "$H/.claude/CLAUDE.md" "$REPO/global/claude/CLAUDE.md"
 check "copilot guide resolves to AGENTS.md" resolves_to "$H/.copilot/copilot-instructions.md" "$REPO/global/AGENTS.md"
+check "codex guide resolves to AGENTS.md" resolves_to "$H/.codex/AGENTS.md" "$REPO/global/AGENTS.md"
 check "hook script linked" resolves_to "$H/.agents/hooks/block-dangerous-shell.sh" "$REPO/hooks/copilot/block-dangerous-shell.sh"
 check "hook script is executable" [ -x "$H/.agents/hooks/block-dangerous-shell.sh" ]
 check "no hook script link in ~/.copilot/hooks" [ ! -e "$H/.copilot/hooks/block-dangerous-shell.sh" ]
@@ -540,10 +541,22 @@ check "hooks.json written" jq -e . "$H/.codex/hooks.json"
 check "hooks.json has the prompt and tool entries, and no session-end entry" \
   test "$(jq -r '[(.hooks.UserPromptSubmit | length), (.hooks.PreToolUse | length), (.hooks | has("SessionEnd"))] | map(tostring) | join(",")' "$H/.codex/hooks.json")" = "1,1,false"
 check "the plan reminds the engineer to trust the hook" has "$OUT" '/hooks'
+check "codex guide links through ~/.agents/AGENTS.md" test "$(readlink "$H/.codex/AGENTS.md")" = "$H/.agents/AGENTS.md"
 check "--harness codex-cli leaves Claude and Copilot alone" \
   bash -c '[ ! -e "$1/.claude/skills" ] && [ ! -e "$1/.copilot/hooks" ]' _ "$H"
 OUT=$(run --apply --harness codex-cli 2>&1)
 check "second apply changes nothing" has "$OUT" 'link/write=0'
+# A guide written by hand, such as an @ import that Codex does not follow.
+new_home
+printf '@~/.agents/AGENTS.md\n' >"$H/.codex/AGENTS.md"
+OUT=$(run --apply --harness codex-cli 2>&1); RC=$?
+check "a hand-written codex guide is a CONFLICT" has "$OUT" 'CONFLICT.*\.codex/AGENTS.md'
+check "a hand-written codex guide exits 1" [ "$RC" -eq 1 ]
+check "a hand-written codex guide is left alone" test "$(cat "$H/.codex/AGENTS.md")" = '@~/.agents/AGENTS.md'
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "--adopt replaces a hand-written codex guide" resolves_to "$H/.codex/AGENTS.md" "$REPO/global/AGENTS.md"
+check "--adopt keeps the hand-written codex guide in the backup" \
+  bash -c 'test "$(cat "$1"/.agent-skills-backup/*/.codex/AGENTS.md)" = "@~/.agents/AGENTS.md"' _ "$H"
 new_home
 printf '{"hooks":{}}\n' >"$H/.codex/hooks.json"
 OUT=$(run --apply --harness codex-cli 2>&1); RC=$?
@@ -608,6 +621,68 @@ check "a HOME with a double quote: apply exits 0" [ "$RC" -eq 0 ]
 check "a HOME with a double quote: warns" has "$OUT" 'cannot quote'
 check "a HOME with a double quote: no git-safety.json" [ ! -e "$H/.copilot/hooks/git-safety.json" ]
 check "a HOME with a double quote: no codex hooks.json" [ ! -e "$H/.codex/hooks.json" ]
+
+echo "14. Git Bash on Windows (faked uname and ln)"
+# fake_ln link: records MSYS, then makes a real link. fake_ln copy: copies, like Git Bash without native symlinks.
+# fake_ln fail: exits 1, like nativestrict without Developer Mode.
+fake_ln() {
+  case "$1" in
+    link) printf '#!/bin/sh\nprintf "%%s\\n" "$MSYS" >>"%s/msys.txt"\nexec /bin/ln "$@"\n' "$H" >"$H/bin/ln" ;;
+    copy) printf '#!/bin/sh\n[ "$1" = -s ] && shift\ncp -R "$1" "$2"\n' >"$H/bin/ln" ;;
+    fail) printf '#!/bin/sh\necho "ln: cannot create symlink" >&2\nexit 1\n' >"$H/bin/ln" ;;
+  esac
+  chmod +x "$H/bin/ln"
+}
+fake_windows() {
+  printf '#!/bin/sh\necho %s\n' "${1:-MINGW64_NT-10.0-26100}" >"$H/bin/uname"
+  chmod +x "$H/bin/uname"
+}
+new_home
+fake_windows
+fake_ln link
+OUT=$(run --apply 2>&1); RC=$?
+check "Git Bash with symlinks: apply exits 0" [ "$RC" -eq 0 ]
+check "Git Bash with symlinks: ln runs with MSYS=winsymlinks:nativestrict" grep -q 'winsymlinks:nativestrict' "$H/msys.txt"
+check "Git Bash with symlinks: skills are real links" [ -L "$H/.agents/skills/agentd-prompt" ]
+check "Git Bash with symlinks: Claude Code gets the skills" resolves_to "$H/.claude/skills/agentd-prompt" "$REPO/skills/agentd-prompt"
+new_home
+fake_windows
+fake_ln copy
+OUT=$(run 2>&1); RC=$?
+check "Git Bash without symlinks: dry run exits 2" [ "$RC" -eq 2 ]
+check "Git Bash without symlinks: says to turn on Developer Mode" has "$OUT" 'Developer Mode'
+OUT=$(run --apply 2>&1); RC=$?
+check "Git Bash without symlinks: apply exits 2" [ "$RC" -eq 2 ]
+check "Git Bash without symlinks: apply creates nothing" [ ! -e "$H/.agents" ]
+OUT=$(run --help 2>&1); RC=$?
+check "Git Bash without symlinks: --help still exits 0" [ "$RC" -eq 0 ]
+OUT=$(run --harness bogus 2>&1); RC=$?
+check "Git Bash without symlinks: a bad harness is reported as such" has "$OUT" 'unknown harness'
+new_home
+fake_windows MSYS_NT-10.0-26100
+fake_ln link
+OUT=$(run --apply --harness claude-code 2>&1); RC=$?
+check "MSYS uname: apply exits 0" [ "$RC" -eq 0 ]
+check "MSYS uname: ln runs with MSYS=winsymlinks:nativestrict" grep -q 'winsymlinks:nativestrict' "$H/msys.txt"
+new_home
+fake_windows
+fake_ln link
+OUT=$(env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS HOME="$H" PATH="$H/bin:$PATH" MSYS='enable_pcon winsymlinks:lnk' \
+  "$REPO/install.sh" --apply --harness claude-code 2>&1); RC=$?
+check "an existing MSYS keeps its options and ends with nativestrict" \
+  test "$(tail -n 1 "$H/msys.txt")" = 'enable_pcon winsymlinks:lnk winsymlinks:nativestrict'
+new_home
+fake_ln copy
+OUT=$(run --apply --harness claude-code 2>&1); RC=$?
+check "an ln that copies is reported, not called linked" has "$OUT" 'could not create a symlink at'
+check "an ln that copies prints no 'linked'" not has "$OUT" 'linked '
+check "an ln that copies exits 1" [ "$RC" -eq 1 ]
+check "an ln that copies is counted as failed" bash -c 'printf "%s" "$1" | grep -q "failed=[1-9]"' _ "$OUT"
+new_home
+fake_ln fail
+OUT=$(run --apply --harness claude-code 2>&1); RC=$?
+check "an ln that fails is reported" has "$OUT" 'could not create a symlink at'
+check "an ln that fails exits 1" [ "$RC" -eq 1 ]
 
 echo
 echo "passed=$PASS failed=$FAIL"
