@@ -22,6 +22,8 @@ mktemp() { case " $* " in *XXX*) command mktemp "$@" ;; *) command mktemp "$@" "
 export -f mktemp
 cleanup() { if [ "$FAIL" -eq 0 ]; then rm_tmp "$TMP_ROOT"; else echo "temp folder kept: $TMP_ROOT"; fi; }
 trap cleanup EXIT
+# Git Bash: a plain ln -s copies, or fails for a missing target. The test's own fixture links must be real links.
+export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
 
 check() {
   local desc=$1
