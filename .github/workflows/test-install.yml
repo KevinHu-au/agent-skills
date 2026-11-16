@@ -1,0 +1,42 @@
+# Runs tests/test-install.sh on every pull request, on macOS and on Windows in Git Bash.
+name: test-install
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test-install:
+    name: test-install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash # Git Bash on Windows
+    steps:
+      # Without this, Windows checks the shell scripts out with CRLF line endings and bash cannot run them.
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show tool versions
+        run: |
+          bash --version | head -1
+          jq --version
+          uname -a
+
+      - name: Run tests/test-install.sh
+        run: tests/test-install.sh
