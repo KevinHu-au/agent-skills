@@ -216,6 +216,9 @@ if ! OUT=$(
   deny "block-dangerous-shell.sh could not read the hook input."
   exit 0
 fi
+# jq.exe on Windows ends each output line with \r\n. Drop every \r, or the tool name "Bash\r" matches no shell tool
+# and every command passes unchecked. Dropping a \r inside a command only joins text, so it cannot hide a rule match.
+OUT=${OUT//$'\r'/}
 OUT=${OUT%.}
 TOOL_NAME=${OUT%%$'\n'*}
 OUT=${OUT#*$'\n'}

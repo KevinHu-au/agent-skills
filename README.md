@@ -32,7 +32,11 @@ repository, not here. This keeps client details out of this repository. See
 ## Set up a new machine
 
 Tested on macOS. On Windows 11 in Git Bash, the installer and the skills were tested in Claude Code, Copilot CLI and
-Codex, but the shell safety hook was not. Linux is not tested.
+Codex. Linux is not tested.
+
+> **Known limit: no shell safety hook in Codex on Windows.** Codex runs the hook, but cannot start the script there,
+> so it lets every command through, even in an agentd session. The hook works in Claude Code and Copilot CLI on
+> Windows. Until this is fixed, use Claude Code or Copilot CLI for the agentd skills on Windows.
 
 1. Install Claude Code, Copilot CLI and Codex, and start each once so `~/.claude`, `~/.copilot` and `~/.codex`
    exist. A tool you do not use is skipped.
@@ -198,7 +202,8 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
   Codex hooks cannot ask, so in Codex every "ask" is a deny that tells the agent to leave the command to you.
   Copilot CLI reads the flat `permissionDecision`. Claude Code and Codex read `hookSpecificOutput`. The
   `--harness` flag tells the script which shape to print. When the script cannot run (for example the repository
-  moved and the link broke), Copilot CLI denies the call and Codex lets it run. In Copilot that means every shell
+  moved and the link broke), Copilot CLI denies the call and Codex lets it run. On Windows, Codex cannot start the
+  script at all (see the known limit under [Set up a new machine](#set-up-a-new-machine)). In Copilot that means every shell
   command and every skill call in every Copilot session is denied until you fix the link. Claude Code should
   block the command (`onFailure: block`), but that is not yet checked live for a hook in a skill's frontmatter.
   The installer will not write a hook file when your home folder path holds a `"`, `$`, `` ` `` or `\`, because the
