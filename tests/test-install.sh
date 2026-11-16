@@ -440,8 +440,10 @@ NJ=$(mktemp -d)
 # Enough tools for the hook and for install.sh, and no jq. Section 16 uses it too.
 for t in bash env sh cat find grep head ls mkdir touch sed tr dirname basename realpath date ln readlink sort awk \
   cmp diff uname cp mv mktemp chmod rm wc cut; do
-  p=$(command -v "$t") && ln -s "$p" "$NJ/$t"
+  p=$(type -P "$t") && ln -s "$p" "$NJ/$t" # -P: the file, not the mktemp function above
 done
+# Git Bash: each tool loads msys-*.dll from its own folder, so the linked tools need the DLLs next to them.
+for f in /usr/bin/msys-*.dll; do [ -e "$f" ] && ln -s "$f" "$NJ/${f##*/}"; done
 nojq() { printf '%s' "$2" | HOME=$GH PATH=$NJ /bin/bash "$TEST_HOOK" --harness copilot --event "$1"; }
 check "copilot: missing jq on a prompt prints nothing" test -z "$(nojq prompt '{"sessionId":"j1","prompt":"/agentd-intake"}')"
 check "copilot: missing jq still writes the marker from the prompt" [ -e "$GH/.agents/hook-state/j1" ]
