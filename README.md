@@ -91,7 +91,7 @@ Options:
 | `--always-on-guard` | Opt in to the [always-on guard](#always-on-guard-optional). Off by default. |
 
 Exit status: `0` clean, `1` conflicts or failed links remain, `2` bad usage or a missing prerequisite (`realpath`,
-or symlinks on Windows).
+or on Windows, symlinks or a writable temp folder).
 
 Claude Code reads `$CLAUDE_CONFIG_DIR` when it is set. Some setups use a second
 folder, for example `~/.claude-work` for a company account. Each folder needs its

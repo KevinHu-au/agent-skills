@@ -75,10 +75,19 @@ done
 case "$(uname -s)" in
   MINGW*|MSYS*)
     export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
-    if ! links_work; then
-      say "Windows did not create a symlink. Turn on Developer Mode (Settings > System > For developers), then re-run."
-      exit 2
-    fi
+    links_rc=0
+    links_work || links_rc=$?
+    case $links_rc in
+      0) ;;
+      2)
+        say "Could not use a temp folder to check symlinks. Check that TMPDIR (or /tmp) is writable, then re-run."
+        exit 2
+        ;;
+      *)
+        say "Windows did not create a symlink. Turn on Developer Mode (Settings > System > For developers), then re-run."
+        exit 2
+        ;;
+    esac
     ;;
 esac
 
