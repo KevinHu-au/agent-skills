@@ -664,6 +664,16 @@ fake_windows() {
   printf '#!/bin/sh\necho %s\n' "${1:-MINGW64_NT-10.0-26100}" >"$H/bin/uname"
   chmod +x "$H/bin/uname"
 }
+# fake_mktemp fail: exits 1. fake_mktemp unwritable: makes $H/probe with a folder named f in it, so writing the file
+# $H/probe/f fails (chmod cannot make a folder read-only on Windows). install.sh inherits the mktemp function at the
+# top of this file, which reaches this one through command mktemp.
+fake_mktemp() {
+  case "$1" in
+    fail) printf '#!/bin/sh\necho "mktemp: failed to create directory" >&2\nexit 1\n' >"$H/bin/mktemp" ;;
+    unwritable) printf '#!/bin/sh\nmkdir -p "%s/probe/f" && echo "%s/probe"\n' "$H" "$H" >"$H/bin/mktemp" ;;
+  esac
+  chmod +x "$H/bin/mktemp"
+}
 new_home
 fake_windows
 fake_ln link
@@ -685,6 +695,32 @@ OUT=$(run --help 2>&1); RC=$?
 check "Git Bash without symlinks: --help still exits 0" [ "$RC" -eq 0 ]
 OUT=$(run --harness bogus 2>&1); RC=$?
 check "Git Bash without symlinks: a bad harness is reported as such" has "$OUT" 'unknown harness'
+new_home
+fake_windows
+fake_mktemp fail
+OUT=$(run 2>&1); RC=$?
+check "Git Bash, no temp folder: dry run exits 2" [ "$RC" -eq 2 ]
+check "Git Bash, no temp folder: says the temp folder is the cause" has "$OUT" 'Could not use a temp folder'
+check "Git Bash, no temp folder: does not blame Developer Mode" not has "$OUT" 'Developer Mode'
+OUT=$(run --apply 2>&1); RC=$?
+check "Git Bash, no temp folder: apply exits 2" [ "$RC" -eq 2 ]
+check "Git Bash, no temp folder: apply creates nothing" [ ! -e "$H/.agents" ]
+OUT=$(run --help 2>&1); RC=$?
+check "Git Bash, no temp folder: --help still exits 0" [ "$RC" -eq 0 ]
+OUT=$(run --harness bogus 2>&1); RC=$?
+check "Git Bash, no temp folder: a bad harness is reported as such" has "$OUT" 'unknown harness'
+new_home
+fake_windows
+fake_mktemp unwritable
+OUT=$(run 2>&1); RC=$?
+check "Git Bash, temp folder not writable: dry run exits 2" [ "$RC" -eq 2 ]
+check "Git Bash, temp folder not writable: says the temp folder is the cause" has "$OUT" 'Could not use a temp folder'
+check "Git Bash, temp folder not writable: does not blame Developer Mode" not has "$OUT" 'Developer Mode'
+check "Git Bash, temp folder not writable: no raw shell error" not has "$OUT" 'common.sh'
+check "Git Bash, temp folder not writable: the check folder is removed" [ ! -e "$H/probe" ]
+OUT=$(run --apply 2>&1); RC=$?
+check "Git Bash, temp folder not writable: apply exits 2" [ "$RC" -eq 2 ]
+check "Git Bash, temp folder not writable: apply creates nothing" [ ! -e "$H/.agents" ]
 new_home
 fake_windows MSYS_NT-10.0-26100
 fake_ln link

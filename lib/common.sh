@@ -138,11 +138,15 @@ write_marker() {
   fi
 }
 
-# links_work: true when ln -s makes a real symlink here. Git Bash on Windows needs Developer Mode for that.
+# links_work: 0 when ln -s makes a real symlink here, 1 when it does not (Git Bash on Windows needs Developer Mode
+# for that), 2 when no temp folder could be made or written for the check.
 links_work() {
   local d rc=1
-  d=$(mktemp -d) || return 1
-  : >"$d/f"
+  d=$(mktemp -d) || return 2
+  { : >"$d/f"; } 2>/dev/null || {
+    rm -rf "$d"
+    return 2
+  }
   ln -s "$d/f" "$d/l" 2>/dev/null && [ -L "$d/l" ] && rc=0
   rm -rf "$d"
   return $rc
