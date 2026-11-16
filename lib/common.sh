@@ -35,11 +35,13 @@ resolve() {
 
 backup_dir() { printf '%s' "$BACKUP_DIR"; }
 
+# aside_path DST: where move_aside puts DST, keeping its path relative to $HOME.
+aside_path() { printf '%s/%s' "$(backup_dir)" "${1#"$HOME"/}"; }
+
 # Move $1 into the backup folder, keeping its path relative to $HOME.
 move_aside() {
-  local dst=$1 rel dest
-  rel=${dst#"$HOME"/}
-  dest="$(backup_dir)/$rel"
+  local dst=$1 dest
+  dest=$(aside_path "$dst")
   mkdir -p "$(dirname "$dest")"
   mv "$dst" "$dest"
 }
@@ -64,12 +66,18 @@ handle_conflict() {
   local dst=$1 src=$2 action=$3 kind
   kind=$(describe_existing "$dst" "$src")
   if [ "$ADOPT" = 1 ]; then
-    N_ADOPT=$((N_ADOPT + 1))
     if is_apply; then
-      move_aside "$dst"
+      # A failed move leaves the old file in place. The caller must not replace it then, or it would be lost.
+      if ! move_aside "$dst"; then
+        N_FAIL=$((N_FAIL + 1))
+        warn "could not move $dst to $(backup_dir). It was not replaced. Check that it is intact."
+        return 1
+      fi
+      N_ADOPT=$((N_ADOPT + 1))
       say "  adopted   $dst ($kind; old copy moved to $(backup_dir))"
       return 0
     fi
+    N_ADOPT=$((N_ADOPT + 1))
     say "  would adopt $dst ($kind; old copy would move to a backup folder)"
     return 1
   fi
@@ -82,7 +90,7 @@ handle_conflict() {
 # TARGET is what the new link points at (default SRC). Use it to keep the
 # ~/.claude -> ~/.agents -> repo chain while still checking against the repo.
 link_item() {
-  local src=$1 dst=$2 target=${3:-$1}
+  local src=$1 dst=$2 target=${3:-$1} adopted=0
   if [ ! -e "$src" ]; then
     warn "source missing, skipped: $src"
     return 0
@@ -99,6 +107,7 @@ link_item() {
       return 0
     fi
     handle_conflict "$dst" "$src" "link it" || return 0
+    adopted=1
   fi
   if is_apply; then
     mkdir -p "$(dirname "$dst")"
@@ -108,7 +117,12 @@ link_item() {
       say "  linked    $dst -> $target"
     else
       N_FAIL=$((N_FAIL + 1))
-      warn "could not create a symlink at $dst"
+      # --adopt moved the old item aside. Put it back, unless ln left something at DST.
+      if [ "$adopted" = 1 ] && [ ! -e "$dst" ] && [ ! -L "$dst" ] && mv "$(aside_path "$dst")" "$dst"; then
+        warn "could not create a symlink at $dst. The old item is back in place."
+      else
+        warn "could not create a symlink at $dst"
+      fi
     fi
   else
     N_LINK=$((N_LINK + 1))
@@ -155,7 +169,7 @@ links_work() {
 # render_item TEMPLATE DST: write TEMPLATE to DST with @HOME@ replaced by $HOME.
 # Used for files that need an absolute path, so they cannot be symlinks.
 render_item() {
-  local tmpl=$1 dst=$2 tmp esc
+  local tmpl=$1 dst=$2 tmp esc new exists=0
   # Escape for JSON (\ and "), then for the sed replacement (\ & and the # delimiter).
   esc=$(printf '%s' "$HOME" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | sed -e 's/[\\&#]/\\&/g')
   # The hook command quotes the path in double quotes, which cannot hold " $ ` or \ safely.
@@ -165,29 +179,69 @@ render_item() {
       return 0
       ;;
   esac
-  tmp=$(mktemp)
-  sed "s#@HOME@#$esc#g" "$tmpl" >"$tmp"
+  if [ ! -f "$tmpl" ]; then
+    warn "source missing, skipped: $tmpl"
+    return 0
+  fi
+  # Render and stage the new file before any conflict handling, so --adopt does not move a file aside that it then
+  # cannot replace.
+  tmp=$(mktemp) || {
+    N_FAIL=$((N_FAIL + 1))
+    warn "could not make a temp file to render $dst. Check that TMPDIR (or /tmp) is writable."
+    return 0
+  }
+  if ! sed "s#@HOME@#$esc#g" "$tmpl" >"$tmp"; then
+    rm -f "$tmp"
+    N_FAIL=$((N_FAIL + 1))
+    warn "could not render $dst from $tmpl"
+    return 0
+  fi
   if [ -e "$dst" ] || [ -L "$dst" ]; then
+    exists=1
     if [ ! -L "$dst" ] && cmp -s "$tmp" "$dst"; then
       say "  ok        $dst"
       N_OK=$((N_OK + 1))
       rm -f "$tmp"
       return 0
     fi
-    if ! handle_conflict "$dst" "$tmp" "write it"; then
-      rm -f "$tmp"
-      return 0
-    fi
   fi
-  N_LINK=$((N_LINK + 1))
-  if is_apply; then
-    mkdir -p "$(dirname "$dst")"
-    cp "$tmp" "$dst"
-    say "  wrote     $dst"
-  else
-    say "  write     $dst (rendered from $(basename "$tmpl"))"
+  # Nothing is replaced in a dry run, or when DST is a conflict without --adopt: report it and stop.
+  if ! is_apply || { [ "$exists" = 1 ] && [ "$ADOPT" != 1 ]; }; then
+    if [ "$exists" = 1 ]; then
+      handle_conflict "$dst" "$tmp" "write it"
+    else
+      N_LINK=$((N_LINK + 1))
+      say "  write     $dst (rendered from $(basename "$tmpl"))"
+    fi
+    rm -f "$tmp"
+    return 0
+  fi
+  # Copy the new file next to DST first. A copy that fails, or stops partway, never touches DST.
+  new="$dst.agentd-new.$$"
+  if ! { mkdir -p "$(dirname "$dst")" && cp "$tmp" "$new"; }; then
+    rm -f "$tmp" "$new"
+    N_FAIL=$((N_FAIL + 1))
+    warn "could not write $dst"
+    return 0
   fi
   rm -f "$tmp"
+  if [ "$exists" = 1 ] && ! handle_conflict "$dst" "$new" "write it"; then
+    rm -f "$new"
+    return 0
+  fi
+  # Same folder, so mv is a rename. If it fails after --adopt moved DST aside, put the old file back.
+  if mv -f "$new" "$dst"; then
+    N_LINK=$((N_LINK + 1))
+    say "  wrote     $dst"
+    return 0
+  fi
+  rm -f "$new"
+  N_FAIL=$((N_FAIL + 1))
+  if [ "$exists" = 1 ] && mv "$(aside_path "$dst")" "$dst"; then
+    warn "could not write $dst. The old file is back in place."
+  else
+    warn "could not write $dst"
+  fi
 }
 
 version_ge() {

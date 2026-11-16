@@ -665,12 +665,15 @@ fake_windows() {
   chmod +x "$H/bin/uname"
 }
 # fake_mktemp fail: exits 1. fake_mktemp unwritable: makes $H/probe with a folder named f in it, so writing the file
-# $H/probe/f fails (chmod cannot make a folder read-only on Windows). install.sh inherits the mktemp function at the
-# top of this file, which reaches this one through command mktemp.
+# $H/probe/f fails (chmod cannot make a folder read-only on Windows). fake_mktemp file: fails for a file, but runs the
+# real mktemp for a folder (-d), so the Windows symlink check still passes. install.sh inherits the mktemp function
+# at the top of this file, which reaches this one through command mktemp.
 fake_mktemp() {
   case "$1" in
     fail) printf '#!/bin/sh\necho "mktemp: failed to create directory" >&2\nexit 1\n' >"$H/bin/mktemp" ;;
     unwritable) printf '#!/bin/sh\nmkdir -p "%s/probe/f" && echo "%s/probe"\n' "$H" "$H" >"$H/bin/mktemp" ;;
+    file) printf '#!/bin/sh\n[ "$1" = -d ] && exec "%s" "$@"\necho "mktemp: failed to create file" >&2\nexit 1\n' \
+      "$(type -P mktemp)" >"$H/bin/mktemp" ;;
   esac
   chmod +x "$H/bin/mktemp"
 }
@@ -894,6 +897,70 @@ new_home
 OUT=$(env -u CLAUDE_CONFIG_DIR -u CLAUDE_CONFIG_DIRS -u MSYS HOME="$H" PATH="$H/bin:$NOJQ" "$REPO/install.sh" --always-on-guard 2>&1)
 check "--always-on-guard without jq warns that the guard checks nothing" has "$OUT" 'always-on guard checks nothing without it'
 check "missing jq is warned about once, not once per tool" test "$(printf '%s\n' "$OUT" | grep -c 'jq not found')" -eq 1
+
+echo "17. A rendered hook file that cannot be made or written"
+new_home
+fake_mktemp file
+OUT=$(run --apply --harness codex-cli 2>&1); RC=$?
+check "render, no temp file: apply exits 1" [ "$RC" -eq 1 ]
+check "render, no temp file: says the temp folder is the cause" has "$OUT" 'could not make a temp file to render .*hooks.json'
+check "render, no temp file: counted as failed" has "$OUT" 'failed=1 warn='
+check "render, no temp file: not claimed as written" not has "$OUT" 'wrote .*hooks.json'
+check "render, no temp file: no hooks.json" [ ! -e "$H/.codex/hooks.json" ]
+new_home
+fake_mktemp file
+MINE='{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"mine"}]}]}}'
+printf '%s\n' "$MINE" >"$H/.codex/hooks.json"
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "render, no temp file, --adopt: apply exits 1" [ "$RC" -eq 1 ]
+check "render, no temp file, --adopt: the engineer's hooks.json stays in place" test "$(cat "$H/.codex/hooks.json")" = "$MINE"
+check "render, no temp file, --adopt: nothing is moved to the backup folder" [ ! -e "$H/.agent-skills-backup" ]
+new_home
+printf '#!/bin/sh\necho "cp: cannot create regular file" >&2\nexit 1\n' >"$H/bin/cp"
+chmod +x "$H/bin/cp"
+OUT=$(run --apply --harness codex-cli 2>&1); RC=$?
+check "render, write fails: apply exits 1" [ "$RC" -eq 1 ]
+check "render, write fails: says it could not write" has "$OUT" 'could not write .*hooks.json'
+check "render, write fails: counted as failed" has "$OUT" 'failed=1 warn='
+check "render, write fails: not claimed as written" not has "$OUT" 'wrote .*hooks.json'
+check "render, write fails: no half-written file is left" bash -c '! ls "$1"/.codex/hooks.json* >/dev/null 2>&1' _ "$H"
+printf '%s\n' "$MINE" >"$H/.codex/hooks.json"
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "render, write fails, --adopt: apply exits 1" [ "$RC" -eq 1 ]
+check "render, write fails, --adopt: the engineer's hooks.json stays in place" test "$(cat "$H/.codex/hooks.json")" = "$MINE"
+check "render, write fails, --adopt: nothing is moved to the backup folder" [ ! -e "$H/.agent-skills-backup" ]
+new_home
+printf '%s\n' "$MINE" >"$H/.codex/hooks.json"
+: >"$H/.agent-skills-backup" # a file, so the backup folder cannot be made
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "backup folder cannot be made, --adopt: apply exits 1" [ "$RC" -eq 1 ]
+check "backup folder cannot be made, --adopt: says the file was not replaced" has "$OUT" 'could not move .*hooks.json.*not replaced'
+check "backup folder cannot be made, --adopt: not claimed as adopted" not has "$OUT" 'adopted .*hooks.json'
+check "backup folder cannot be made, --adopt: the engineer's hooks.json is not overwritten" \
+  test "$(cat "$H/.codex/hooks.json")" = "$MINE"
+check "backup folder cannot be made, --adopt: no staged file is left" \
+  bash -c '! ls "$1"/.codex/hooks.json.agentd-new.* >/dev/null 2>&1' _ "$H"
+# An mv that fails only for the staged file, so the move into the backup folder still works.
+new_home
+printf '%s\n' "$MINE" >"$H/.codex/hooks.json"
+printf '#!/bin/sh\nfor a; do case "$a" in *.agentd-new.*) echo "mv: cannot move" >&2; exit 1 ;; esac; done\nexec "%s" "$@"\n' \
+  "$(type -P mv)" >"$H/bin/mv"
+chmod +x "$H/bin/mv"
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "final mv fails, --adopt: apply exits 1" [ "$RC" -eq 1 ]
+check "final mv fails, --adopt: says the old file is back" has "$OUT" 'could not write .*hooks.json.*back in place'
+check "final mv fails, --adopt: the engineer's hooks.json is back in place" test "$(cat "$H/.codex/hooks.json")" = "$MINE"
+check "final mv fails, --adopt: no staged file is left" \
+  bash -c '! ls "$1"/.codex/hooks.json.agentd-new.* >/dev/null 2>&1' _ "$H"
+# link_item: ln fails after --adopt moved a hand-written guide aside. fake_linux skips the Windows symlink check.
+new_home
+fake_linux
+fake_ln fail
+printf '%s\n' '@~/.agents/AGENTS.md' >"$H/.codex/AGENTS.md"
+OUT=$(run --apply --adopt --harness codex-cli 2>&1); RC=$?
+check "ln fails, --adopt: apply exits 1" [ "$RC" -eq 1 ]
+check "ln fails, --adopt: says the old item is back" has "$OUT" 'could not create a symlink at .*\.codex/AGENTS.md.*back in place'
+check "ln fails, --adopt: the hand-written guide is back in place" test "$(cat "$H/.codex/AGENTS.md")" = '@~/.agents/AGENTS.md'
 
 echo
 echo "passed=$PASS failed=$FAIL"
