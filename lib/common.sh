@@ -116,6 +116,28 @@ link_item() {
   fi
 }
 
+# write_marker DST: create the empty file DST when it is missing. Used for the opt-in always-on guard.
+write_marker() {
+  local dst=$1
+  if [ -e "$dst" ]; then
+    say "  ok        $dst"
+    N_OK=$((N_OK + 1))
+    return 0
+  fi
+  if is_apply; then
+    if { mkdir -p "$(dirname "$dst")" && : >"$dst"; } 2>/dev/null && [ -f "$dst" ]; then
+      N_LINK=$((N_LINK + 1))
+      say "  wrote     $dst"
+    else
+      N_FAIL=$((N_FAIL + 1))
+      warn "could not write $dst"
+    fi
+  else
+    N_LINK=$((N_LINK + 1))
+    say "  write     $dst (empty marker)"
+  fi
+}
+
 # links_work: true when ln -s makes a real symlink here. Git Bash on Windows needs Developer Mode for that.
 links_work() {
   local d rc=1

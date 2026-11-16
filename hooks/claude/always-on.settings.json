@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$HOME/.agents/hooks/block-dangerous-shell.sh\"; [ ! -x \"$f\" ] || exec \"$f\" --harness claude --event tool --always-on; cat >/dev/null; [ ! -e \"$HOME/.agents/always-on-guard\" ] || echo \"always-on guard: $f is missing or not executable, so this command is not checked.\" >&2",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -12,6 +12,7 @@ skills/         General skills, one folder each. Each holds a SKILL.md.
 global/         The global guide (AGENTS.md), the Claude Code CLAUDE.md that imports it, bin/rm-scratch and bin/onboarding-pack.
 hooks/copilot/  The shell safety hook, used by Claude Code, Copilot CLI and Codex. git-safety.json.tmpl is the Copilot template.
 hooks/codex/    hooks.json.tmpl, the Codex template for the same hook.
+hooks/claude/   always-on.settings.json, the Claude Code snippet for the optional always-on guard.
 harness/        One script per tool: claude-code.sh, copilot-cli.sh, codex-cli.sh.
 lib/common.sh   Link, backup and conflict logic shared by the scripts.
 setup.manifest  Optional plugins to reinstall by hand (Superpowers).
@@ -87,6 +88,7 @@ Options:
 | `--apply` | Create the missing links and files. Leave conflicts alone. |
 | `--adopt` | With `--apply`, move conflicting items to the backup folder and link ours. |
 | `--harness LIST` | Limit to some of `claude-code`, `copilot-cli` and `codex-cli` (comma separated). |
+| `--always-on-guard` | Opt in to the [always-on guard](#always-on-guard-optional). Off by default. |
 
 Exit status: `0` clean, `1` conflicts or failed links remain, `2` bad usage or a missing prerequisite (`realpath`,
 or symlinks on Windows).
@@ -147,8 +149,9 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
   status: 0 success, 1 no pack recorded, 2 bad usage, 3 the recorded folder is gone, 4 refused.
   `verify-folder <app>`, `verify-find` and `verify-set <folder>` do the same for a generated verify skill, with the
   registry `~/.agents/verify-skills.tsv` and the default folder `~/.agents/verify/<app>/`.
-- `block-dangerous-shell.sh` is the shell safety hook for the agentd skills. It checks shell commands only in a
-  session that has started an agentd skill. Each tool gets it a different way:
+- `block-dangerous-shell.sh` is the shell safety hook for the agentd skills. By design, it checks shell commands only
+  in a session that has started an agentd skill. An ordinary session uses the tool's own permission prompts, unless
+  you turn on the [always-on guard](#always-on-guard-optional). Each tool gets the hook a different way:
 
   | Tool | Where the hook is set | When it checks commands |
   |---|---|---|
@@ -223,6 +226,58 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
   aside too, so merge by hand when the file has hooks of your own. A file that holds both agentd entries, with the
   same command and matcher, is reported as `ok`, whatever other hooks it has. This check needs `jq`.
 - Edit skills in this repository, not through the links. `git pull` then updates both tools.
+
+## Always-on guard (optional)
+
+By default, the shell safety hook checks commands only inside an agentd skill. The installer adds no hook that
+acts in an ordinary session. The strongest protection against an unwanted push does not depend on any agent:
+turn on branch protection for the main branches on the remote server.
+
+If you also want the agent stopped in every session, opt in to the always-on guard:
+
+```bash
+./install.sh --apply --always-on-guard
+```
+
+What it does:
+
+- It writes one empty file, `~/.agents/always-on-guard`. The hook checks for this file on every shell command.
+- While the file exists, every Copilot CLI and Codex session gets the deny rules. So does every Claude Code session,
+  once you merge the snippet below. The deny rules are: `git push`; `git reset --hard`; a forced `git clean`;
+  `git branch -D`, `-M` or `-f`; `git checkout -f`, `-B` or `.`; `git switch -C`, `--force`, `--force-create` or
+  `--discard-changes`; and `git restore .`.
+- The ask rules (removing files, `git commit`, pull requests, SQL writes) still run only inside an agentd skill.
+- Outside an agentd skill, the guard stays silent when it cannot read the command, for example when `jq` is
+  missing. So it never blocks an ordinary session for that reason, but it then checks nothing. The installer warns
+  when `jq` is missing, and the hook writes a line to the tool's hook log.
+
+Per tool:
+
+- **Copilot CLI and Codex:** nothing more to do. Their hook files already run in every session and read the file.
+- **Claude Code:** the installer never edits `settings.json`, so it prints a snippet. Merge it into the `"hooks"` of
+  the `settings.json` in each Claude Code configuration folder the installer names. These are the folders it links:
+  `~/.claude`, `$CLAUDE_CONFIG_DIR`, `$CLAUDE_CONFIG_DIRS` and `~/.agents/claude-config-dirs`. A later run with the
+  flag reports `ok` for a folder that holds the entry, and prints the snippet only for a folder that lacks it. The
+  snippet is also in `hooks/claude/always-on.settings.json`.
+
+**To turn the guard off, delete the file yourself:**
+
+```bash
+rm ~/.agents/always-on-guard
+```
+
+The guard stops at once in all three tools. Then remove the Claude Code snippet from each `settings.json` too. A
+leftover snippet does nothing while the file is gone, and it stays silent if the hook script is missing, for example
+after you remove this repository. Running `./install.sh` again without the flag does not turn the guard off. The
+installer never deletes anything, and while the file exists it prints a note that the guard is on.
+
+The guard can also deny a harmless command. A command word inside quoted text counts, so a commit message, a pull
+request body or an `echo` that names `git push` is denied too. Inside agentd skills this was always the case; with
+the guard it happens in every session. Reword the text, or run that command yourself.
+
+The same limits apply as for the hook inside agentd skills: a regex cannot catch every shell form (see the list
+above), and on Windows Codex cannot start the hook (see the known limit under
+[Set up a new machine](#set-up-a-new-machine)).
 
 ## Safety rules for the scripts
 
