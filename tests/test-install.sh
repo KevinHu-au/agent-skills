@@ -684,6 +684,25 @@ OUT=$(run --apply --harness claude-code 2>&1); RC=$?
 check "an ln that fails is reported" has "$OUT" 'could not create a symlink at'
 check "an ln that fails exits 1" [ "$RC" -eq 1 ]
 
+echo "15. jq that ends lines with \\r\\n (jq.exe on Windows)"
+CRLF_BIN=$(mktemp -d)
+printf '#!/bin/sh\n"%s" "$@" | perl -pe '"'"'s/\\n/\\r\\n/'"'"'\n' "$(command -v jq)" >"$CRLF_BIN/jq"
+chmod +x "$CRLF_BIN/jq"
+check "the fake jq really writes \\r\\n" bash -c 'printf "{\"a\":\"Bash\"}" | "$1/jq" -r .a | od -c | grep -q "\\\\r"' _ "$CRLF_BIN"
+crlf() { printf '%s' "$3" | HOME=$GH PATH="$CRLF_BIN:$PATH" "$TEST_HOOK" --harness "$1" --event "$2"; }
+check "CRLF jq, claude: git push is denied" \
+  test "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}' | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "CRLF jq, claude: rm asks" \
+  test "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"rm -f x.txt"}}' | jq -r .hookSpecificOutput.permissionDecision)" = ask
+check "CRLF jq, claude: an ordinary command gets no output" \
+  test -z "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"ls -la"}}')"
+crlf copilot prompt "$(cp_prompt crlf1 '/agentd-diagnose fix the login bug')" >/dev/null
+check "CRLF jq, copilot: after /agentd-, git push is denied" \
+  test "$(crlf copilot tool "$(cp_tool crlf1 'git push origin main')" | jq -r .permissionDecision)" = deny
+crlf codex prompt "$(cx_prompt crlf2 'run $agentd-diagnose on the login bug')" >/dev/null
+check "CRLF jq, codex: after \$agentd-, git push is denied" \
+  test "$(crlf codex tool "$(cx_tool crlf2 'git push origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]
