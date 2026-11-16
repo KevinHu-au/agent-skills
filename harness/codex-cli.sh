@@ -35,6 +35,12 @@ harness_codex_cli() {
   fi
   # Same pattern as Copilot: the Codex guide points at the shared AGENTS.md.
   link_item "$REPO_ROOT/global/AGENTS.md" "$HOME/.codex/AGENTS.md" "$HOME/.agents/AGENTS.md"
+  # Without the template there is no hook to install, check or trust.
+  if [ ! -f "$tmpl" ] || [ ! -r "$tmpl" ]; then
+    warn "source missing or unreadable, skipped: $tmpl"
+    print_manifest codex-cli
+    return 0
+  fi
   # Codex reads one hooks.json per configuration folder. A file that already holds our two entries is fine, even
   # with other hooks next to them. Any other existing file is a CONFLICT: merge our two entries into it by hand,
   # or use --adopt to move it aside. The script never edits the file.
