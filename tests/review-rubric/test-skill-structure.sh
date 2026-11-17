@@ -229,7 +229,7 @@ test_no_absolute_home_paths() {
 
 test_prose_lines_keep_120_characters() {
   local f
-  for f in "$SKILL" "$TPL" "$REFS/reading-the-rubric.md" "$REFS/risk-tiers.md"; do
+  for f in "$SKILL" "$TPL" "$REFS/reading-the-rubric.md" "$REFS/risk-tiers.md" "$REFS/refresh.md"; do
     [ -f "$f" ] || return 1
     perl -CSD -ne 'chomp; exit 1 if length > 120 && !/^\|/ && !/^description: /' "$f" || return 1
   done
@@ -443,6 +443,45 @@ test_skill_drafts_risk_tiers_rows() {
     has_all "$SKILL" 'every `told by` criterion and Risk tiers row' "and the Risk tiers section too"
 }
 
+REFRESH="$REFS/refresh.md"
+
+test_refresh_reference_is_followed() {
+  has_all "$SKILL" "references/refresh.md" "never replace it without a yes" &&
+    [ "$(h2_list "$REFRESH" | tr '\n' '|')" = "Gaps|Choices|What the Flow does|What a refresh keeps|" ]
+}
+
+test_refresh_names_the_gaps_and_risk_tiers_is_not_one() {
+  section_has "$REFRESH" Gaps "by criterion ID" 'no `Applies to` line' "no Severity line" "no Source line" \
+    'ends in `(Block)`, `(Major)` or `(Minor)`' 'A missing `### Risk tiers` section is not a gap'
+}
+
+test_refresh_offers_four_choices_in_order() {
+  in_order "$REFRESH" "1. **Fix the gaps only.**" "2. **Specific edits.**" "3. **Full refresh.**" "4. **Nothing.**" &&
+    section_has "$REFRESH" Choices "change no line that exists" 'write `told by <role>`' \
+      'When the Source is `inferred:`, write `Minor`' 'A named `told by` criterion or row may change too' \
+      "Change an existing criterion only when the engineer names it" "With any choice but Nothing" \
+      "only when the engineer says yes"
+}
+
+test_refresh_flow_saves_in_place_and_keeps_the_header() {
+  section_has "$REFRESH" "What the Flow does" "Fix the gaps only reads none" "Only Full refresh adds criteria" \
+    'asks for the Owner only when the header has no `Owner:` line' "saves to the place where the rubric was found" &&
+    section_has "$REFRESH" "What a refresh keeps" "Every ID" "that the engineer does not name" \
+      "Every section the template does not have" \
+      'Fix the gaps only and Specific edits change only `Date:`' 'Full refresh sets `Scanned commit:`' \
+      'A rubric in `AGENTS.md` has no header lines: add none' &&
+    has_all "$SKILL" 'except in a refresh that `references/refresh.md`' "It changes only what the engineer names"
+}
+
+test_missing_fields_have_a_reading_default() {
+  has_all "$READING" 'A criterion with no `Applies to` line counts as `all`' "no Severity line takes the severity" \
+    "or else counts as Minor" "List the IDs of such criteria in one line" 'no Source line counts as `inferred:`' \
+    "A severity word anywhere else in the heading does not count" &&
+    has_all "$TPL" 'treats a missing `Applies to` line as `all`' &&
+    has_all "$DEV_REV" 'A criterion with no `Applies to` line counts as `all`' 'no Source line counts as `inferred:`' \
+      "a heading that ends in \`(Block)\`, \`(Major)\` or \`(Minor)\`"
+}
+
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
@@ -517,6 +556,11 @@ check "risk-tiers.md shapes the output lines" test_risk_tiers_output_lines
 check "the template has the Risk tiers section" test_template_risk_tiers_section
 check "the reading reference skips Risk tiers" test_reading_reference_skips_risk_tiers
 check "the skill drafts and keeps Risk tiers rows" test_skill_drafts_risk_tiers_rows
+check "SKILL.md points a refresh to refresh.md" test_refresh_reference_is_followed
+check "a refresh names missing Applies to, Severity and Source lines; Risk tiers is not a gap" test_refresh_names_the_gaps_and_risk_tiers_is_not_one
+check "a refresh offers four choices in order" test_refresh_offers_four_choices_in_order
+check "a refresh saves in place and keeps the header" test_refresh_flow_saves_in_place_and_keeps_the_header
+check "missing Applies to, Severity and Source lines have a reading default" test_missing_fields_have_a_reading_default
 
 echo
 echo "passed=$PASS failed=$FAIL"

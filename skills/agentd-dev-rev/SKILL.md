@@ -173,7 +173,7 @@ Check these first:
 - Every stop condition in the blocks. If the work should have stopped, say so.
 - Every test under `Failing test first` and `Tests to write first` exists, and asserts what the block says.
 - The risk tier above. Name each staged change with a signal its reasons miss, and the tier that signal gives. Report it as minor: a tier finding changes no code.
-- Every project review criterion above whose `Applies to` matches a staged path. Cite its criterion ID in each finding. Block is blocker, Major is major, Minor is minor. A criterion whose Source starts `inferred:` is minor. No criterion lowers a built-in blocker.
+- Every project review criterion above whose `Applies to` matches a staged path. Cite its criterion ID in each finding. Block is blocker, Major is major, Minor is minor. A criterion whose Source starts `inferred:` is minor. A criterion with no `Applies to` line counts as `all`. One with no Source line counts as `inferred:`. One with no Severity line takes the severity of a heading that ends in `(Block)`, `(Major)` or `(Minor)`, or else is minor; a severity word anywhere else in the heading does not count. No criterion lowers a built-in blocker.
 
 Focus areas:
 - TDD/coverage: changed/fixed behavior has tests, preferably written before implementation.

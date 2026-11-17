@@ -32,7 +32,8 @@ reuse an ID. A criterion that is dropped keeps its number: leave a gap.
 - Write only a rule a reviewer can check from the diff or a command. Drop "write clean code".
 - Skip a style rule that the lint or format check already enforces. Name that command once, in the optional `Lint:`
   header line.
-- `Applies to` narrows the rule to the paths where it holds. Use `all` only when it holds everywhere.
+- `Applies to` narrows the rule to the paths where it holds. Use `all` only when it holds everywhere. A reader treats
+  a missing `Applies to` line as `all`.
 - A criterion with no source is `inferred:` and `Minor`. Add a source to raise it.
 
 Two examples, from invented projects.

@@ -17,6 +17,10 @@ recorded. For any other failure (the folder is gone, the tool is missing), say s
 ## Read it
 
 - A criterion starts at a `### R<number>:` heading. Its fields are Rule, Applies to, Severity, How to check and Source.
+- Missing lines have a default. A criterion with no `Applies to` line counts as `all`. One with no Source line counts
+  as `inferred:`. One with no Severity line takes the severity of a heading that ends in `(Block)`, `(Major)` or
+  `(Minor)`, or else counts as Minor. A severity word anywhere else in the heading does not count. List the IDs of
+  such criteria in one line of the engineer's notes, and suggest `/agentd-review-rubric` to add the lines.
 - Check a criterion only when its `Applies to` glob matches a path the change touches, or says `all`. The glob is
   relative to the repository root.
 - Use the Severity as written. A criterion whose Source starts with `inferred:` counts as Minor, whatever its Severity
@@ -29,7 +33,7 @@ recorded. For any other failure (the folder is gone, the tool is missing), say s
 - When you review another person's branch and the rubric file is tracked, read it from the base
   (`git show <base>:<path>`), not from the branch. Say when the change edits the rubric. An untracked file, or one in a
   folder outside the repository, is the engineer's own: read the working copy.
-- A criterion with no Source line counts as `inferred:`. Several globs in `Applies to` (separated by commas) match when
+- Several globs in `Applies to` (separated by commas) match when
   any one matches. `**` matches zero or more folders. When you
   review the engineer's own staged work, read the working copy.
 - A `## Review rubric` section in `AGENTS.md` with no `### R<number>:` heading is not a hit: go on to the next place.
