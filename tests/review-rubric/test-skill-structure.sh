@@ -229,7 +229,7 @@ test_no_absolute_home_paths() {
 
 test_prose_lines_keep_120_characters() {
   local f
-  for f in "$SKILL" "$TPL" "$REFS/reading-the-rubric.md"; do
+  for f in "$SKILL" "$TPL" "$REFS/reading-the-rubric.md" "$REFS/risk-tiers.md"; do
     [ -f "$f" ] || return 1
     perl -CSD -ne 'chomp; exit 1 if length > 120 && !/^\|/ && !/^description: /' "$f" || return 1
   done
@@ -241,7 +241,7 @@ test_template_exists_and_is_referenced() {
   has_all_cs "$SKILL" "references/rubric-template.md" && [ -s "$TPL" ]
 }
 
-test_template_h2s_exact() { [ -s "$TPL" ] && [ "$(h2_list "$TPL" | tr '\n' '|')" = "File|Writing a criterion|" ]; }
+test_template_h2s_exact() { [ -s "$TPL" ] && [ "$(h2_list "$TPL" | tr '\n' '|')" = "File|Writing a criterion|Risk tiers|" ]; }
 
 test_template_header_lines() {
   has_all "$TPL" "# Review rubric" "Scanned commit:" "Date:" "Owner:" "Built-in rules win" "never lowers"
@@ -330,9 +330,10 @@ test_reading_reference_no_rubric_line() {
 test_both_review_skills_point_to_the_reference() {
   local f
   for f in "$PR_REVIEW" "$DEV_REV"; do
-    has_all "$f" "$POINTER" "resolved from this" "is missing, say so in one line" || return 1
+    has_all "$f" "$POINTER" "resolved from this" "is missing, say so in one line" "$TIERS_POINTER" \
+      "report no tier" || return 1
   done
-  [ -s "$REPO/skills/agentd-pr-review/$POINTER" ]
+  [ -s "$REPO/skills/agentd-pr-review/$POINTER" ] && [ -s "$REPO/skills/agentd-pr-review/$TIERS_POINTER" ]
 }
 
 test_pr_review_cites_the_criterion_id() { has_all "$PR_REVIEW" "criterion ID" "Applies to"; }
@@ -364,6 +365,82 @@ test_dev_rev_prompt_criteria_sit_under_their_heading() {
 
 test_dev_rev_gives_the_rubric_to_the_implementer_and_reviewer() {
   has_all "$DEV_REV" "Project review criteria" "before you write code" "criterion ID"
+}
+
+# ---------------------------------------------------------------- references/risk-tiers.md
+
+TIERS="$REFS/risk-tiers.md"
+TIERS_POINTER='../agentd-review-rubric/references/risk-tiers.md'
+
+test_risk_tiers_h2s_exact() {
+  [ -s "$TIERS" ] && [ "$(h2_list "$TIERS" | tr '\n' '|')" = "Tiers|Signals|Setting the tier|Output|" ]
+}
+
+test_risk_tiers_has_four_tiers() {
+  has_all_cs "$TIERS" "| T0 Trivial |" "| T1 Standard |" "| T2 High |" "| T3 Critical |"
+}
+
+test_risk_tiers_changed_tests_are_not_t0() {
+  has_all_cs "$TIERS" "| T0 Trivial | Changes only documentation, comments or new tests." "no existing test changes" &&
+    section_has "$TIERS" Tiers "keeps every assertion and expected value is T1" &&
+    section_has "$TIERS" Tiers "A new test method in" "an existing test file is a new test" "acts as a directive" &&
+    section_has "$TIERS" Signals "An existing test loses or changes a check" "assertion or expected value changes" \
+      "skipped or ignored" "snapshot or golden file" "shared fixture"
+}
+
+test_risk_tiers_setting_rules() {
+  section_has "$TIERS" "Setting the tier" "--no-renames" "old path and its new path" "the task's paths only" \
+    "without staged files that are not part of the" "The lowering holds when you set the tier again" \
+    "keep the lowering line"
+}
+
+test_risk_tiers_signal_and_row_limits() {
+  section_has "$TIERS" Signals "an \`Applies to\` other than \`all\`" "The review rubric or the project contract changes" \
+    "in the base or in the change" &&
+    section_has "$TIERS" Signals 'a Source that is not `inferred:`' "never lowers production code below T1" \
+    'Source is `inferred:` gives at most T2' &&
+    has_all_cs "$TIERS" "The \`Risk tier:\` line and the list of changed files." &&
+    section_has "$TPL" "Risk tiers" "<T1, T2 or T3>" "There is no T0 row" "gives at most T2" &&
+    ! grep -qF "<T0, T1, T2 or T3>" "$TPL" &&
+    section_has "$SKILL" Flow "Propose a row only where a" "needs a higher tier than the built-in signals" \
+      'use `AGENTS.md` and mark the fact `conflict:`' &&
+    section_has "$SKILL" Criteria 'marked `inferred:` or `unknown:` is `inferred:` too'
+}
+
+test_risk_tiers_is_reported_only() {
+  has_all "$TIERS" "The tier is reported only" "changes no step, gate, severity or vote"
+}
+
+test_risk_tiers_unknown_counts_as_t2() { section_has "$TIERS" Signals "unknown:" "count it as T2"; }
+
+test_risk_tiers_rows_only_raise() {
+  section_has "$TIERS" Signals "A row may raise a tier" "never lowers a built-in signal" &&
+    section_has "$TIERS" "Setting the tier" "Risk areas twice: in the base and in the change" "use the higher tier" \
+      "One the change removes or" "lowers still counts" "has no base: read the working" \
+      "look in every place the lookup names" "read the change only"
+}
+
+test_risk_tiers_only_up_and_engineer_lowers() {
+  section_has "$TIERS" "Setting the tier" "only goes up" "Only the engineer lowers a tier" \
+    "lowered by the engineer from T<n>"
+}
+
+test_risk_tiers_output_lines() {
+  section_has "$TIERS" Output "Risk tier: T<n>:" "Read first:" "Tier rows changed:" \
+    "never in text the engineer pastes elsewhere" "no T2 or T3 signal"
+}
+
+test_template_risk_tiers_section() {
+  section_has "$TPL" "Risk tiers" "### Risk tiers" "| Paths | Tier | Why | Source |" "At most 10 rows" \
+    "never lowers a built-in signal" "It is not a criterion" "risk-tiers.md"
+}
+
+test_reading_reference_skips_risk_tiers() { has_all "$READING" '`### Risk tiers` section is not a criterion' "risk-tiers.md"; }
+
+test_skill_drafts_risk_tiers_rows() {
+  section_has "$SKILL" Flow "Risk areas" '`### Risk tiers` rows' "leave the section out" "criteria and rows" &&
+    section_has "$SKILL" Criteria "Risk tiers rows" "references/risk-tiers.md" &&
+    has_all "$SKILL" 'every `told by` criterion and Risk tiers row' "and the Risk tiers section too"
 }
 
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
@@ -399,7 +476,7 @@ fi
 check "no absolute home paths" test_no_absolute_home_paths
 check "prose lines are at most 120 characters" test_prose_lines_keep_120_characters
 check "the template exists and SKILL.md references it" test_template_exists_and_is_referenced
-check "the template has exactly two H2s" test_template_h2s_exact
+check "the template has exactly three H2s" test_template_h2s_exact
 check "the template header lines" test_template_header_lines
 check "the template criterion fields in order" test_template_criterion_fields_in_order
 check "the template says the R anchor is fixed" test_template_says_the_anchor_is_fixed
@@ -419,7 +496,7 @@ check "the reading reference has three H2s" test_reading_reference_h2s_exact
 check "the reading reference keeps the lookup order" test_reading_reference_matches_the_lookup_order
 check "the reading reference has the reading rules" test_reading_reference_rules
 check "the reading reference has the no-rubric line" test_reading_reference_no_rubric_line
-check "pr-review and dev-rev point to the reference" test_both_review_skills_point_to_the_reference
+check "pr-review and dev-rev point to the rubric and risk-tiers references" test_both_review_skills_point_to_the_reference
 check "pr-review cites the criterion ID" test_pr_review_cites_the_criterion_id
 check "dev-rev gives the rubric to the implementer and reviewer" test_dev_rev_gives_the_rubric_to_the_implementer_and_reviewer
 check "set and .gitignore appear only in never or print lines" test_set_and_gitignore_only_appear_in_never_lines
@@ -427,6 +504,19 @@ check "none folder must be absolute and outside the repository" test_none_folder
 check "reading reference gates commands and reads untracked rubrics" test_reading_reference_command_gating
 check "pr-review step 4 checks the rubric" test_pr_review_step_4_checks_the_rubric
 check "dev-rev prompt puts criteria under their heading" test_dev_rev_prompt_criteria_sit_under_their_heading
+check "risk-tiers.md has its H2s in order" test_risk_tiers_h2s_exact
+check "risk-tiers.md has four tiers" test_risk_tiers_has_four_tiers
+check "a changed existing test is not T0" test_risk_tiers_changed_tests_are_not_t0
+check "changed paths skip renames and other work; a lowering holds" test_risk_tiers_setting_rules
+check "signals and rows have their limits" test_risk_tiers_signal_and_row_limits
+check "the risk tier is reported only" test_risk_tiers_is_reported_only
+check "an unknown signal counts as T2" test_risk_tiers_unknown_counts_as_t2
+check "tier rows only raise, read from base and change" test_risk_tiers_rows_only_raise
+check "the tier only goes up; only the engineer lowers it" test_risk_tiers_only_up_and_engineer_lowers
+check "risk-tiers.md shapes the output lines" test_risk_tiers_output_lines
+check "the template has the Risk tiers section" test_template_risk_tiers_section
+check "the reading reference skips Risk tiers" test_reading_reference_skips_risk_tiers
+check "the skill drafts and keeps Risk tiers rows" test_skill_drafts_risk_tiers_rows
 
 echo
 echo "passed=$PASS failed=$FAIL"

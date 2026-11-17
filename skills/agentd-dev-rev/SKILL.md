@@ -42,6 +42,8 @@ Read these when they exist, and skip them when they do not:
 
 **Find the review rubric.** Read `../agentd-review-rubric/references/reading-the-rubric.md`, resolved from this skill's own folder, not the repository, and follow it. If it is missing, say so in one line and use the general rules. With no rubric found, follow its No rubric section. Read the criteria before you write code, and meet each one whose `Applies to` matches a path you change, and check the list again once you know the changed paths. Give the same criteria to the Round 2 reviewer.
 
+**Find the risk tiers.** Read `../agentd-review-rubric/references/risk-tiers.md`, resolved from this skill's own folder, not the repository, and follow it for your own staged work. If it is missing, say so in one line and report no tier. The tier is reported only: it changes no Hard Rule and no step of this skill.
+
 With no project contract, run only a command the repository states (a README, a script, a pipeline file). Mark what you could not run `unknown:` in the hand-off.
 
 ## Inputs
@@ -85,15 +87,15 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
 
 ## Workflow
 
-1. **Understand the task and repo.** Read the target files, neighboring patterns, callers, and tests. Identify existing helpers before adding new logic. Then follow Inputs: read the pasted blocks, or restate the task and ask.
+1. **Understand the task and repo.** Read the target files, neighboring patterns, callers, and tests. Identify existing helpers before adding new logic. Then follow Inputs: read the pasted blocks, or restate the task and ask. Then set the risk tier from the task, the pasted blocks and the paths you plan to change, and say it with its reasons.
 2. **Implement with TDD and coverage.** Prefer a red → green → refactor flow: write the focused failing test, verify the expected failure, implement the minimal fix/change, then keep tests green. Write the tests that a pasted block names first. Changed or fixed behavior should have automated coverage. If TDD or coverage is infeasible, explain why before review. If the code has no test project or no seam for the change, say so before you edit. Then write characterization tests of today's behavior first, or name the closest executable check (a script, a query, a manual step) in the hand-off. Never skip tests without saying so.
 3. **Validate locally.** Take every command from the contract's Commands heading. Never guess a command. Run the build, the unit tests and the lint check. Fix failures caused by the task.
    - **Counts.** Check the test count, not only the exit code. A command that ran 0 tests is reported as "ran 0 tests", never as a pass. Report pass, fail and skip counts per suite.
    - **Docker.** If a suite needs Docker and Docker is not running, skip that suite, say so, and never report it as passed.
    - **Base re-run.** Re-run each failing suite on the code before your change, with the same command. Add a worktree at `HEAD` in a `mktemp -d` scratch folder: `git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base HEAD`. Never check it out in the repository. The option turns off the repository's hooks, so none of its code runs. The add writes a record under `.git/worktrees/`. With a `.gitmodules` file, ask the engineer once before you run `git -C <scratch>/wt-base submodule update --init`: it writes entries into the repository's `.git/config` and may need the network. With nobody to answer, skip it and mark the base `unknown:`. Say in the hand-off what you did. If the add or the update fails, the base result is `unknown:`; do not fall back to `git archive` then. Without `git-lfs`, large files stay pointers: say so. Only if the `git worktree` command is unavailable or unsupported, export `HEAD` with `git archive` into the folder instead; that export has no submodules, no LFS content and no `.git`. The copy may restore the packages the project declares, from its lock file. If the restore fails or the copy runs 0 tests, the base result is `unknown:`. Compare the failing test names and the error text. A suite is old breakage only when the same tests fail for the same reason on both. The same reason means the same error text once paths, line numbers, timestamps and IDs are removed; a suite that cannot compile or start on either side is `unknown:`, not the same. A different or extra failure is yours. If the copy fails at setup, for example because a git-ignored local settings file is missing, the base result is `unknown:`. List old breakage in the hand-off. Run `git worktree remove --force <scratch>/wt-base` on the worktree you added, then remove the scratch folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where the folder is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
    - **Lint.** Report only problems on lines you changed.
-4. **Stage only task changes.** Inspect status first. Stage only files that belong to the task.
-5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt below with the task, the pasted blocks, the contract's Risk areas and the rubric's criteria. The reviewer must inspect the staged diff, not your narrative.
+4. **Stage only task changes.** Inspect status first. Stage only files that belong to the task. Then set the risk tier again from the staged paths, and keep the higher one.
+5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt below with the task, the pasted blocks, the contract's Risk areas, the rubric's criteria and the risk tier with its reasons. The reviewer must inspect the staged diff, not your narrative.
 6. **Triage findings.**
    - Agree: fix surgically, validate, and restage.
    - Disagree: keep the change, but record the exact claim and your evidence-based reason.
@@ -101,7 +103,7 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
 7. **Decide on Review Round 2.**
    - Run it on the restaged diff, using the same independent review process, if a blocker or major finding was fixed, or a minor fix changed production logic.
    - Skip it if Round 1 found nothing, or every fix was minor and limited to comments, docs, formatting, behavior-preserving renames, or test-only changes. Re-run local validation before skipping.
-8. **Handoff.** Report staged files, validation run (with test counts), the reviewer model as the reviewer stated it (and, if a fallback was used, that the named model was not offered), review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Compare the model the reviewer stated with the Harness Mapping table. If it is neither the table's model nor an allowed fallback, write "reviewer model mismatch" in the report. The review still counts. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. With no project rubric, add the line the rubric reference gives as the last line of this report; step 9 comes after it. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
+8. **Handoff.** Report staged files, the `Risk tier:` and `Read first:` lines as the risk tiers reference shapes them, validation run (with test counts), the reviewer model as the reviewer stated it (and, if a fallback was used, that the named model was not offered), review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Compare the model the reviewer stated with the Harness Mapping table. If it is neither the table's model nor an allowed fallback, write "reviewer model mismatch" in the report. The review still counts. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. With no project rubric, add the line the rubric reference gives as the last line of this report; step 9 comes after it. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
 9. **Verify hand-off.** Give the engineer what a fresh verify session needs. Do the parts in this order.
    - **Marker lookup first.** Look for `verify-*/SKILL.md` under any `.github/skills/` or `.claude/skills/` folder. Then look for `verify-*/SKILL.md` under the folder that `"$HOME/.agents/bin/onboarding-pack" verify-find` prints. It is the repository's own verify folder when its files policy is `none`. Exit status 1 means none is recorded; for any other failure (the folder is gone, the tool is missing), say so in the reply and carry on without it. Accept only a file whose header has `generated-by: agentd-verify-init` nested under `metadata:`. Ignore a `verify-*` skill without that marker. If several marked skills match in one place, list them and ask which one. A marked skill in the repository wins over one outside it; name the other one in the reply. If no marked skill exists in either place, write only this closing line: "No project verify skill. Run `/agentd-verify-init` once, or verify by hand." In that case dev-rev asks no base-branch question and writes no Verify block.
    - **No user-visible effect.** Decide this before the base-branch question. Write `Verify: none: <reason>` and no other field, and ask no base-branch question.
@@ -162,10 +164,15 @@ Project review criteria from the review rubric (or "none"). Copy each criterion 
 
 <criteria>
 
+Risk tier and its reasons (or "none"):
+
+<risk tier>
+
 Check these first:
 - Every `Do not change` item in the blocks. A change to one without the engineer's approval is a blocker.
 - Every stop condition in the blocks. If the work should have stopped, say so.
 - Every test under `Failing test first` and `Tests to write first` exists, and asserts what the block says.
+- The risk tier above. Name each staged change with a signal its reasons miss, and the tier that signal gives. Report it as minor: a tier finding changes no code.
 - Every project review criterion above whose `Applies to` matches a staged path. Cite its criterion ID in each finding. Block is blocker, Major is major, Minor is minor. A criterion whose Source starts `inferred:` is minor. No criterion lowers a built-in blocker.
 
 Focus areas:
@@ -218,6 +225,7 @@ The key invariant is independence plus the model the table names. "Fast reviewer
 | Claim is false based on code evidence | Do not change code; report the claim and evidence for disagreement. |
 | Product behavior choice | Ask engineer; do not decide silently. |
 | Still unresolved after Round 2 | Stop and report as unresolved. |
+| The risk tier misses a signal | Raise the tier and give the reason in the hand-off. Never lower it on a reviewer claim. It does not count toward Round 2. |
 
 ## Common Mistakes
 

@@ -204,6 +204,15 @@ test_still_never_commits() {
   grep -qF '1. **Never commit.**' "$SKILL" && [ "$(grep -c 'git commit' "$SKILL")" -le 1 ]
 }
 
+test_risk_tier_is_reported_only() {
+  section_has "Project facts" "reported only" "no Hard Rule" \
+    "report no tier" &&
+    section_has Workflow "set the risk tier from the task" "set the risk tier again from the staged paths" \
+      "keep the higher one" '`Risk tier:`' '`Read first:`' "the risk tier with its reasons" &&
+    section_has "Reviewer Prompt Template" "<risk tier>" "a signal its reasons miss" "Report it as minor" &&
+    section_has "Triage Rules" "The risk tier misses a signal" "Never lower it on a reviewer claim" "does not count toward Round 2"
+}
+
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when" test_description_starts_with_use_when
 check "the skill is manual-only" test_skill_is_manual_only
@@ -228,6 +237,7 @@ check "Breaks, a none: fix, a support question and two blocks that differ each h
 check "old breakage needs the same failure on both, and a pasted reproduction command is gated" test_base_re_run_compares_reasons_and_reproduction_is_gated
 check "the project facts paragraph appears once" test_project_facts_paragraph_is_present_once
 check "it still never commits" test_still_never_commits
+check "the risk tier is reported only, set twice, and given to the reviewer" test_risk_tier_is_reported_only
 
 echo
 echo "passed=$PASS failed=$FAIL"

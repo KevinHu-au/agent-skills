@@ -394,6 +394,14 @@ test_vote_line_is_outside_the_paste() {
     ! has_all "$OUT" "and the suggested vote" && ! has_all "$OUT" "inside it"
 }
 
+test_risk_tier_is_for_the_engineer_only() {
+  has_all "$SKILL" "Set the risk tier of the PR" &&
+    section_in_order "$OUT" "For you only" "**No work item:**" "**Risk tier:**" "**Requirement:**" &&
+    section_has "$OUT" "For you only" "**Read first:**" "**Tier rows changed:**" \
+      "changes no finding, severity or vote" "Never put it in a paste-ready part" \
+      "**Risk tier:** none: risk-tiers.md is missing"
+}
+
 test_finding_order_is_exact() {
   has_all "$OUT" "every Block, then every Major, then every Minor"
 }
@@ -625,6 +633,7 @@ check "Running commands never switch branches" test_running_commands_never_switc
 check "a dirty tree asks to stash, not commit" test_dirty_tree_asks_to_stash_not_commit
 check "the vote line is outside the paste" test_vote_line_is_outside_the_paste
 check "the finding order is exact" test_finding_order_is_exact
+check "the risk tier is in For you only, never pasted" test_risk_tier_is_for_the_engineer_only
 check "no Minor finding asks to wait" test_no_minor_finding_asks_to_wait
 check "the README lists the skill and its tests" test_readme_lists_the_skill_and_its_tests
 

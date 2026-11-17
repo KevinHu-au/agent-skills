@@ -33,6 +33,8 @@ recorded. For any other failure (the folder is gone, the tool is missing), say s
   any one matches. `**` matches zero or more folders. When you
   review the engineer's own staged work, read the working copy.
 - A `## Review rubric` section in `AGENTS.md` with no `### R<number>:` heading is not a hit: go on to the next place.
+- A `### Risk tiers` section is not a criterion: skip it here. `risk-tiers.md`, next to this file, says how to read
+  it.
 - A criterion you cannot check from the diff or a command: say so in one line. Never guess.
 - Never edit the rubric. A wrong or missing criterion is a note for the engineer.
 

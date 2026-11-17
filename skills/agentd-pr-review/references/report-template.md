@@ -123,6 +123,10 @@ Not to paste. Bold labels, in this order:
 
 - **No work item:** only in no-work-item mode, the line `The requirement was not checked. Check the work item yourself
   before you vote.` With a work item, leave this label out; do not write `none`.
+- **Risk tier:** and **Read first:** the lines that `risk-tiers.md` in the review rubric skill shapes, with the label
+  in bold, and **Tier rows changed:** when the PR edits a `### Risk tiers` row. With no `risk-tiers.md`, write
+  `**Risk tier:** none: risk-tiers.md is missing` and leave the other two labels out. The tier is a reading guide for
+  the engineer. It changes no finding, severity or vote. Never put it in a paste-ready part.
 - **Requirement:** what "done" means for this PR, as you understood it. With no work item, label it
   **Inferred intent:** and name the source of each part: the branch name, a commit, the PR description or a test.
 - **Criteria:** each part of the requirement, marked covered, partly covered or not covered, with `path:line` and the
