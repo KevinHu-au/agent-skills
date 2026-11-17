@@ -33,10 +33,11 @@ it inside one.` Work from the repository root.
 Do not check for `docs/onboarding/README.md`: the rubric works without a pack. Exit status 1 of `find` means none is
 recorded. For any other failure (the folder is gone, the tool is missing), say so in one line and carry on.
 
-When a rubric exists, show it, ask what to change, and never replace it without a yes. A refresh keeps every ID and
-every `told by` criterion and Risk tiers row, and changes only what the engineer names. Show what changed before you
-save. A change to a rubric in `AGENTS.md` is not written by this skill: print the revised section for the engineer to
-paste.
+When a rubric exists, show it, ask what to change, and never replace it without a yes. Follow
+`references/refresh.md`: it lists the gaps to name, the four choices, and what a refresh keeps. A refresh keeps every
+ID. It keeps every `told by` criterion and Risk tiers row the engineer does not name. It changes only what the
+engineer names. Show what changed before you save. A change to a rubric in
+`AGENTS.md` is not written by this skill: print the revised section for the engineer to paste.
 
 ## Flow
 
@@ -91,7 +92,8 @@ Write one file. Choose the folder in this order:
     nothing. Create the folder
     and save the file there. Do not run `set`: print `"$HOME/.agents/bin/onboarding-pack" set <folder>` for the
     engineer, and say the review skills find the file only after the engineer runs it.
-- The `Scanned commit:` line is the output of `git rev-parse HEAD`. In a repository with no commit, write `none yet`.
+- The `Scanned commit:` line is the output of `git rev-parse HEAD`, except in a refresh that `references/refresh.md`
+  says keeps it. In a repository with no commit, write `none yet`.
 - A rubric in `AGENTS.md` instead, only when the engineer asks: print it as a `## Review rubric` section for the
   engineer to paste. Keep the criteria as `###` headings, and the Risk tiers section too. Leave out the
   `# Review rubric` title and the `Scanned commit:` line. Save no file.
