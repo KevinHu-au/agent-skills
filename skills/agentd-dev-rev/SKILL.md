@@ -22,7 +22,7 @@ Run development work through a strict implement → stage → independent review
 1. **Never commit.** Do not run `git commit`, create commits, amend commits, push, or open a PR. Only stage the task-owned changes.
 2. **Do not self-review.** Your own diff read, checklist, tests, or summary never counts as review.
 3. **Use a separate review agent.** Review must be performed by an independent agent on the staged diff.
-4. **Reviewer model floor is mandatory.** Use the strongest model the harness offers, at high effort, and name the model in the report. If the harness cannot set the model or the effort, or has no separate review agent, stop and tell the engineer. Do not use a cheaper model, your own review, or "review later."
+4. **Reviewer model floor is mandatory.** Use the model the Harness Mapping table names, or the fallback it allows, at high effort, and name the model in the report. If the harness cannot set the model or the effort, or has no separate review agent, stop and tell the engineer. Do not use a cheaper model, your own review, or "review later."
 5. **Two review rounds maximum.** Round 1 reviews the staged diff. Run Round 2 only if a Round 1 fix was blocker or major, or a minor fix changed production logic. Otherwise skip it. After Round 2, stop and report any unresolved claims.
 6. **Preserve unrelated work.** Stage only files that belong to the task. Never use broad staging when unrelated dirty files exist.
 7. **Dependency approval gate.** Before adding, removing, or upgrading a package, ask the engineer for approval. Do not proceed silently.
@@ -93,7 +93,7 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
    - **Base re-run.** Re-run each failing suite on the code before your change, with the same command. Add a worktree at `HEAD` in a `mktemp -d` scratch folder: `git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base HEAD`. Never check it out in the repository. The option turns off the repository's hooks, so none of its code runs. The add writes a record under `.git/worktrees/`. With a `.gitmodules` file, ask the engineer once before you run `git -C <scratch>/wt-base submodule update --init`: it writes entries into the repository's `.git/config` and may need the network. With nobody to answer, skip it and mark the base `unknown:`. Say in the hand-off what you did. If the add or the update fails, the base result is `unknown:`; do not fall back to `git archive` then. Without `git-lfs`, large files stay pointers: say so. Only if the `git worktree` command is unavailable or unsupported, export `HEAD` with `git archive` into the folder instead; that export has no submodules, no LFS content and no `.git`. The copy may restore the packages the project declares, from its lock file. If the restore fails or the copy runs 0 tests, the base result is `unknown:`. Compare the failing test names and the error text. A suite is old breakage only when the same tests fail for the same reason on both. The same reason means the same error text once paths, line numbers, timestamps and IDs are removed; a suite that cannot compile or start on either side is `unknown:`, not the same. A different or extra failure is yours. If the copy fails at setup, for example because a git-ignored local settings file is missing, the base result is `unknown:`. List old breakage in the hand-off. Run `git worktree remove --force <scratch>/wt-base` on the worktree you added, then remove the scratch folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where the folder is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
    - **Lint.** Report only problems on lines you changed.
 4. **Stage only task changes.** Inspect status first. Stage only files that belong to the task.
-5. **Review Round 1.** Spawn a separate reviewer using the strongest model the harness offers, at high effort. Fill the prompt below with the task, the pasted blocks, the contract's Risk areas and the rubric's criteria. The reviewer must inspect the staged diff, not your narrative.
+5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt below with the task, the pasted blocks, the contract's Risk areas and the rubric's criteria. The reviewer must inspect the staged diff, not your narrative.
 6. **Triage findings.**
    - Agree: fix surgically, validate, and restage.
    - Disagree: keep the change, but record the exact claim and your evidence-based reason.
@@ -101,7 +101,7 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
 7. **Decide on Review Round 2.**
    - Run it on the restaged diff, using the same independent review process, if a blocker or major finding was fixed, or a minor fix changed production logic.
    - Skip it if Round 1 found nothing, or every fix was minor and limited to comments, docs, formatting, behavior-preserving renames, or test-only changes. Re-run local validation before skipping.
-8. **Handoff.** Report staged files, validation run (with test counts), the reviewer model, review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. With no project rubric, add the line the rubric reference gives as the last line of this report; step 9 comes after it. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
+8. **Handoff.** Report staged files, validation run (with test counts), the reviewer model as the reviewer stated it (and, if a fallback was used, that the named model was not offered), review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Compare the model the reviewer stated with the Harness Mapping table. If it is neither the table's model nor an allowed fallback, write "reviewer model mismatch" in the report. The review still counts. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. With no project rubric, add the line the rubric reference gives as the last line of this report; step 9 comes after it. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
 9. **Verify hand-off.** Give the engineer what a fresh verify session needs. Do the parts in this order.
    - **Marker lookup first.** Look for `verify-*/SKILL.md` under any `.github/skills/` or `.claude/skills/` folder. Then look for `verify-*/SKILL.md` under the folder that `"$HOME/.agents/bin/onboarding-pack" verify-find` prints. It is the repository's own verify folder when its files policy is `none`. Exit status 1 means none is recorded; for any other failure (the folder is gone, the tool is missing), say so in the reply and carry on without it. Accept only a file whose header has `generated-by: agentd-verify-init` nested under `metadata:`. Ignore a `verify-*` skill without that marker. If several marked skills match in one place, list them and ask which one. A marked skill in the repository wins over one outside it; name the other one in the reply. If no marked skill exists in either place, write only this closing line: "No project verify skill. Run `/agentd-verify-init` once, or verify by hand." In that case dev-rev asks no base-branch question and writes no Verify block.
    - **No user-visible effect.** Decide this before the base-branch question. Write `Verify: none: <reason>` and no other field, and ask no base-branch question.
@@ -180,6 +180,7 @@ Focus areas:
 - Task-specific risks you notice.
 
 Output:
+- Begin the report by stating the model you are running as.
 - A ranked list of findings, most severe first. Use severity: blocker / major / minor.
 - Group related findings.
 - For each finding include:
@@ -196,13 +197,15 @@ Output:
 
 ## Harness Mapping
 
-| Harness | How to review |
-| --- | --- |
-| Claude Code | Use a separate Task/review agent if available. Select the strongest model it offers and high effort. |
-| Copilot CLI | Use a separate review-capable task agent. Select the strongest model it offers and high reasoning effort, when the tool supports it. |
-| Other harness | Use its independent-agent mechanism only if it can select the strongest model and high effort. Otherwise stop and report the blocker. |
+| Harness | Reviewer model | How to review |
+| --- | --- | --- |
+| Claude Code | Opus 5.5 | Use a separate Task/review agent if available. Select the model and high effort. If it cannot set both, stop (Hard Rule 4). |
+| Copilot CLI | Opus 5.5 | Use a separate review-capable task agent. Select the model and high reasoning effort. If it cannot set both, stop (Hard Rule 4). |
+| Other harness, including Codex | Ask the engineer | Ask which model to review with. If the harness can list the models it offers, show that list and let the engineer pick. If it cannot, ask for the model name. Use its independent-agent mechanism only if it can select that model and high effort. With nobody to answer, or no such mechanism, stop and report the blocker. |
 
-The key invariant is independence plus the strongest available model. "Fast reviewer", "same-agent review", "manual inspection", and "review after commit" are not equivalent.
+If the named model is not offered, use a later version of the same model line (for Claude Code and Copilot CLI, a later Opus, never a smaller or faster variant), name it in the step 8 handoff, and say that the named model was not offered. For the Other harness row, the named model is the engineer's pick; if it is not offered, ask again. For any other model that is not cheaper than the named one, ask the engineer first. Never use a cheaper one. With nobody to answer, stop and tell the engineer.
+
+The key invariant is independence plus the model the table names. "Fast reviewer", "same-agent review", "manual inspection", and "review after commit" are not equivalent.
 
 ## Triage Rules
 
@@ -225,7 +228,7 @@ The key invariant is independence plus the strongest available model. "Fast revi
 | Treating tests-after as equivalent to TDD | Prefer failing test first when practical; explain exceptions. |
 | Skipping Round 2 after fixing a blocker or major finding, or a minor fix that changed production logic | Restage and review once more. |
 | Starting Round 2 after only minor fixes that did not change production logic | Skip it, re-run validation, and report the skip in the handoff. |
-| Using a weaker model or the same agent when no suitable reviewer exists | Stop and tell the engineer that no separate reviewer at the strongest model is available. |
+| Using a weaker model or the same agent when no suitable reviewer exists | Stop and tell the engineer that no separate reviewer on the table's model, or its allowed fallback, is available. |
 | Silently accepting product/backcompat decisions | Ask the engineer. |
 | Hiding disagreed claims | Report them with evidence. |
 | Changing a `Do not change` item, or going past a stop condition, from a pasted block | Stop and report to the engineer. |

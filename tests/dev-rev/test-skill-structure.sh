@@ -85,15 +85,39 @@ test_no_absolute_home_paths() {
   ! grep -qE '/Users/|/home/' "$SKILL"
 }
 
-test_reviewer_model_is_not_hard_coded() {
-  ! grep -qE 'Opus|GPT-[0-9]|claude-opus|Sonnet|Haiku' "$SKILL"
+# Model names may appear only under Harness Mapping. Every other line stays name-free,
+# including the intro before the first H2 and fenced blocks.
+test_reviewer_model_names_only_in_harness_mapping() {
+  grep -qx '## Harness Mapping' "$SKILL" || return 1
+  ! awk '
+    /^## / { skip = ($0 == "## Harness Mapping"); next }
+    !skip
+  ' "$SKILL" | grep -qiE 'opus|gpt-?[0-9]|claude-|sonnet|haiku|fable|gemini|(^|[^a-z])o[0-9](-mini)?($|[^a-z0-9])'
 }
 
 test_reviewer_model_rule() {
-  section_has "Hard Rules" 'strongest model the harness offers' 'high effort' 'name the model in the report' \
-    'has no separate review agent, stop and tell the engineer' &&
-    section_has Workflow 'strongest model the harness offers' 'the reviewer model' &&
-    section_has "Harness Mapping" 'strongest model'
+  local map
+  map=$(section_of "Harness Mapping")
+  ! grep -qi 'strongest' "$SKILL" &&
+    section_has "Hard Rules" 'the model the Harness Mapping table names, or the fallback it allows' 'high effort' \
+      'name the model in the report' 'has no separate review agent, stop and tell the engineer' \
+      'Do not use a cheaper model, your own review, or "review later."' &&
+    section_has Workflow 'the model the Harness Mapping table names, or the fallback it allows' 'the reviewer model' \
+      'that the named model was not offered' 'as the reviewer stated it' 'reviewer model mismatch' \
+      'The review still counts' &&
+    section_of "Reviewer Prompt Template" | awk '/^```/ { f = !f; next } f' |
+      grep -qiF 'Begin the report by stating the model you are running as' &&
+    section_has "Harness Mapping" 'Reviewer model' 'later version of the same model line' \
+      'never a smaller or faster variant' 'name it in the step 8 handoff' \
+      'say that the named model was not offered' "the named model is the engineer's pick" 'ask again' \
+      'For any other model that is not cheaper than the named one, ask the engineer first' 'With nobody to answer, stop and tell the engineer' \
+      'Ask which model' 'show that list' 'ask for the model name' \
+      'only if it can select that model and high effort' 'independence plus the model the table names' &&
+    printf '%s\n' "$map" | grep -qE '^\| Claude Code \| Opus 5\.5 \|.*If it cannot set both, stop \(Hard Rule 4\)' &&
+    printf '%s\n' "$map" | grep -qE '^\| Copilot CLI \| Opus 5\.5 \|.*If it cannot set both, stop \(Hard Rule 4\)' &&
+    printf '%s\n' "$map" | grep -qE '^\| Other harness, including Codex \| Ask the engineer \|.*With nobody to answer, or no such mechanism, stop' &&
+    ! printf '%s\n' "$map" | grep -qi 'when the tool supports it' &&
+    section_has "Common Mistakes" "the table's model, or its allowed fallback"
 }
 
 test_standalone_use_asks_with_defaults_and_waits() {
@@ -186,8 +210,8 @@ check "the skill is manual-only" test_skill_is_manual_only
 check "SKILL.md is at most 260 lines" test_skill_is_at_most_260_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "no absolute home paths" test_no_absolute_home_paths
-check "no reviewer model is hard-coded" test_reviewer_model_is_not_hard_coded
-check "the reviewer is the strongest model, named in the report" test_reviewer_model_rule
+check "model names appear only under Harness Mapping" test_reviewer_model_names_only_in_harness_mapping
+check "the reviewer is the model the table names, named in the report" test_reviewer_model_rule
 check "standalone use asks with defaults and waits" test_standalone_use_asks_with_defaults_and_waits
 check "pasted Do not change items and stop conditions are hard limits" test_pasted_blocks_are_hard_limits
 check "a hypothesis needs the test to fail for the stated reason" test_hypothesis_needs_the_test_to_fail_for_the_stated_reason
