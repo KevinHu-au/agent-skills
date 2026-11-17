@@ -34,23 +34,29 @@ Do not check for `docs/onboarding/README.md`: the rubric works without a pack. E
 recorded. For any other failure (the folder is gone, the tool is missing), say so in one line and carry on.
 
 When a rubric exists, show it, ask what to change, and never replace it without a yes. A refresh keeps every ID and
-every `told by` criterion, and changes only the criteria the engineer names. Show what changed before you save. A
-change to a rubric in `AGENTS.md` is not written by this skill: print the revised section for the engineer to paste.
+every `told by` criterion and Risk tiers row, and changes only what the engineer names. Show what changed before you
+save. A change to a rubric in `AGENTS.md` is not written by this skill: print the revised section for the engineer to
+paste.
 
 ## Flow
 
 1. **Find the rubric.** Do the lookup above. Say what you found, or say "no rubric".
 2. **Read the sources.** Read only these, and nothing else: `CONTRIBUTING.md`, the PR template
    (`.github/pull_request_template.md`, `docs/pull_request_template.md`, or a template under `.azuredevops/`),
-   `CODEOWNERS`, the lint and format config, the pipeline files, the conventions text in the README, and what the
-   engineer pastes: past review comments or team rules. Cite each fact from a file as `path:line`.
+   `CODEOWNERS`, the lint and format config, the pipeline files, the conventions text in the README, the Risk areas
+   of the project contract (the `## Project contract` section of `AGENTS.md`, or else `contract.md` in the pack
+   folder; when both exist and disagree, use `AGENTS.md` and mark the fact `conflict:`), and what the engineer
+   pastes: past review comments or team rules. Cite each fact from a file as `path:line`.
 3. **Draft the criteria.** Give each criterion an ID (`R1`, `R2`), a Rule, Applies to (a path glob or `all`), a
    Severity (`Block`, `Major` or `Minor`), How to check, and a Source. Apply the rules below. At most 15 criteria.
-   Propose each severity; the engineer corrects it. If the sources give no criteria, say so and ask the engineer to
+   Propose each severity; the engineer corrects it. Then propose the optional `### Risk tiers` rows, shaped as
+   `references/rubric-template.md` says, from the Risk areas, `CODEOWNERS` and the paste. Propose a row only where a
+   path needs a higher tier than the built-in signals of `references/risk-tiers.md` give it, for example a Risk area
+   that needs T3. With no row, leave the section out. If the sources give no criteria, say so and ask the engineer to
    paste rules. With nobody to answer, print no draft and write nothing.
 4. **Correct it with the engineer.** Show the draft before you save anything. The engineer adds, drops or changes
-   criteria. A rule the engineer states gets the source `told by <role>`: ask for the role once. That role is the
-   file's Owner: ask for it once even when the engineer states no rule. With no role, write
+   criteria and rows. A rule or row the engineer states gets the source `told by <role>`: ask for the role once. That
+   role is the file's Owner: ask for it once even when the engineer states no rule. With no role, write
    `Owner: unknown: ask the team`. Ask nothing else about a rule that has a source.
 5. **Save it.** Do this only after the engineer agrees. Follow Saving.
 
@@ -62,6 +68,9 @@ change to a rubric in `AGENTS.md` is not written by this skill: print the revise
 - **Checkable.** Keep a rule only when a reviewer can check from the diff or a command. Drop the rest.
 - **Lint.** Drop a style rule that the lint or format check already enforces. Point to the lint command in an optional
   `Lint:` header line, or to its config file when there is no command.
+- **Risk tiers rows.** The Source rule holds for each row. A row raises a tier and never lowers one. Leave out a row
+  that only repeats a built-in signal of `references/risk-tiers.md`. A row drawn from a contract fact marked
+  `inferred:` or `unknown:` is `inferred:` too, whatever line it cites.
 - **Built-in rules win.** The file header says a rubric never lowers the severity of a failing build or test, a
   security problem, data loss or a contract break. A criterion may add a check and raise severity.
 
@@ -84,8 +93,8 @@ Write one file. Choose the folder in this order:
     engineer, and say the review skills find the file only after the engineer runs it.
 - The `Scanned commit:` line is the output of `git rev-parse HEAD`. In a repository with no commit, write `none yet`.
 - A rubric in `AGENTS.md` instead, only when the engineer asks: print it as a `## Review rubric` section for the
-  engineer to paste. Keep the criteria as `###` headings. Leave out the `# Review rubric` title and the `Scanned
-  commit:` line. Save no file.
+  engineer to paste. Keep the criteria as `###` headings, and the Risk tiers section too. Leave out the
+  `# Review rubric` title and the `Scanned commit:` line. Save no file.
 - With nobody to answer, or no yes from the engineer, write nothing and print the draft in chat.
 - If the file exists, ask before you replace it. Yes rewrites the whole file. No leaves it.
 

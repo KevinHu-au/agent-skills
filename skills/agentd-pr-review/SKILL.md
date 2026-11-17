@@ -50,6 +50,7 @@ inside one.` Work from the repository root.
   `README.md`. When the pack disagrees with the code, the code wins.
 - **Find the review rubric.** Read `../agentd-review-rubric/references/reading-the-rubric.md`, resolved from this
   skill's own folder, not the repository, and follow it. If it is missing, say so in one line and use the general rules.
+  Read `../agentd-review-rubric/references/risk-tiers.md` the same way. If it is missing, say so and report no tier.
 
 ## Flow
 
@@ -61,7 +62,7 @@ inside one.` Work from the repository root.
    branch name, the commit messages, a pasted PR description and the names of new tests. Then check the PR against its own claims: a half-finished change,
    such as a rename done in some places only, a new field nothing reads or a flag nothing turns on, is a finding.
 3. **Read the change.** List the files, symbols, queries, routes and settings it adds, changes or removes. Read
-   `git log` for those files. Note what behaves differently without the diff saying so.
+   `git log` for those files. Note what behaves differently without the diff saying so. Set the risk tier of the PR.
 4. **Check each criterion.** For each part of the requirement: covered, partly covered or not covered, with `path:line`
    evidence and the test that covers it, if there is one. Then check each rubric criterion whose `Applies to` matches a
    changed path, and cite its criterion ID in the finding.

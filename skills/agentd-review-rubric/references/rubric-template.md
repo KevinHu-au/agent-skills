@@ -68,3 +68,36 @@ Two examples, from invented projects.
 - How to check: Read the new screen for a branch that handles an empty list.
 - Source: inferred: the existing list screens all do this
 ```
+
+## Risk tiers
+
+An optional section after the last criterion. It names the paths that need more of the engineer's attention than the
+built-in signals give. `risk-tiers.md`, next to this file, holds the tiers, the built-in signals and how skills read
+this section.
+
+```markdown
+### Risk tiers
+
+| Paths | Tier | Why | Source |
+|---|---|---|---|
+| <path glob, or several separated by commas> | <T1, T2 or T3> | <one short reason> | <path:line, URL, told by <role>, or inferred: <where it came from>> |
+```
+
+- The heading is `### Risk tiers`, at the same level as the criteria, so the section also fits inside a
+  `## Review rubric` section in `AGENTS.md`. Never rename it. It is not a criterion and has no ID.
+- At most 10 rows, one reason each. A glob follows the `Applies to` rules.
+- A row raises a path's tier. It never lowers a built-in signal, so a row that only repeats one adds nothing: leave it
+  out. There is no T0 row: a row never lowers production code below T1.
+- A row with no source is written `inferred:`, and gives at most T2.
+
+An example, from an invented project.
+
+```markdown
+### Risk tiers
+
+| Paths | Tier | Why | Source |
+|---|---|---|---|
+| src/Billing/** | T3 | Invoice totals and payment amounts | told by the tech lead |
+| src/Shared/Components/** | T2 | Every screen uses these components | CONTRIBUTING.md:30 |
+| docs/runbooks/** | T1 | Support follows these steps during an incident | inferred: linked from the on-call page |
+```
