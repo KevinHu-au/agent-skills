@@ -213,6 +213,24 @@ test_risk_tier_is_reported_only() {
     section_has "Triage Rules" "The risk tier misses a signal" "Never lower it on a reviewer claim" "does not count toward Round 2"
 }
 
+test_reviewer_gets_the_work_item_and_checks_each_criterion() {
+  section_has Inputs "Give the reviewer the work item as pasted, with its acceptance criteria word for word" \
+    "Meet each one, or ask before you leave one out" "Your restatement never replaces a listed criterion" \
+    "With no list, ask or stop first" \
+    "Once the task is agreed, your restatement is the requirement" &&
+    section_has Workflow "the work item as Inputs says" '"may be incomplete"' "never narrows the review" &&
+    section_has "Reviewer Prompt Template" "This is the author's summary, and it may be wrong" "<work item>" \
+      "Every acceptance criterion in the work item, as written" "a criterion the diff does not touch still counts" \
+      "out of scope, not a finding, only when a pasted block puts it under \`Follow-on\` or \`Do not change\`" \
+      "or the engineer said another change delivers it" "Judge the staged code" "every group a criterion names" \
+      "Assumptions the author added (may be wrong)" \
+      "With no list, find what the author's summary leaves out" "is a claim" "name any it misses" \
+      "Leave and return. A flow that leaves and comes back" \
+      "raises an event only when the test makes it" "that no test raises" \
+      "One line per acceptance criterion: met, partly met, not met or out of scope" '"no list"' &&
+    grep -qF '| Giving the reviewer your summary in place of the acceptance criteria |' "$SKILL"
+}
+
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when" test_description_starts_with_use_when
 check "the skill is manual-only" test_skill_is_manual_only
@@ -238,6 +256,7 @@ check "old breakage needs the same failure on both, and a pasted reproduction co
 check "the project facts paragraph appears once" test_project_facts_paragraph_is_present_once
 check "it still never commits" test_still_never_commits
 check "the risk tier is reported only, set twice, and given to the reviewer" test_risk_tier_is_reported_only
+check "the reviewer gets the work item word for word and checks each criterion" test_reviewer_gets_the_work_item_and_checks_each_criterion
 
 echo
 echo "passed=$PASS failed=$FAIL"

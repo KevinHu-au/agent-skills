@@ -129,15 +129,18 @@ Not to paste. Bold labels, in this order:
   the engineer. It changes no finding, severity or vote. Never put it in a paste-ready part.
 - **Requirement:** what "done" means for this PR, as you understood it. With no work item, label it
   **Inferred intent:** and name the source of each part: the branch name, a commit, the PR description or a test.
-- **Criteria:** each part of the requirement, marked covered, partly covered or not covered, with `path:line` and the
-  test that covers it.
+- **Criteria:** each acceptance criterion as the work item words it, then each assumed part of the requirement, marked
+  covered, partly covered or not covered, with `path:line` and the test that covers it. Mark a criterion that
+  another PR delivers as out of scope, and name who said so. When only the PR description says so, ask the engineer
+  to check that the other PR exists.
 - **Assumptions:** what you assumed where the work item is silent, one line each. With no work item, write `see
   Inferred intent`.
 - **Questions for the work item creator:** every gap in the requirement, and every sibling gap, as a question the
   engineer can forward. Each question names the finding it settles. With no work item, label it
   **Questions for the PR author:**.
 - **Old failures:** tests that fail on the base as well. Not findings.
-- **Not run or not checked:** each suite or check you skipped, and why.
+- **Not run or not checked:** each suite or check you skipped, and why, and each criterion you only partly checked,
+  with the count of group members left unchecked.
 - **Rubric:** the rubric you used and where it was read from, and any criterion that this PR edits. With none, the
   last line of this `For you only` part is `No project rubric. Run /agentd-review-rubric to draft one.` Put it last
   even when a `Check in the UI` list follows.

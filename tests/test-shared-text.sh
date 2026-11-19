@@ -97,6 +97,14 @@ done
 check "README names the supported stacks and the fallback" bash -c \
   'b=$(tr "\n" " " <"$1" | tr -s " "); for t in "not for every stack" ".NET (Framework and Core)" "SQL Server" "React web" "SwiftUI" "generic.md" "inferred:" "agentd-onboard" "a part of a project"; do printf "%s" "$b" | grep -qF -- "$t" || exit 1; done; ! printf "%s" "$b" | grep -qF "They work for any client and any stack"' _ "$HERE/../README.md"
 
+# The leave-and-return trace is one text in blast-radius surfaces.md (the reference copy) and in the dev-rev reviewer
+# prompt, which the reviewer gets in whole. Change both together.
+LEAVE_AND_RETURN='A flow that leaves and comes back: a sign-in redirect, a payment page, an OAuth callback, a deep link, an app relaunch. State held in memory before it leaves is gone on return. Trace each return on its own: success, error or cancel, an expired or removed account that later comes back, and a second tab or window.'
+for f in agentd-blast-radius/references/surfaces.md agentd-dev-rev/SKILL.md; do
+  check "$f has the leave-and-return trace word for word" bash -c \
+    'tr "\n" " " <"$1" | tr -s " " | grep -qF -- "$2"' _ "$SKILLS/$f" "$LEAVE_AND_RETURN"
+done
+
 # Every agentd skill carries the same shell safety hook in its frontmatter (Claude Code runs it while the skill is
 # active), and a Codex policy that stops an implicit start, because the Codex hook wakes up only on $agentd-<name>.
 # hooks_block <file>: the hooks: block of the frontmatter, up to the closing ---.

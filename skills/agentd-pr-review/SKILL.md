@@ -15,9 +15,8 @@ hooks:
 
 # agentd-pr-review
 
-Review a teammate's PR against its work item, or against its inferred intent when there is none, then stop. The result is a summary comment and one comment per finding,
-each in markdown the engineer pastes into the Azure DevOps PR, plus notes for the engineer only. Spend your time on
-what the work item really asks for, and on what the PR should have changed but did not.
+Review a teammate's PR against its work item, or against its inferred intent when there is none, then stop. Spend
+your time on what the work item really asks for, and on what the PR should have changed but did not.
 
 ## Prerequisite
 
@@ -63,24 +62,32 @@ inside one.` Work from the repository root.
    such as a rename done in some places only, a new field nothing reads or a flag nothing turns on, is a finding.
 3. **Read the change.** List the files, symbols, queries, routes and settings it adds, changes or removes. Read
    `git log` for those files. Note what behaves differently without the diff saying so. Set the risk tier of the PR.
-4. **Check each criterion.** For each part of the requirement: covered, partly covered or not covered, with `path:line`
-   evidence and the test that covers it, if there is one. Then check each rubric criterion whose `Applies to` matches a
-   changed path, and cite its criterion ID in the finding.
+4. **Check each criterion.** Check each acceptance criterion the work item lists as written; your restatement never
+   replaces one. Judge the code at `HEAD`, not the diff: a criterion the diff does not touch still counts. When only
+   untouched code fails it, the base fails it too: it is at most Major, never Block. It is out of scope, not a finding,
+   only when the engineer or the PR description says another PR delivers it. When one names a group ("startup
+   requests"), list its members from the code and check each. Past 10 members, search for those that lack the change; if
+   you cannot, mark the criterion partly checked. For each part of the requirement: covered, partly covered or not
+   covered, with `path:line` evidence and the test that covers it, if there is one.
+   Then check each rubric criterion whose `Applies to` matches a changed path, and cite its criterion ID.
 5. **Search for siblings.** For each pattern the PR changes, search for similar places the PR did not touch: other
    pages, sibling components, parallel API handlers, the matching stored procedure, view or DTO. Find them from the
    code, not the work item, because the work item may not name them. A place that likely needs the same change is
    Major, and it is also a question for the work item creator.
 6. **Check for breakage.** Read `../agentd-blast-radius/references/surfaces.md`, resolved from this skill's own folder,
-   not the repository. Check only the surfaces the change touches. For a .NET, React or iOS project also read
-   `dotnet.md`, `react.md` or `ios.md` there. If `surfaces.md` is missing, say so in one line and check these instead:
-   wire shapes, data, configuration and flags, indirection, timing and state, other readers of the same bytes,
-   generated files, libraries and the runtime, authorisation reach, external systems, and tests that encode the old
-   behaviour. Callers found by search are the start, not the finding. On a wide PR, read-only sub-agents may run steps
-   5 and 6; each returns a short summary with `path:line` evidence.
-7. **Run plan.** List the commands, as Running commands says, and ask for one confirmation. In no-work-item mode, ask
-   in the same message whether the inferred intent is right. If the engineer corrects it, rebuild step 2 and redo
-   steps 4 to 6 before running the tests. A correction in the engineer's words is still the inferred intent. If the
-   engineer pastes the work item instead, leave no-work-item mode and redo steps 2 to 6.
+   not the repository. Check only the surfaces the change touches; a sign-in, payment or callback flow always touches
+   timing and state. For a .NET, React or iOS project also read `dotnet.md`, `react.md` or `ios.md` there. If
+   `surfaces.md` is missing, say so in one line and check these instead: wire shapes, data, configuration and flags,
+   indirection, timing and state, other readers of the same bytes, generated files, libraries and the runtime,
+   authorisation reach, external systems, and tests that encode the old behaviour. Callers found by search are the
+   start, not the finding. On a wide PR, read-only sub-agents may run steps 5 and 6. Give them the acceptance criteria
+   as pasted, or in no-work-item mode the inferred intent marked as one, and say your requirement may be wrong. Each
+   returns a short summary with `path:line` evidence.
+7. **Run plan.** List the commands, as Running commands says, and ask for one confirmation. Ask in the same message
+   whether another PR delivers each criterion not met in untouched code, and in no-work-item mode, whether the inferred
+   intent is right. If the engineer corrects it, rebuild step 2 and redo steps 4 to 6 before running the tests. A
+   correction in the engineer's words is still the inferred intent. If the engineer pastes the work item instead, leave
+   no-work-item mode and redo steps 2 to 6.
 8. **Run the tests.** Run them, read every result, and compare failures with the base.
 9. **Report.** Write the output with `references/report-template.md`. Then remove the worktrees and the scratch folder (see Scratch folder).
 
@@ -91,8 +98,8 @@ inside one.` Work from the repository root.
   loss or corruption. A contract break the work item does not ask for: a change of shape (fields, types, keys, routes),
   not a change in which rows come back.
 - **Major:** a likely bug or regression in a realistic case. A sibling place that likely needs the same change. Changed
-  behaviour with no test. A criterion that is only partly met. A change that does more than the work item asks is
-  Major plus a question for the work item creator, not Block.
+  behaviour with no test. A handled event that no test raises is not covered. A criterion that is only partly met. A
+  change that does more than the work item asks is Major plus a question for the work item creator, not Block.
 - **Minor:** a small, real improvement: a misleading name, a missed existing helper, a weak test, a convention the
   repository follows elsewhere. No style nits that carry no risk.
 
@@ -143,8 +150,9 @@ no confirmation.
   is not old breakage. A suite that cannot start in `wt-head` was not run: never report it as passed.
 - **Verdict on a failure.** A test that fails only on the PR branch is Block. Compare the failing test names and error
   text on both sides, with paths, line numbers, timestamps and IDs removed. A test that fails on both for the same
-  reason is old breakage: list it for the engineer, but it is not a finding. A different or extra failure is the PR's,
-  so it is Block. A suite that cannot compile or start on either side is `unknown:`, not the same.
+  reason is old breakage: list it for the engineer, but it is not a finding, unless it checks an acceptance criterion:
+  then step 4 decides. A different or extra failure is the PR's, so it is Block. A suite that cannot compile or start on
+  either side is `unknown:`, not the same.
 - **Lint.** Run the contract's lint or format check, when it has one. Report only problems on lines the PR changed.
 - **Check in the UI.** Add this list only when a claim can be settled only in the running app. You do not start the
   app; the engineer does. If the engineer reports what they saw, update that finding's tier and severity.

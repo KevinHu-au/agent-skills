@@ -300,6 +300,11 @@ test_surfaces_reference_covers_every_surface() {
     'unknown: ask' 'encode the old behaviour'
 }
 
+test_surfaces_reference_covers_leave_and_return_flows() {
+  section_has "$REFS/surfaces.md" "Timing and state" 'A flow that leaves and comes back' 'sign-in redirect' \
+    'gone on return' 'error or cancel' 'removed account that later comes back' 'second tab'
+}
+
 test_surfaces_reference_covers_persisted_names_deploy_order_and_performance() {
   section_has "$REFS/surfaces.md" "Persisted names" 'stored as data' 'old stored item' 'references/dotnet.md' &&
     section_has "$REFS/surfaces.md" "Deploy order and rollback" 'rolling deploy' 'slot swap' 'add first, remove later' \
@@ -421,6 +426,7 @@ check "a clean run on our side is not Contained when the fact is outside" test_a
 check "a search that finds no caller is supported and never confirmed" test_a_search_that_finds_no_caller_is_supported_and_never_confirmed
 check "staged runs, the no-fact case and the Unproven tier rules are written" test_staged_runs_the_no_fact_case_and_the_unproven_tier_rules_are_written
 check "surfaces.md covers every surface" test_surfaces_reference_covers_every_surface
+check "surfaces.md traces a flow that leaves and comes back" test_surfaces_reference_covers_leave_and_return_flows
 check "dotnet.md names where to look and says it is unchecked" test_dotnet_reference_names_where_to_look_and_says_it_is_unchecked
 check "ios.md names the stored data that old builds leave" test_ios_reference_names_the_stored_data_that_old_builds_leave
 check "react.md names the stored data that old builds leave" test_react_reference_names_the_stored_data_that_old_builds_leave

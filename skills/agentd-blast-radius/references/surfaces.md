@@ -57,6 +57,7 @@ The JSON, XML or CSV that the application sends to a caller you do not control.
 
 - Transactions and their order, a cache that holds the old shape, a background job that retries, a handler that must be idempotent, a teardown that runs after the thing it cleans up is gone.
 - A change that is safe once can be unsafe when it runs twice.
+- A flow that leaves and comes back: a sign-in redirect, a payment page, an OAuth callback, a deep link, an app relaunch. State held in memory before it leaves is gone on return. Trace each return on its own: success, error or cancel, an expired or removed account that later comes back, and a second tab or window.
 
 ## Other readers of the same bytes
 
