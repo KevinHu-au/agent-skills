@@ -49,7 +49,8 @@ drives the changed feature through the user interface, and writes an evidence re
      `fresh restore needed: <reason>` and, without a terminal, stops. Ask the engineer, then run it again with
      `-ConfirmRestore`. When the engineer asks for fresh data, run it with `-ConfirmRestore` too.
    - `db-restore.ps1`: only when the data is a bacpac and `db-start.ps1` printed `database: new` or
-     `database: dropped`.
+     `database: dropped`. Until it ends with `ok`, `dbup-run.ps1` refuses to run, and the next `db-start.ps1` drops the
+     database again.
    - `dbup-run.ps1`: on every run, after `db-start.ps1` and after `db-restore.ps1` when that ran.
    - `api-start.ps1`: with the admin roles (`<admin roles>`) when any setup recipe is still pending, otherwise with the
      roles of the `Roles:` line. A recipe is pending when the `Data:` line names it, or the `Needs:` line of a feature
@@ -314,7 +315,16 @@ endpoint, so Doctor checks the ports, the signed-in API user, the role set, the 
 
 ## Browser and session
 
-- Drive the browser with `chrome-devtools-axi`, started through `npx`. Take a fresh page snapshot after each action.
+- Drive the browser with `chrome-devtools-axi` from the pinned install in `browser/` next to this file, never through
+  `npx`. The tool controls the browser the engineer signs in with, so it runs only the reviewed versions in
+  `browser/package.json` and its committed lockfile. Call it only through `axi.ps1`.
+  - Install once per checkout, and again after the lockfile changes, with the frozen install command that `axi.ps1`
+    prints. It runs no package scripts. Show the command to the engineer before you run it.
+  - Run `axi.ps1 stop` once before the first browser call of a run. A background process that the tool started earlier
+    (perhaps through `npx`) keeps its own copy, and the tool reuses it.
+  - To change a version, edit `browser/package.json`, update the lockfile, and commit both for review. Never run the
+    tool's `update` command.
+- Take a fresh page snapshot after each action.
 - Start the browser tool headed, with a named session per ticket, using the tool's environment variables, on every
   call. It is headless by default, and then the engineer has no window to sign in.
 - Start the browser tool's background process from the repository root. It uploads files only from under the folder it

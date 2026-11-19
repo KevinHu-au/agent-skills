@@ -13,12 +13,49 @@ in the verify skill's folder, so a committed skill carries them.
 - Helpers never edit settings files, and never read, print, copy or change user secrets. Connection strings and roles
   go to the app as an environment variable.
 - Every helper prints one line per step and ends with `ok` or `blocked: <reason>`.
+- Check the exit status of every external command and every query a helper runs. A non-zero exit ends the helper with
+  `blocked: <reason>`. It never prints `ok` after a failed command, and it writes nothing more to `state.json` after
+  one. A check that reads a query result (the journal, a row count) counts only when that query exited with 0: a failed
+  query is never an empty result. One exception: a command whose non-zero exit is an expected answer, such as an
+  existence check (`docker inspect` of a container that does not exist yet), a readiness poll, a port probe, or a stop
+  of a process that has already ended. The helper reads that exit as the answer and goes on. It still tells an expected
+  answer from a real error (Docker not running, for example), and a real error is `blocked:`.
+- A secret never goes on a command line, neither the helper's nor a child's, because other processes and command-line
+  logging can read process arguments. Set it in the helper's own environment for the one call that needs it, pass it to
+  that command by name (for Docker, `-e <NAME>` with no value), and remove it after the call, so a process started
+  later does not inherit it. The database reference names any tool that has no such route.
+- Process ownership: a start helper records a process, and says the service is ready, only when the process that
+  listens on the port runs under the process the helper launched. Follow the listener's parent chain up to the launched
+  process. Each parent must have started no later than its child, because the system can give the ID of a parent that
+  has ended to a new process. Record each process ID with its start time. When the wait ends without such a listener,
+  record only the launched process, never whatever holds the port. Then stop the launched process and its descendants,
+  and end with `blocked:`. A descendant is a process whose parent chain reaches the launched process by the same
+  start-time rule. The host reference says how to read a parent ID and a start time.
+- Resource ownership: a helper reuses, connects to or offers to remove only a database resource that this skill made
+  for this ticket. The database reference says how the resource carries the ticket label and an ID, and both must match
+  `state.json`. Any other resource with the ticket's name is left alone, and the helper ends with `blocked:` and names
+  it. It never records another resource's ID as its own. Removal is always by ID, never by name. The `blocked:`
+  message prints the resource's ID and the command that removes it by ID (the database reference names it). The
+  engineer runs it after they check that nothing else uses the resource. The helper never runs it.
+- A query the agent writes runs as a database user that can only read the per-ticket database. The administrator login
+  is only for the helpers' own setup steps: create, drop, import and migrate. A keyword filter on the query catches
+  mistakes, but the user's rights are what stop a write. The database reference says how.
 - The scripts folder is the folder the project's migration tool runs scripts from.
 - No customer values in a usage example. A usage example in a contract or a helper header shows `<ticket>`, and never a
   real work item number.
 - A parse check is not enough. After it, run each helper once with its prerequisites missing (no container, no
   state). It must stop with its own `blocked:` message instead of a shell error. This is a run-time smoke check
   and does not start Docker. It applies to every helper except the shared file that is only sourced.
+- Then run the failure-path check. A missing prerequisite tests only the first lines of a helper, so also fake each
+  failure below. Put a stub tool in the scratch folder, and point the tool's environment variable at it or put it first
+  on `PATH`. Fake these: a container with the ticket's name but another ID or no ticket label, a query that exits
+  non-zero, an import that fails, a migration run that leaves a branch script out of the journal, and a port held by a
+  process the helper did not launch. Each helper that writes `state.json`, records a process or offers to remove
+  something must end with its own `blocked:` message. It must leave `state.json` as it was, apart from the ID of a
+  process it launched, which `cleanup.ps1` needs. Run the check with a throwaway ticket (`failpath-<random>`), never a
+  real ticket, and check that no other folder under `~/.<app>-verify/` changed. Afterwards, list the throwaway folder
+  and ask the engineer before removing it. The stubs stay in the scratch folder and are never committed. The report
+  lists each faked failure and what the helper did.
 - Privacy: the browser tool's open output prints the full authorize URL (tenant and client IDs), its network output
   prints the Authorization header, and a saved response can hold the signed-in person's name. Filter these from tool
   output before it reaches notes or the report. Doctor output follows the same rule. Evidence files are the only place
@@ -32,6 +69,7 @@ The contracts of the helpers that depend on the stack sit in the reference for t
 - `dbup-run.ps1` and `api-start.ps1`: `references/dotnet.md`. For .NET Framework, `api-start.ps1` is in `references/dotnet-framework.md` instead.
 - `ui-start.ps1`: `references/react.md`. For an iOS app, `ui-start.ps1` is in `references/ios.md` instead, and the app has no `api-start.ps1` of its own.
 - `doctor.ps1`: this file. For an iOS app, the Doctor section of `references/ios.md` replaces it.
+- `axi.ps1`: this file. An iOS app has no browser tool and no `axi.ps1`.
 
 An entry applies only when its reference was loaded. For any other stack, use the next section.
 
@@ -54,7 +92,7 @@ Path: `~/.<app>-verify/<ticket>/state.json`. It sits outside every repository an
 |---|---|
 | `containerId` | the container ID |
 | `createdAt` | when the container was created |
-| `dataSource` | `empty`, or the bacpac file name and date |
+| `dataSource` | `empty`, or the bacpac file name and date; `pending: <bacpac file name and date>` until the import passes |
 | `recipes` | the setup recipes that ran on this container |
 | `branchScripts` | map from script path to the SHA-256 of the script |
 | `appFingerprint` | the app-code fingerprint, a SHA-256 |
@@ -69,11 +107,12 @@ Path: `~/.<app>-verify/<ticket>/state.json`. It sits outside every repository an
   the UI sign-in values file (`<local-only file>`). The generated skill lists them in one place, the `LocalOnlyFiles`
   list in `common.ps1`. The engineer approves each entry, and the agent never reads their content.
 - Scripts that the migration tool will re-run on every run, such as stored procedures, need no hash.
-- Before each run: a different container ID resets the recipe list, clears `branchScripts`, `appFingerprint` and `dataSource`, and skips the restore check. A missing stored value is no reason to restore. A recorded branch script whose hash changed, or a
+- Before each run: a container that `db-start.ps1` has just created resets the recipe list, clears `branchScripts`, `appFingerprint` and `dataSource`, and skips the restore check. A container whose ID differs from the saved ID is never adopted: see Resource ownership in the rules above. A missing stored value is no reason to restore. A recorded branch script whose hash changed, or a
   removed script forces a fresh restore and a re-run of the recipes, because the migration journal would skip an
   edited script. A changed app-code fingerprint also forces a fresh restore, because recipe data made through the UI by
   an earlier build may be wrong. A changed data source (for example `empty` to `bacpac`) also forces a fresh restore,
-  because the import needs an empty database. The report says when this happened.
+  because the import needs an empty database. A `pending:` data source also forces a fresh restore, because an earlier
+  import did not finish, failed or was rejected. The report says when this happened.
 
 ## common.ps1
 
@@ -85,7 +124,7 @@ State, hashing and the evidence folder. It is dot-sourced by the other helpers a
 - `LocalOnlyFiles`: the list of local-only files. `Get-AppFingerprint` leaves them out. Nothing else reads their content.
 - `New-EvidenceFolder`: parameters: ticket. Creates `~/.<app>-verify/<ticket>/<timestamp>/` and prints its path.
 - Rule: it creates and reads, and never removes anything. It records the new path in `state.json` as `evidenceFolder`.
-- `state.json` has the launch keys (the process IDs of the API and UI and of their launchers, the wanted roles, and `connectionConfirmedFor`) only
+- `state.json` has the launch keys (the process IDs of the API and UI and of their launchers, each with its start time, the wanted roles, and `connectionConfirmedFor`) only
   after a launch writes them. The state reader must default every launch key to null when it is missing.
 
 ## doctor.ps1
@@ -113,7 +152,38 @@ sign-in. Prints one line per check and ends with `ok` or `blocked: <reason>`.
 Parameters: ticket. Stops the API and UI processes this run started, using the process IDs in `state.json`, and
 nothing else. It stops only the recorded process IDs.
 
+- It stops a recorded process only when its start time still matches the recorded one, so a reused ID is left alone.
+  It then stops that process's descendants (the process ownership rule), so a child that bound the port late does not
+  keep running.
+- A recorded process with no start time (written by a helper made before this rule) is not stopped. The helper names
+  it and prints the stop command for the engineer.
 - It never removes the container, `state.json` or the evidence folder.
-- Removing a container is outside this helper. It asks the engineer before removing anything: it prints the
-  `docker rm` command, and the engineer runs it.
+- Removing a container is outside this helper. It asks the engineer before removing anything: it prints
+  `docker rm <container ID>`, by ID, and only for a container that passes the resource ownership rule. The engineer
+  runs it.
 - It prints the process IDs it stopped.
+
+## axi.ps1
+
+Not for an iOS app. Parameters: the browser tool's own arguments, passed through unchanged. Runs the entry file of the
+pinned `chrome-devtools-axi` that is installed under the `browser/` folder of the verify skill, and exits with the
+tool's exit code. The working folder stays the repository root, because the tool uploads files only from under the
+folder it started in.
+
+- The generator writes `browser/package.json` with exact versions, never a range, of `chrome-devtools-axi` and of the
+  `chrome-devtools-mcp` it runs. It makes the lockfile with the repository's package manager, or npm when the
+  repository has none, with package scripts off (for pnpm: `pnpm install --lockfile-only --ignore-scripts
+  --ignore-workspace` in `browser/`; for npm: `npm install --package-lock-only --ignore-scripts` in `browser/`). It
+  asks the engineer to review both versions. Both files are committed with the skill.
+- `browser/node_modules/` is never committed. The generator checks with `git check-ignore` that the repository already
+  ignores it. If not, it adds `<skill folder>/browser/node_modules/` to `.git/info/exclude` (the file
+  `git rev-parse --git-path info/exclude` prints), never to `.gitignore`, and lists the line in the report.
+- When the install is missing, it stops with `blocked:` and prints the frozen install command, which runs no package
+  scripts (for pnpm: `pnpm install --frozen-lockfile --ignore-scripts --ignore-workspace` in `browser/`; for npm:
+  `npm ci --ignore-scripts` in `browser/`). `--ignore-workspace` keeps pnpm on the lockfile in `browser/` when the
+  repository has a `pnpm-workspace.yaml`. It never runs the command itself.
+- It runs the tool's JavaScript entry file with `node`, not the `.bin` shim. On Windows the shim is a `.cmd` file, and
+  `cmd.exe` changes arguments that hold quotes with `&`, `|` or `%`. `inferred:`
+- It sets `CHROME_DEVTOOLS_AXI_MCP_PATH` to the pinned `chrome-devtools-mcp` entry file. Without it the tool may use
+  another copy, or `npx chrome-devtools-mcp@latest`. `inferred:` from one project's reading of the tool.
+- It refuses the tool's `update` command, which installs the newest version globally.

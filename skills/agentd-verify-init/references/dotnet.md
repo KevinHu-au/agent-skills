@@ -36,7 +36,12 @@ its own project folder and prints the log lines that name each script that ran. 
 
 - Rule: it must refuse to run unless the connection environment variable is set and names the container's host and
   port. It must never fall back to a settings file, because a settings file can name the engineer's own database.
+- Rule: it refuses to run while `dataSource` in `state.json` starts with `pending:`, because the bacpac import has not
+  passed. It ends with `blocked: bacpac import not finished`.
 - Pass the connection string as an environment variable. Never read or print its value.
+- A successful run: the tool exits with 0, the journal query after it exits with 0, and every script in the scripts
+  folder that the tool journals is in the journal, in the journal's name format. Anything less ends with `blocked:`,
+  names the missing scripts, and records no hash and no `appFingerprint`.
 - After the log shows a branch script ran, record its hash in `state.json`. Not before. Find the branch scripts with
   `Get-BranchScripts`. The helper drops the entries of removed scripts, and writes `appFingerprint` after a successful run.
 - Scripts the tool re-runs on every run are not hashed.
@@ -53,6 +58,10 @@ roles in environment variables. Prints the port and the process ID, and saves th
 - Roles: for k wanted roles and N entries in the settings JSON, set indexes 0..max(N,k)-1, cycling through the k roles.
   Read N from the JSON files only. A role change restarts the API.
 - Refuse to start when something this run did not start already holds the port. Name the process.
+- The process ID it saves, and the readiness it reports, follow the process ownership rule in `templates/helpers.md`.
+  `dotnet run` starts the API as a child process, so the process that holds the port is recorded only when it runs
+  under the launched process. When the wait ends without it, it stops the launched process and its descendants, and
+  ends with `blocked:`.
 - It must not require the plain-HTTP port when the UI only calls the secure port. Pass `--urls` for the secure port
   only. When it refuses, it names the process that holds a port. Some systems hold a fixed port: macOS holds port 5000
   for AirPlay Receiver. Put this port rule in the Gotchas of the generated skill.

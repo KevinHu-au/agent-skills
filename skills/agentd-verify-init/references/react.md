@@ -47,5 +47,9 @@ Load this file in Flow step 4, for a React web project (the stack signals in Flo
 Parameters: ticket. Starts the UI dev server and waits until the port answers an HTTP request. Prints the URL and the
 process ID, and saves the process ID in `state.json`. Refuse when a process this run did not start holds the port.
 
+- The process ID it saves, and the readiness it reports, follow the process ownership rule in `templates/helpers.md`.
+  The package manager's `run` command starts the dev server as a child process, so the process that holds the port is
+  recorded only when it runs under the launched process. When the wait ends without it, it stops the launched process
+  and its descendants, and ends with `blocked:`.
 - When a dependency is missing, it stops with `blocked: <reason>` and prints the fix command. It never runs the command
   itself. The fix command must not change tracked files (for npm, `npm ci`, never `npm install`).

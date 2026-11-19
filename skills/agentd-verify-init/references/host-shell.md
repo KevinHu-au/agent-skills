@@ -11,6 +11,9 @@ Load this file in Flow step 5, when the helpers are written in bash or zsh: the 
 - A query that returns one row returns one line. Count lines with `wc -l`, and read the first with `head -n 1`. Do not treat the result as an array.
 - `sed -i` on macOS needs an empty suffix argument (`sed -i '' ...`), and on Linux it must not have one. Do not use in-place `sed` in a helper. Write to a temp file, or use `jq`.
 - Stop a process by its recorded ID with `kill <pid>`, never by name with `pkill`.
+- Read `$?` right after each command. In a pipeline, `$?` is the last command's status: use `set -o pipefail`, or read `${PIPESTATUS[0]}`. `inferred:`
+- Parent and start time, for the process ownership rule: `ps -o ppid= -p <pid>` and `ps -o lstart= -p <pid>`. `inferred:`
+- A secret by name: write `NAME="$value" docker exec -e NAME ...`. The value is in the child's environment, not in any argument, and the helper's own shell does not keep it. `inferred:`
 - Print one line per step, and end with `ok` or `blocked: <reason>`. Exit with 0 for `ok` and 1 for `blocked`. `inferred:`
 
 ## State and queries

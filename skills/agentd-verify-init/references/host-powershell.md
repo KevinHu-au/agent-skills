@@ -8,6 +8,9 @@ Load this file in Flow step 5, when the helpers are written in PowerShell: the r
   variable called `name?`. This only fails at run time, so a parse check does not catch it.
 - Helpers set strict mode. Test that the key exists first, before a read of an optional key from a settings file, such
   as the role override list. A missing key is an error under strict mode.
+- Read `$LASTEXITCODE` right after each native command, before another native command replaces it. `inferred:`
+- Parent and start time, for the process ownership rule: on Windows, read the parent with `Get-CimInstance Win32_Process -Filter "ProcessId = <id>"` (`ParentProcessId`); on macOS and Linux, with `ps -o ppid= -p <id>`. Read the start time with `(Get-Process -Id <id>).StartTime`. Windows keeps a parent ID after the parent ends, so compare start times at each step. `inferred:`
+- A secret by name: set it with `[Environment]::SetEnvironmentVariable('<NAME>', <value>, 'Process')` just before the call, pass `-e <NAME>` with no value, and clear it in a `finally` block. `inferred:`
 - A helper that runs a database query (in a container or in LocalDB) must wrap query results in `@()` before indexing or counting. PowerShell turns a
   one-row result into a plain string, so the count prints its first character and a `.Count` read fails.
 

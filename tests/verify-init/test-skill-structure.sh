@@ -802,12 +802,12 @@ test_fresh_restore_rules() {
 test_container_and_state_rules_are_pinned() {
   has_all "$DBA" "never azure-sql-edge" "host port other than 1433" "unique container name" "kept between runs" \
     "made by SQL, not through the app" &&
-    has_all "$HP" "a hash is recorded only after" "a different container ID resets the recipe list" \
+    has_all "$HP" "a hash is recorded only after" "a container whose ID differs from the saved ID is never adopted" \
       "a removed script forces a fresh restore"
 }
 
 test_browser_and_session_rules_are_pinned() {
-  has_all "$VT" "chrome-devtools-axi" "npx" "fresh session" \
+  has_all "$VT" "chrome-devtools-axi" "never through \`npx\`" "fresh session" \
     "only the feature map, the raw ticket and the Verify block" "not a task agent by default" || return 1
   has_all "$SKILL" "scripting language of the repository" || has_all "$HP" "scripting language of the repository"
 }
@@ -1525,7 +1525,7 @@ test_db_start_sees_the_bacpac_and_writes_the_data_source_late() {
     "writes \`dataSource\` only after the state check passes or after a confirmed drop, never on a \`blocked\` exit" \
     "With \`-ConfirmRestore\` and no forced reason, the helper drops and recreates the database on request." \
     "\`database: new\`, \`database: reused\` or \`database: dropped\`" &&
-    section_has "$HP" state.json "a different container ID resets the recipe list, clears \`branchScripts\`, \`appFingerprint\` and \`dataSource\`, and skips the restore check" \
+    section_has "$HP" state.json "a container that \`db-start.ps1\` has just created resets the recipe list, clears \`branchScripts\`, \`appFingerprint\` and \`dataSource\`, and skips the restore check" \
       "A missing stored value is no reason to restore." &&
     vt_step_has "Start the data and the app" "asks for fresh data" "\`-ConfirmRestore\`"
 }
@@ -1738,6 +1738,98 @@ check "the iOS API leg can use a debug token" test_ios_api_leg_can_use_a_debug_t
 check "the template rule gives iOS an exception" test_ios_has_no_default_api_in_the_template_rule
 check "policy none creates the folder and handles refusals" test_policy_none_creates_the_folder_and_handles_refusals
 check "dev-rev warns when a skill outside the repository has no link" test_dev_rev_names_a_dead_command
+
+# ---------------------------------------------------------------- helper safety (failure paths, ownership, secrets)
+
+test_helpers_check_every_exit_status() {
+  section_has "$HP" "Rules for every helper" "Check the exit status of every external command and every query" \
+    "never prints \`ok\` after a failed command" "a failed query is never an empty result" &&
+    section_has "$DBA" db-restore.ps1 "The journal check counts only when its query exits with 0" &&
+    section_has "$DN" dbup-run.ps1 "every script in the scripts folder that the tool journals is in the journal" \
+      "records no hash and no \`appFingerprint\`" &&
+    section_has "$HPS" Rules '$LASTEXITCODE' && section_has "$HSH" Rules "pipefail"
+}
+
+test_containers_are_labelled_and_owned() {
+  section_has "$HP" "Rules for every helper" "Resource ownership" "both must match" "Removal is always by ID" &&
+    section_has "$DBA" "Database in Docker" "--label <app>-verify.ticket=<ticket>" "made without the label is refused" &&
+    section_has "$DBA" db-start.ps1 "Ownership check" "never records its ID" "a fresh restore that the engineer confirms" &&
+    section_has "$HP" cleanup.ps1 "docker rm <container ID>" "by ID" "start time still matches" &&
+    section_has "$LDB" db-start.ps1 "Ownership" "create_date" "left alone"
+}
+
+test_bacpac_import_is_pending_until_it_passes() {
+  section_has "$DBA" db-start.ps1 "pending: <bacpac file name and date>" "forces a fresh restore" &&
+    section_has "$DBA" db-restore.ps1 "writes \`dataSource\` as the plain value" "leaves the \`pending:\` value" &&
+    section_has "$DN" dbup-run.ps1 "refuses to run while \`dataSource\`" "pending:" &&
+    section_has "$HP" state.json "A \`pending:\` data source also forces a fresh restore" &&
+    vt_step_has "Start the data and the app" "Until it ends with \`ok\`, \`dbup-run.ps1\` refuses to run"
+}
+
+test_start_helpers_own_their_listener() {
+  section_has "$HP" "Rules for every helper" "Process ownership" "runs under the process the helper launched" \
+    "started no later than its child" "never whatever holds the port" &&
+    section_has "$DN" api-start.ps1 "process ownership rule" &&
+    section_has "$RX" ui-start.ps1 "process ownership rule" &&
+    section_has "$DNF" api-start.ps1 "process ownership rule" "HTTP.sys" &&
+    section_has "$HPS" Rules "ParentProcessId" "StartTime" && section_has "$HSH" Rules "ppid=" "lstart="
+}
+
+test_read_only_queries_use_a_reader_user() {
+  section_has "$HP" "Rules for every helper" "runs as a database user that can only read" \
+    "the user's rights are what stop a write" &&
+    section_has "$DBA" "Database in Docker" "db_datareader" "WITH NO REVERT" "-x" "\`:connect\`" &&
+    section_has "$LDB" "Instance and database" "WITH NO REVERT"
+}
+
+test_secrets_stay_off_command_lines() {
+  section_has "$HP" "Rules for every helper" "A secret never goes on a command line" "by name" &&
+    section_has "$DBA" "Database in Docker" "Never put it on a command line" "-e MSSQL_SA_PASSWORD" &&
+    section_has "$DBA" Bacpac "DacServices.ImportBacpac" "Gotchas of the generated skill" &&
+    section_has "$HPS" Rules "A secret by name" && section_has "$HSH" Rules "A secret by name"
+}
+
+test_browser_tool_is_pinned() {
+  section_has "$VT" "Browser and session" "pinned install" "never through" "committed lockfile" "axi.ps1" &&
+    ! section_has "$VT" "Browser and session" "started through \`npx\`" &&
+    section_has "$HP" axi.ps1 "exact versions, never a range" "--frozen-lockfile --ignore-scripts" \
+      "npm ci --ignore-scripts" "CHROME_DEVTOOLS_AXI_MCP_PATH" "refuses the tool's \`update\` command" &&
+    section_has "$HP" "Where the other contracts live" "\`axi.ps1\`: this file"
+}
+
+test_helpers_get_a_failure_path_check() {
+  section_has "$HP" "Rules for every helper" "failure-path check" "stub tool" "another ID or no ticket label" \
+    "a query that exits non-zero" "an import that fails" "leaves a branch script out of the journal" \
+    "a port held by a process the helper did not launch" "leave \`state.json\` as it was" "never committed" &&
+    step_has "Write the helpers" "failure-path check" &&
+    step_has "Report" "failure-path check"
+}
+
+test_helper_safety_review_fixes_are_pinned() {
+  section_has "$HP" "Rules for every helper" "whose non-zero exit is an expected answer" "a real error is \`blocked:\`" \
+    "stop the launched process and its descendants, and end with \`blocked:\`" \
+    "prints the resource's ID and the command that removes it by ID" \
+    "throwaway ticket (\`failpath-<random>\`), never a real ticket" "ask the engineer before removing it" &&
+    section_has "$HP" cleanup.ps1 "stops that process's descendants" "with no start time" "is not stopped" &&
+    section_has "$HP" axi.ps1 "The working folder stays the repository root" "--ignore-workspace" "--lockfile-only" \
+      "--package-lock-only --ignore-scripts" "git check-ignore" ".git/info/exclude" "never to \`.gitignore\`" &&
+    section_has "$DBA" "Database in Docker" "every container made before this rule" "holds no permission other than \`CONNECT\`" \
+      "\`-X\`" "after any spaces or tabs" &&
+    section_has "$DBA" db-start.ps1 "prints \`docker rm <container ID>\` for the engineer" &&
+    section_has "$LDB" db-start.ps1 "prints the \`DROP DATABASE\` statement for the engineer" &&
+    section_has "$DN" api-start.ps1 "stops the launched process and its descendants" &&
+    section_has "$RX" ui-start.ps1 "stops the launched process and its descendants"
+}
+
+check "helper safety review fixes are pinned" test_helper_safety_review_fixes_are_pinned
+check "helpers check every exit status" test_helpers_check_every_exit_status
+check "containers are labelled, owned and removed by ID" test_containers_are_labelled_and_owned
+check "a bacpac import stays pending until it passes" test_bacpac_import_is_pending_until_it_passes
+check "start helpers record only their own listener" test_start_helpers_own_their_listener
+check "read-only queries run as a reader user" test_read_only_queries_use_a_reader_user
+check "secrets stay off command lines" test_secrets_stay_off_command_lines
+check "the browser tool is pinned" test_browser_tool_is_pinned
+check "helpers get a failure-path check" test_helpers_get_a_failure_path_check
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]
