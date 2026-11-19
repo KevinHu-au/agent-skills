@@ -46,6 +46,10 @@ A request to a binding that is not `localhost` fails with "access denied" until 
 Parameters: ticket, roles (a list, or `default`). Starts the API on IIS Express from the scratch copy of `applicationhost.config`. Prints the URL and the process ID, and saves the process ID in `state.json`.
 
 - Rule: it refuses to start when a process this run did not start holds the port. It names the process.
+- The process ID it saves follows the process ownership rule in `templates/helpers.md`. IIS Express may serve the
+  port through HTTP.sys, and then the port shows as held by the System process, not by IIS Express. In that case the
+  check is that the launched IIS Express process still runs with its recorded start time, and that the site answers.
+  `inferred:`
 - Rule: it starts only when `connectionConfirmedFor` in `state.json` equals the current `containerId` value. The agent asks the engineer to confirm, in the conversation, that their local settings file points at the per-ticket database, and then runs the helper with `-ConnectionConfirmed`, which records the value. A new database gives a new `containerId`, so the confirmation lapses. Without it the helper ends with `blocked: connection string not set for this ticket`.
 - It never edits a settings file and never reads a connection string.
 - A role change that needs a settings change is the engineer's step: say which role the ticket needs, and wait.

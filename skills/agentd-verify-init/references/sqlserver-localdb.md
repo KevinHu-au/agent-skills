@@ -10,6 +10,7 @@ Load this file in Flow step 5, when the engineer says the local database runs in
 - Checked: a command that `prlctl exec` runs in a Parallels virtual machine runs as SYSTEM unless the call has `--current-user`, and SYSTEM does not see the user's instances.
 - One new database per ticket, named `<app>_verify_<ticket>`. Create it with `CREATE DATABASE`. Never use a name that already exists without the state check. Never touch any other database in the instance.
 - LocalDB has no password, so nothing secret is made or stored.
+- Read-only queries follow the rule in `references/sqlserver-docker.md`. The engineer's Windows login is an administrator of the instance, so every query the agent writes runs under `EXECUTE AS USER = N'<reader>' WITH NO REVERT` in the per-ticket database. `inferred:`
 
 ## Bacpac
 
@@ -23,7 +24,8 @@ Follow the Bacpac section of `references/sqlserver-docker.md`, with these change
 
 Parameters: the same as `db-start.ps1` in `references/sqlserver-docker.md`. Starts the instance if it is stopped, creates the per-ticket database or reuses the one in `state.json`, and does the state check. Prints the instance name, the SQL Server version, the database name, the `containerId` value, and one of `database: new`, `database: reused` or `database: dropped`.
 
-- `containerId` keeps its name, because `state.json` has one contract. For LocalDB it holds `<instance>\<database>` and the database's `create_date` from `sys.databases`, so the value changes whenever the database is dropped and created again. The state check then clears the stored state, as it does for a new container. `createdAt` holds the time the database was created.
+- `containerId` keeps its name, because `state.json` has one contract. For LocalDB it holds `<instance>\<database>` and the database's `create_date` from `sys.databases`, so the value changes whenever the database is dropped and created again. When `db-start.ps1` itself drops and creates it, it writes the new value, and the state check then clears the stored state, as it does for a new container. `createdAt` holds the time the database was created.
+- Ownership: LocalDB has no labels, so the per-ticket database name is the label and the `containerId` value is the ID. A database with the per-ticket name whose `create_date` differs from the recorded value was made outside this helper: it is left alone, and the helper ends with `blocked:`. The message prints the `DROP DATABASE` statement for the engineer to run after they check that nothing else uses the database. When `state.json` records no value and the database exists, the helper takes it only after a fresh restore that the engineer confirms.
 - The state check, the fresh-restore rules, the `-ConfirmRestore` switch and the `fresh restore needed: <reason>` message are the same as in `references/sqlserver-docker.md`. A fresh restore means `DROP DATABASE` and `CREATE DATABASE` on the one per-ticket name. It never drops any other database.
 - Wait until `sqlcmd` can run a query. A started instance is not enough.
 - Where `dbup-run.ps1` and `api-start.ps1` say "the container's host and port", read "the instance and the per-ticket database".
