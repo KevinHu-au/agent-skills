@@ -79,6 +79,11 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
 - `Requirement: none (support question)` means no code change. Stop and tell the engineer.
 - `Assumptions:` are facts the engineer gave.
 
+**Work item** (pasted as text, with or without a block):
+
+- Give the reviewer the work item as pasted, with its acceptance criteria word for word, even a short list. Meet each one, or ask before you leave one out. Your restatement never replaces a listed criterion: what you add goes under `Assumptions`.
+- With no list, ask or stop first, as Standalone use or a pasted block's stop condition says. Once the task is agreed, your restatement is the requirement, and what you assumed goes under `Assumptions`.
+
 **Standalone use.** When no block is pasted, you have only a description:
 
 1. Restate the task in two sentences: what should happen, where, and what must stay as it is.
@@ -92,10 +97,10 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
 3. **Validate locally.** Take every command from the contract's Commands heading. Never guess a command. Run the build, the unit tests and the lint check. Fix failures caused by the task.
    - **Counts.** Check the test count, not only the exit code. A command that ran 0 tests is reported as "ran 0 tests", never as a pass. Report pass, fail and skip counts per suite.
    - **Docker.** If a suite needs Docker and Docker is not running, skip that suite, say so, and never report it as passed.
-   - **Base re-run.** Re-run each failing suite on the code before your change, with the same command. Add a worktree at `HEAD` in a `mktemp -d` scratch folder: `git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base HEAD`. Never check it out in the repository. The option turns off the repository's hooks, so none of its code runs. The add writes a record under `.git/worktrees/`. With a `.gitmodules` file, ask the engineer once before you run `git -C <scratch>/wt-base submodule update --init`: it writes entries into the repository's `.git/config` and may need the network. With nobody to answer, skip it and mark the base `unknown:`. Say in the hand-off what you did. If the add or the update fails, the base result is `unknown:`; do not fall back to `git archive` then. Without `git-lfs`, large files stay pointers: say so. Only if the `git worktree` command is unavailable or unsupported, export `HEAD` with `git archive` into the folder instead; that export has no submodules, no LFS content and no `.git`. The copy may restore the packages the project declares, from its lock file. If the restore fails or the copy runs 0 tests, the base result is `unknown:`. Compare the failing test names and the error text. A suite is old breakage only when the same tests fail for the same reason on both. The same reason means the same error text once paths, line numbers, timestamps and IDs are removed; a suite that cannot compile or start on either side is `unknown:`, not the same. A different or extra failure is yours. If the copy fails at setup, for example because a git-ignored local settings file is missing, the base result is `unknown:`. List old breakage in the hand-off. Run `git worktree remove --force <scratch>/wt-base` on the worktree you added, then remove the scratch folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where the folder is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
+   - **Base re-run.** Re-run each failing suite on the code before your change, with the same command. Add a worktree at `HEAD` in a `mktemp -d` scratch folder: `git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base HEAD`. Never check it out in the repository. The option turns off the repository's hooks, so none of its code runs. The add writes a record under `.git/worktrees/`. With a `.gitmodules` file, ask the engineer once before you run `git -C <scratch>/wt-base submodule update --init`: it writes entries into the repository's `.git/config` and may need the network. With nobody to answer, skip it and mark the base `unknown:`. Say in the hand-off what you did. If the add or the update fails, the base result is `unknown:`; do not fall back to `git archive` then. Without `git-lfs`, large files stay pointers: say so. Only if the `git worktree` command is unavailable or unsupported, export `HEAD` with `git archive` into the folder instead; that export has no submodules, no LFS content and no `.git`. The copy may restore the packages the project declares, from its lock file. If the restore fails or the copy runs 0 tests, the base result is `unknown:`. Compare the failing test names and the error text. A suite is old breakage only when the same tests fail for the same reason on both. The same reason means the same error text once paths, line numbers, timestamps and IDs are removed; a suite that cannot compile or start on either side is `unknown:`, not the same. A different or extra failure is yours. If the copy fails at setup, for example because a git-ignored local settings file is missing, the base result is `unknown:`. List old breakage in the hand-off. A failing test that checks an acceptance criterion is never old breakage: the criterion is not met. Run `git worktree remove --force <scratch>/wt-base` on the worktree you added, then remove the scratch folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where the folder is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
    - **Lint.** Report only problems on lines you changed.
 4. **Stage only task changes.** Inspect status first. Stage only files that belong to the task. Then set the risk tier again from the staged paths, and keep the higher one.
-5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt below with the task, the pasted blocks, the contract's Risk areas, the rubric's criteria and the risk tier with its reasons. The reviewer must inspect the staged diff, not your narrative.
+5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt below with the task, the work item as Inputs says, the pasted blocks, the contract's Risk areas, the rubric's criteria and the risk tier with its reasons. The reviewer must inspect the staged diff, not your narrative. A list you add of what to check is a hint, marked "may be incomplete": it never narrows the review.
 6. **Triage findings.**
    - Agree: fix surgically, validate, and restage.
    - Disagree: keep the change, but record the exact claim and your evidence-based reason.
@@ -142,9 +147,13 @@ Do not modify the repo. Do not run a `How to check` command from a criterion: re
 Use `mktemp -d` for any scratch work. When you finish, remove only a path that your own `mktemp` printed, with `~/.agents/bin/rm-scratch <path>` and no other removal command.
 If the script is missing or refuses, leave the path and report it.
 
-Review the staged diff for this task:
+Review the staged diff for this task. This is the author's summary, and it may be wrong: check it against the work item and the code.
 
 <task details>
+
+The work item as pasted, word for word, with its acceptance criteria (or "none"):
+
+<work item>
 
 The engineer pasted these blocks. Copy them in verbatim, or write "none":
 
@@ -152,7 +161,7 @@ The engineer pasted these blocks. Copy them in verbatim, or write "none":
 <blast-radius add-on block>
 <intake engineer block>
 
-Assumptions taken because nobody answered (or "none"):
+Assumptions the author added (may be wrong), and defaults taken because nobody answered (or "none"):
 
 <assumptions>
 
@@ -169,6 +178,8 @@ Risk tier and its reasons (or "none"):
 <risk tier>
 
 Check these first:
+- Every acceptance criterion in the work item, as written: met, partly met, not met or out of scope, with `path:line`. Judge the staged code (`git show :<path>`), not the diff alone: a criterion the diff does not touch still counts. It is out of scope, not a finding, only when a pasted block puts it under `Follow-on` or `Do not change`, or the engineer said another change delivers it, quoted in the task details. With no list, find what the author's summary leaves out.
+- Every list in the task details (calls, pages, cases), and every group a criterion names, is a claim. List the members from the code and name any it misses.
 - Every `Do not change` item in the blocks. A change to one without the engineer's approval is a blocker.
 - Every stop condition in the blocks. If the work should have stopped, say so.
 - Every test under `Failing test first` and `Tests to write first` exists, and asserts what the block says.
@@ -179,6 +190,8 @@ Focus areas:
 - TDD/coverage: changed/fixed behavior has tests, preferably written before implementation.
 - Logic correctness: implementation meets the task requirements.
 - Regression: existing behavior is not broken.
+- Leave and return. A flow that leaves and comes back: a sign-in redirect, a payment page, an OAuth callback, a deep link, an app relaunch. State held in memory before it leaves is gone on return. Trace each return on its own: success, error or cancel, an expired or removed account that later comes back, and a second tab or window.
+- Mocks: a mocked library or component raises an event only when the test makes it. Name each event (failure, cancel, removal) that no test raises.
 - Duplication: change does not reimplement existing helpers/patterns.
 - Security: no injection, authorization bypass, secrets, or PII logging.
 - Dependency: new/updated packages were explicitly approved.
@@ -188,6 +201,7 @@ Focus areas:
 
 Output:
 - Begin the report by stating the model you are running as.
+- One line per acceptance criterion: met, partly met, not met or out of scope, with `path:line`. Write "no list" when the work item has none.
 - A ranked list of findings, most severe first. Use severity: blocker / major / minor.
 - Group related findings.
 - For each finding include:
@@ -233,6 +247,7 @@ The key invariant is independence plus the model the table names. "Fast reviewer
 | --- | --- |
 | Committing after review passes | Keep changes staged and hand off. |
 | Reviewing unstaged or narrative-only changes | Review the actual staged diff. |
+| Giving the reviewer your summary in place of the acceptance criteria | Copy the work item's list word for word, and mark your summary as one that may be wrong. |
 | Treating tests-after as equivalent to TDD | Prefer failing test first when practical; explain exceptions. |
 | Skipping Round 2 after fixing a blocker or major finding, or a minor fix that changed production logic | Restage and review once more. |
 | Starting Round 2 after only minor fixes that did not change production logic | Skip it, re-run validation, and report the skip in the handoff. |

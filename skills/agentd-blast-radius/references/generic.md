@@ -32,7 +32,7 @@ Follow `references/surfaces.md` in its own order. For an unknown stack, find eac
 - Wire shapes: the routes, the message or event names and the serialisers. Search for the framework's route and handler registration.
 - Data: the columns, the readers of a column (code, views, stored procedures, reports, exports) and the persisted names.
 - Persisted names: any name that old data or old builds still use after the change: keys in client storage and caches, serialised field and type names, file and queue names, on-device data. A rename breaks the data that is already stored, so list where it is stored and how long it lives.
-- Timing and state: caches, sessions and background jobs that hold a value from before the change.
+- Timing and state: caches, sessions and background jobs that hold a value from before the change. For a flow that leaves and comes back, search for the redirect, callback and return routes, the deep-link handlers and the code that restores state on relaunch.
 - Configuration and flags: the section above.
 - Indirection: the section on wiring above.
 - Deploy order and rollback: the section on migrations above.

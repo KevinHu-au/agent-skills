@@ -171,10 +171,11 @@ test_skill_is_manual_only() {
 # Raised from 120 to 130 for the shared "Find the project facts" paragraph, which every skill that reads the pack
 # carries word for word (see tests/test-shared-text.sh). Raised again to 145 for the rubric pointer, one sentence in
 # Flow step 4; the rubric rules live in skills/agentd-review-rubric/references/reading-the-rubric.md. Raised again
-# to 155 for no-work-item mode, which changes the Prerequisite, Flow steps 2 and 7, Severity and Output.
+# to 155 for no-work-item mode, which changes the Prerequisite, Flow steps 2 and 7, Severity and Output. Raised again
+# to 160 for checking each acceptance criterion as written, on the code at HEAD, in Flow steps 4 and 6 and Severity.
 # Counts the body only: the frontmatter (name, description, hooks) is for the tool, not instructions.
-test_skill_is_at_most_155_lines() {
-  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 155 ]
+test_skill_is_at_most_160_lines() {
+  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 160 ]
 }
 
 test_required_h2_sections_in_order() {
@@ -363,6 +364,23 @@ test_silent_or_vague_work_item_wins_over_block() {
 }
 
 # ---------------------------------------------------------------- exact rules (review round 2: no deletion or reversal)
+
+test_acceptance_criteria_are_checked_as_written() {
+  section_has "$SKILL" Flow "Check each acceptance criterion the work item lists as written" \
+    "your restatement never replaces one" 'Judge the code at `HEAD`, not the diff' \
+    "a criterion the diff does not touch still counts" \
+    "only when the engineer or the PR description says another PR delivers it" "names a group" \
+    "list its members from the code" "Past 10 members, search for those that lack the change" \
+    "When only untouched code fails it, the base fails it too: it is at most Major, never Block" \
+    "mark the criterion partly checked" "a sign-in, payment or callback flow always touches timing and state" \
+    "whether another PR delivers each criterion not met in untouched code" \
+    "Give them the acceptance criteria as pasted, or in no-work-item mode the inferred intent marked as one" \
+    "say your requirement may be wrong" &&
+    section_has "$SKILL" Severity "A handled event that no test raises is not covered." &&
+    section_has "$SKILL" "Running commands" "unless it checks an acceptance criterion: then step 4 decides" &&
+    section_has "$OUT" "For you only" "each acceptance criterion as the work item words it" \
+      "another PR delivers as out of scope" "When only the PR description says so" "count of group members left unchecked"
+}
 
 test_block_list_is_complete() {
   section_has "$SKILL" Severity "A stated acceptance criterion is clearly not met." \
@@ -563,7 +581,7 @@ check "line_has needs every text on one line" test_line_has_needs_one_line
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
-check "the SKILL.md body is at most 155 lines" test_skill_is_at_most_155_lines
+check "the SKILL.md body is at most 160 lines" test_skill_is_at_most_160_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "Flow has nine numbered steps in order" test_flow_has_nine_numbered_steps_in_order
 check "a missing paste asks once" test_missing_paste_asks_once
@@ -628,6 +646,7 @@ check "for-you-only has the criteria" test_for_you_only_has_the_criteria
 check "the Docker check is on the run plan" test_docker_check_is_on_the_run_plan
 check "a silent or vague work item caps requirement findings only" test_silent_or_vague_work_item_wins_over_block
 check "the Block list is complete" test_block_list_is_complete
+check "acceptance criteria are checked as written, on the code at HEAD" test_acceptance_criteria_are_checked_as_written
 check "exact running rules" test_exact_running_rules
 check "Running commands never switch branches" test_running_commands_never_switch_branches
 check "a dirty tree asks to stash, not commit" test_dirty_tree_asks_to_stash_not_commit
