@@ -190,7 +190,7 @@ check "git-safety.json holds the exact quoted path" \
 # A session that started an agentd skill (its marker exists): a dangerous command is denied.
 mkdir -p "$H/.agents/hook-state" && : >"$H/.agents/hook-state/s5"
 check "the rendered Copilot command runs through a shell" \
-  test "$(jq -cn '{sessionId:"s5",toolName:"bash",toolArgs:{command:"git push"}}' \
+  test "$(jq -cn '{sessionId:"s5",toolName:"bash",toolArgs:{command:"git push --force"}}' \
     | HOME=$H bash -c "$(jq -r '.hooks.preToolUse[0].bash' "$H/.copilot/hooks/git-safety.json")" | jq -r .permissionDecision)" = deny
 check "codex hooks.json is valid JSON" jq -e . "$H/.codex/hooks.json"
 check "codex hooks.json holds the exact quoted path" \
@@ -211,19 +211,27 @@ decision() { printf '%s' "$1" | jq -r '.permissionDecision' 2>/dev/null; }
 is_deny() { [ "$(decision "$(hook "$1")")" = deny ]; }
 is_ask() { [ "$(decision "$(hook "$1")")" = ask ]; }
 is_silent() { [ -z "$(hook "$1")" ]; }
-for c in 'git push' 'git reset --hard' 'git push --force origin main' 'cd repo && git push' \
-  'git -C repo push' '/usr/bin/git push' '\git push' '(git push)' 'echo $(git push)' \
-  'git -c core.pager=cat push' 'git --git-dir=.git push' 'git --no-pager push' \
+for c in 'git push --force' 'git reset --hard' 'git push --force origin main' 'cd repo && git push -f' \
+  'git -C repo push --force' '/usr/bin/git push -f' '\git push -f' '(git push -f)' 'echo $(git push -f)' \
+  'git -c core.pager=cat push -f' 'git --git-dir=.git push -f' 'git --no-pager push -f' \
+  'git push -uf origin feat' 'git push --force-with-lease' 'git push --force-with-lease=main:abc123 origin main' \
+  'git push --force-if-includes --force-with-lease' 'git push origin --delete old' 'git push -d origin old' \
+  'git push origin :old' 'git push origin +main' 'git push origin "+main"' "git push origin ':old'" \
+  'git push origin +HEAD:main' 'git push --mirror' 'git push --prune origin' 'git push -f>out' \
+  'git push --del origin old' 'git push --mir' 'git push --pru origin' "git push origin '-f'" \
+  'git push "--force" origin main' 'git push origin "--delete" old' 'git push -4f origin main' 'git push -6d origin old' \
+  'git push origin \+main' 'git push origin \:old' 'git push origin ""+main' "git push origin \$'+main'" 'git push \-f' \
+  'git push origin $"+main"' 'git push $"-f"' 'git push origin ":old"' \
   'git clean -f' 'git clean -fd' 'git clean -fdx' 'git clean -xdf' 'git clean --force' \
   'git reset --soft HEAD~1 && git reset --hard' 'git -C repo reset --hard HEAD' \
   'git branch -D topic' 'git branch -Dq topic' 'git checkout .' 'git checkout -- .' 'git restore .' \
-  'git -C "my repo" push --force' 'git -C "my repo" reset --hard' 'git -c "a=b c" push' "git --git-dir 'x y' push" \
-  "bash -c 'git push'" 'git push>out' 'git reset --hard>out' "$(printf 'git reset \\\n  --hard')" \
-  "$(printf 'git \\\npush')" 'git branch --delete --force topic' 'git branch -d -f topic' 'git checkout -f main' \
+  'git -C "my repo" push --force' 'git -C "my repo" reset --hard' 'git -c "a=b c" push -f' "git --git-dir 'x y' push -f" \
+  "bash -c 'git push -f'" 'git reset --hard>out' "$(printf 'git reset \\\n  --hard')" \
+  "$(printf 'git \\\npush -f')" 'git branch --delete --force topic' 'git branch -d -f topic' 'git checkout -f main' \
   'git switch -f main' 'git switch --discard-changes main' 'git checkout -- ./' \
-  'git -C $(pwd) push' 'git --git-dir=$(pwd)/.git push' 'git -C $(git rev-parse --show-toplevel) push --force' \
+  'git -C $(pwd) push -f' 'git --git-dir=$(pwd)/.git push -f' 'git -C $(git rev-parse --show-toplevel) push --force' \
   'git checkout -B main origin/main' 'git switch -C main origin/main' 'git switch --force-create main' \
-  'git branch -M main' 'git --config-env a=B push' 'git --super-prefix x/ push' '"git" push' "'git' push" \
+  'git branch -M main' 'git --config-env a=B push -f' 'git --super-prefix x/ push -f' '"git" push -f' "'git' push -f" \
   "$(printf 'git reset \\\r\n  --hard')"; do
   check "denied: $c" is_deny "$c"
 done
@@ -232,22 +240,16 @@ for c in 'rm -f x' '/bin/rm x' '\rm x' '(rm x)' 'xargs rm' 'rmdir d' 'unlink f' 
   'Remove-Item -Recurse x' 'remove-item x' 'ri x' 'del x' 'erase x' 'rd x'; do
   check "asks: $c" is_ask "$c"
 done
-# Commit, history rewrite, single-file discard, PR create or merge, and SQL writes: ask, never deny.
-for c in 'git commit -m "fix login"' 'git commit --amend' 'git commit -am x' 'git -C repo commit -m x' \
-  'cd repo && git commit -m x' '/usr/bin/git commit -m x' \
-  'git rebase main' 'git rebase -i HEAD~3' 'git filter-branch --tree-filter x' 'git stash drop' 'git stash clear' \
+# History rewrite, single-file discard and SQL writes: ask, never deny.
+for c in 'git rebase main' 'git rebase -i HEAD~3' 'git filter-branch --tree-filter x' 'git stash drop' 'git stash clear' \
   'git stash drop stash@{1}' 'git -C repo rebase main' \
   'git checkout -- src/a.cs' 'git checkout HEAD -- src/a.cs' 'git restore src/a.cs' 'git -C repo restore a.cs' \
-  'gh pr create' 'gh pr create --title x --body y' 'gh pr merge 12' 'gh pr merge --squash' \
-  'az repos pr create --title x' \
   'sqlcmd -S srv -Q "DELETE FROM t"' 'sqlcmd -Q "update t set a = 1"' 'sqlcmd -Q "Insert into t values (1)"' \
   'sqlcmd -Q "DROP TABLE t"' 'sqlcmd -Q "truncate table t"' 'sqlcmd -Q "ALTER TABLE t ADD c int"' \
   'Invoke-Sqlcmd -Query "DELETE FROM t"' 'invoke-sqlcmd -Query "update t set a = 1"' \
   'cd db && sqlcmd -Q "delete from t"' \
-  'az repos pr update --id 1 --status completed' 'az repos pr update --id 1 --status=completed' \
-  'gh api -X PUT repos/o/r/pulls/12/merge' 'sqlcmd -Q "EXEC dbo.PurgeOrders"' 'sqlcmd -Q "create table t (a int)"' \
-  'Invoke-Sqlcmd -Query "exec dbo.x"' 'sqlcmd -Q "MERGE t USING s ON 1=1 WHEN MATCHED THEN UPDATE SET a=1;"' \
-  'az repos pr update --id 1 --auto-complete true' 'az repos pr update --id 1 --auto-complete=true'; do
+  'sqlcmd -Q "EXEC dbo.PurgeOrders"' 'sqlcmd -Q "create table t (a int)"' \
+  'Invoke-Sqlcmd -Query "exec dbo.x"' 'sqlcmd -Q "MERGE t USING s ON 1=1 WHEN MATCHED THEN UPDATE SET a=1;"'; do
   check "asks: $c" is_ask "$c"
 done
 for c in 'ls -la' 'git status' 'git log --oneline' 'git log --grep=push' \
@@ -261,7 +263,16 @@ for c in 'ls -la' 'git status' 'git log --oneline' 'git log --grep=push' \
   'sqlcmd -Q "SELECT * FROM users"' 'sqlcmd -Q "select updated_at, deleted_flag from t"' \
   'Invoke-Sqlcmd -Query "SELECT 1"' 'echo "update the docs"' \
   'az repos pr update --id 1 --title x' 'gh api repos/o/r/pulls/12' 'az repos pr update --id 1 --auto-complete false' \
-  'sqlcmd -Q "select created_at, executed_by from t"'; do
+  'sqlcmd -Q "select created_at, executed_by from t"' \
+  'git push' 'git push origin release' 'git push -u origin feat' 'git push --set-upstream origin feat' \
+  'git push --follow-tags' 'git push --tags' 'git push origin main:main' 'git push origin HEAD:refs/heads/feat' \
+  'git push origin fix-delete-button' 'git push --no-force-with-lease' 'cd repo && git push' 'git -C repo push' \
+  'git push --dry-run' 'git push --porcelain' 'git push --progress' 'git push --recurse-submodules=on-demand' \
+  'git push --push-option=x' 'git push --repo=https://example.invalid/r.git' 'git push origin :' "git push origin ':'" \
+  'git commit -m "fix login"' 'git commit --amend' 'git commit -am x' 'git -C repo commit -m x' \
+  'gh pr create' 'gh pr create --title x --body y' 'gh pr merge 12' 'gh pr merge --squash' \
+  'az repos pr create --title x' 'az repos pr update --id 1 --status completed' \
+  'az repos pr update --id 1 --auto-complete true' 'gh api -X PUT repos/o/r/pulls/12/merge'; do
   check "no output: $c" is_silent "$c"
 done
 check "a tool that is not a shell gets no output" \
@@ -279,31 +290,35 @@ chook() {
     | "$TEST_HOOK" --harness claude --event tool
 }
 cdecision() { printf '%s' "$1" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null; }
-check "claude: a dangerous git command is denied" test "$(cdecision "$(chook 'git push')")" = deny
+check "claude: a dangerous git command is denied" test "$(cdecision "$(chook 'git push --force')")" = deny
 check "claude: a removal asks" test "$(cdecision "$(chook 'rm -f x')")" = ask
-check "claude: a commit asks" test "$(cdecision "$(chook 'git commit -m x')")" = ask
+check "claude: a rebase asks" test "$(cdecision "$(chook 'git rebase main')")" = ask
+check "claude: a commit gets no output" test -z "$(chook 'git commit -m x')"
+check "claude: a plain push gets no output" test -z "$(chook 'git push -u origin feat')"
 check "claude: the PowerShell tool is checked too" test "$(cdecision "$(chook 'Remove-Item x' PowerShell)")" = ask
 check "claude: an ordinary command gets no output" test -z "$(chook 'ls -la')"
-check "claude: a tool that is not a shell gets no output" test -z "$(chook 'git push' Read)"
+check "claude: a tool that is not a shell gets no output" test -z "$(chook 'git push --force' Read)"
 check "claude: the decision names the event" \
-  test "$(printf '%s' "$(chook 'git push')" | jq -r '.hookSpecificOutput.hookEventName')" = PreToolUse
+  test "$(printf '%s' "$(chook 'git push --force')" | jq -r '.hookSpecificOutput.hookEventName')" = PreToolUse
 check "claude: the decision carries a reason" \
-  test -n "$(printf '%s' "$(chook 'git push')" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty')"
+  test -n "$(printf '%s' "$(chook 'git push --force')" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty')"
 check "claude: the output has no top-level decision" \
-  jq -e 'has("permissionDecision") | not' <<<"$(chook 'git push')"
+  jq -e 'has("permissionDecision") | not' <<<"$(chook 'git push --force')"
 check "claude: a command that cannot be read is denied" \
   test "$(cdecision "$(printf '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{}}' | "$TEST_HOOK")")" = deny
 check "claude: a missing jq is denied in the claude shape" \
   has "$(printf '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls"}}' | PATH=/nonexistent "$TEST_HOOK")" '"hookSpecificOutput".*"permissionDecision":"deny".*jq'
 check "copilot: the output has no hookSpecificOutput" \
-  not has "$(hook 'git push')" 'hookSpecificOutput'
+  not has "$(hook 'git push --force')" 'hookSpecificOutput'
 # An older install (no flags) keeps the older rules only, so a git pull adds nothing to its sessions.
-check "legacy: a dangerous git command is still denied" test "$(decision "$(legacy 'git push')")" = deny
+check "legacy: a dangerous git command is still denied" test "$(decision "$(legacy 'git push --force')")" = deny
 check "legacy: a removal still asks" test "$(decision "$(legacy 'rm -f x')")" = ask
-for c in 'git commit -m x' 'git rebase main' 'git restore a.cs' 'gh pr create' 'sqlcmd -Q "delete from t"' \
-  'az repos pr update --id 1 --status completed'; do
+for c in 'git rebase main' 'git restore a.cs' 'sqlcmd -Q "delete from t"'; do
   check "legacy: no newer rule: $c" test -z "$(legacy "$c")"
 done
+# Older installs share the dangerous git rules, so the push change reaches them too.
+check "legacy: a plain push passes" test -z "$(legacy 'git push origin main')"
+check "legacy: a force push is still denied" test "$(decision "$(legacy 'git push -f origin main')")" = deny
 
 echo "7. CLAUDE_CONFIG_DIR"
 new_home
@@ -408,9 +423,9 @@ cp_prompt() { jq_text -cn --arg s "$1" --arg p "$2" '{sessionId:$s,prompt:$p}'; 
 cx_tool() { jq_text -cn --arg s "$1" --arg c "$2" '{session_id:$s,hook_event_name:"PreToolUse",tool_name:"Bash",tool_input:{command:$c}}'; }
 cx_prompt() { jq_text -cn --arg s "$1" --arg p "$2" '{session_id:$s,hook_event_name:"UserPromptSubmit",prompt:$p}'; }
 
-check "copilot: no agentd skill yet, a dangerous command passes through" test -z "$(gate copilot tool "$(cp_tool s1 'git push')")"
+check "copilot: no agentd skill yet, a dangerous command passes through" test -z "$(gate copilot tool "$(cp_tool s1 'git push --force')")"
 check "copilot: an ordinary prompt does not wake the gate" test -z "$(gate copilot prompt "$(cp_prompt s1 'fix the login bug')")"
-check "copilot: still dormant after an ordinary prompt" test -z "$(gate copilot tool "$(cp_tool s1 'git push')")"
+check "copilot: still dormant after an ordinary prompt" test -z "$(gate copilot tool "$(cp_tool s1 'git push --force')")"
 check "copilot: the prompt hook prints nothing" test -z "$(gate copilot prompt "$(cp_prompt s1 '/agentd-diagnose login fails')")"
 check "copilot: /agentd-<name> writes a marker" [ -e "$GH/.agents/hook-state/s1" ]
 if [ "$ON_WINDOWS" = 1 ]; then
@@ -419,26 +434,26 @@ else
   check "copilot: the marker folder is private" test "$(stat -f %Lp "$GH/.agents/hook-state" 2>/dev/null || stat -c %a "$GH/.agents/hook-state")" = 700
 fi
 check "copilot: after /agentd-, a dangerous command is denied" \
-  test "$(gate copilot tool "$(cp_tool s1 'git push')" | jq -r .permissionDecision)" = deny
+  test "$(gate copilot tool "$(cp_tool s1 'git push --force')" | jq -r .permissionDecision)" = deny
 check "copilot: after /agentd-, a removal asks" \
   test "$(gate copilot tool "$(cp_tool s1 'rm -f x')" | jq -r .permissionDecision)" = ask
-check "copilot: the flat shape, no hookSpecificOutput" not has "$(gate copilot tool "$(cp_tool s1 'git push')")" hookSpecificOutput
-check "copilot: another session stays dormant" test -z "$(gate copilot tool "$(cp_tool s2 'git push')")"
+check "copilot: the flat shape, no hookSpecificOutput" not has "$(gate copilot tool "$(cp_tool s1 'git push --force')")" hookSpecificOutput
+check "copilot: another session stays dormant" test -z "$(gate copilot tool "$(cp_tool s2 'git push --force')")"
 check "copilot: session end prints nothing and keeps the marker" bash -c '[ -z "$1" ] && [ -e "$2" ]' _ \
   "$(gate copilot end '{"sessionId":"s1","reason":"complete"}')" "$GH/.agents/hook-state/s1"
 check "copilot: a resumed session (same ID) is still checked" \
-  test "$(gate copilot tool "$(cp_tool s1 'git push')" | jq -r .permissionDecision)" = deny
+  test "$(gate copilot tool "$(cp_tool s1 'git push --force')" | jq -r .permissionDecision)" = deny
 check "copilot: the skill tool for agentd-<name> writes a marker and prints nothing" bash -c '[ -z "$1" ] && [ -e "$2" ]' _ \
   "$(gate copilot tool '{"sessionId":"s3","toolName":"skill","toolArgs":{"skill":"agentd-dev-rev"}}')" "$GH/.agents/hook-state/s3"
 check "copilot: after the skill tool, a dangerous command is denied" \
-  test "$(gate copilot tool "$(cp_tool s3 'git push')" | jq -r .permissionDecision)" = deny
+  test "$(gate copilot tool "$(cp_tool s3 'git push --force')" | jq -r .permissionDecision)" = deny
 check "copilot: another skill does not wake the gate" bash -c '[ -z "$1" ] && [ ! -e "$2" ]' _ \
   "$(gate copilot tool '{"sessionId":"s4","toolName":"skill","toolArgs":{"skill":"brainstorming"}}')" "$GH/.agents/hook-state/s4"
 gate copilot prompt "$(cp_prompt '../../evil' '/agentd-intake')" >/dev/null
 check "copilot: a session ID cannot leave the marker folder" \
   bash -c '[ -e "$1/.agents/hook-state/evil" ] && [ ! -e "$1/evil" ] && [ ! -e "$1/.agents/evil" ]' _ "$GH"
 check "copilot: a missing session ID runs the rules while any marker exists" \
-  test "$(gate copilot tool '{"toolName":"bash","toolArgs":{"command":"git push"}}' 2>/dev/null | jq -r .permissionDecision)" = deny
+  test "$(gate copilot tool '{"toolName":"bash","toolArgs":{"command":"git push --force"}}' 2>/dev/null | jq -r .permissionDecision)" = deny
 check "copilot: a missing session ID prints a warning" \
   has "$(gate copilot tool '{"toolName":"bash","toolArgs":{"command":"ls"}}' 2>&1 >/dev/null)" 'could not read the session ID'
 check "codex: a missing session ID prints a warning" \
@@ -448,7 +463,7 @@ check "copilot: a readable session ID prints no warning" \
   test -z "$(gate copilot tool "$(cp_tool s1 'ls')" 2>&1 >/dev/null)"
 EH=$(mktemp -d)
 check "copilot: a missing session ID is dormant while no marker exists" \
-  test -z "$(printf '{"toolName":"bash","toolArgs":{"command":"git push"}}' | HOME=$EH "$TEST_HOOK" --harness copilot --event tool 2>/dev/null)"
+  test -z "$(printf '{"toolName":"bash","toolArgs":{"command":"git push --force"}}' | HOME=$EH "$TEST_HOOK" --harness copilot --event tool 2>/dev/null)"
 check "copilot: input that is not JSON is dormant while no marker exists" \
   test -z "$(printf 'not json' | HOME=$EH "$TEST_HOOK" --harness copilot --event tool 2>/dev/null)"
 # A PATH with the usual tools but no jq.
@@ -531,13 +546,13 @@ check "copilot: missing jq, /agentd-<name> on a later prompt line still wakes th
 check "copilot: missing jq, the first session ID is used, not a later one" \
   test -z "$(nojqt tool '{"sessionId":"n3","toolName":"bash","toolArgs":{"command":"ls","session_id":"n1"}}')"
 
-check "codex: no agentd skill yet, a dangerous command passes through" test -z "$(gate codex tool "$(cx_tool c1 'git push')")"
+check "codex: no agentd skill yet, a dangerous command passes through" test -z "$(gate codex tool "$(cx_tool c1 'git push --force')")"
 gate codex prompt "$(cx_prompt c1 'please run $agentd-diagnose on the login bug')" >/dev/null
 check "codex: \$agentd-<name> in the prompt writes a marker" [ -e "$GH/.agents/hook-state/c1" ]
 check "codex: after \$agentd-, a dangerous command is denied" \
-  test "$(gate codex tool "$(cx_tool c1 'git push')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+  test "$(gate codex tool "$(cx_tool c1 'git push --force')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "codex: an ask becomes a deny" \
-  test "$(gate codex tool "$(cx_tool c1 'git commit -m x')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+  test "$(gate codex tool "$(cx_tool c1 'git rebase main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "codex: the deny says Codex cannot ask" \
   has "$(gate codex tool "$(cx_tool c1 'rm -f x')" | jq -r .hookSpecificOutput.permissionDecisionReason)" 'Codex hooks cannot ask'
 check "codex: an ordinary command gets no output" test -z "$(gate codex tool "$(cx_tool c1 'ls -la')")"
@@ -551,12 +566,12 @@ done
 check "codex: reading an agentd SKILL.md in a shell command writes a marker" bash -c '[ -z "$1" ] && [ -e "$2" ]' _ \
   "$(gate codex tool "$(cx_tool q1 'cat ~/.agents/skills/agentd-intake/SKILL.md')")" "$GH/.agents/hook-state/q1"
 check "codex: after reading the skill file, a dangerous command is denied" \
-  test "$(gate codex tool "$(cx_tool q1 'git push')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+  test "$(gate codex tool "$(cx_tool q1 'git push --force')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 
 check "claude: never gated, a dangerous command is denied" \
-  test "$(gate claude tool "$(cx_tool k1 'git push')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+  test "$(gate claude tool "$(cx_tool k1 'git push --force')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "claude: an ask stays an ask" \
-  test "$(gate claude tool "$(cx_tool k1 'git commit -m x')" | jq -r .hookSpecificOutput.permissionDecision)" = ask
+  test "$(gate claude tool "$(cx_tool k1 'git rebase main')" | jq -r .hookSpecificOutput.permissionDecision)" = ask
 check "claude: writes no marker" [ ! -e "$GH/.agents/hook-state/k1" ]
 
 echo "11. Codex harness"
@@ -765,47 +780,48 @@ printf '#!/bin/sh\n"%s" "$@" | perl -pe '"'"'s/\\n/\\r\\n/'"'"'\n' "$(command -v
 chmod +x "$CRLF_BIN/jq"
 check "the fake jq really writes \\r\\n" bash -c 'printf "{\"a\":\"Bash\"}" | "$1/jq" -r .a | od -c | grep -q "\\\\r"' _ "$CRLF_BIN"
 crlf() { printf '%s' "$3" | HOME=$GH PATH="$CRLF_BIN:$PATH" "$TEST_HOOK" --harness "$1" --event "$2"; }
-check "CRLF jq, claude: git push is denied" \
-  test "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}' | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "CRLF jq, claude: a force push is denied" \
+  test "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"git push --force origin main"}}' | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "CRLF jq, claude: rm asks" \
   test "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"rm -f x.txt"}}' | jq -r .hookSpecificOutput.permissionDecision)" = ask
 check "CRLF jq, claude: an ordinary command gets no output" \
   test -z "$(crlf claude tool '{"tool_name":"Bash","tool_input":{"command":"ls -la"}}')"
 crlf copilot prompt "$(cp_prompt crlf1 '/agentd-diagnose fix the login bug')" >/dev/null
-check "CRLF jq, copilot: after /agentd-, git push is denied" \
-  test "$(crlf copilot tool "$(cp_tool crlf1 'git push origin main')" | jq -r .permissionDecision)" = deny
+check "CRLF jq, copilot: after /agentd-, a force push is denied" \
+  test "$(crlf copilot tool "$(cp_tool crlf1 'git push --force origin main')" | jq -r .permissionDecision)" = deny
 crlf codex prompt "$(cx_prompt crlf2 'run $agentd-diagnose on the login bug')" >/dev/null
-check "CRLF jq, codex: after \$agentd-, git push is denied" \
-  test "$(crlf codex tool "$(cx_tool crlf2 'git push origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "CRLF jq, codex: after \$agentd-, a force push is denied" \
+  test "$(crlf codex tool "$(cx_tool crlf2 'git push --force origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 
 echo "16. Always-on guard (optional)"
 AO="$GH/.agents/always-on-guard"
 # claude_ao JSON: run the hook as Claude Code's user-level entry from hooks/claude/always-on.settings.json.
 claude_ao() { printf '%s' "$1" | HOME=$GH "$TEST_HOOK" --harness claude --event tool --always-on; }
 cl_tool() { jq_text -cn --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}'; }
-check "guard off: the Claude Code entry is silent on git push" test -z "$(claude_ao "$(cl_tool 'git push origin main')")"
-check "guard off: copilot without a skill is silent on git push" test -z "$(gate copilot tool "$(cp_tool ao1 'git push')")"
+check "guard off: the Claude Code entry is silent on a force push" test -z "$(claude_ao "$(cl_tool 'git push --force origin main')")"
+check "guard off: copilot without a skill is silent on a force push" test -z "$(gate copilot tool "$(cp_tool ao1 'git push --force')")"
 : >"$AO"
-check "guard on: the Claude Code entry denies git push" \
-  test "$(claude_ao "$(cl_tool 'git push origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "guard on: the Claude Code entry denies a force push" \
+  test "$(claude_ao "$(cl_tool 'git push --force origin main')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "guard on: the Claude Code entry denies git reset --hard" \
   test "$(claude_ao "$(cl_tool 'git reset --hard HEAD~1')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "guard on: the Claude Code entry does not ask on rm" test -z "$(claude_ao "$(cl_tool 'rm -f x.txt')")"
-check "guard on: the Claude Code entry does not ask on git commit" test -z "$(claude_ao "$(cl_tool 'git commit -m x')")"
+check "guard on: the Claude Code entry does not ask on git rebase" test -z "$(claude_ao "$(cl_tool 'git rebase main')")"
+check "guard on: the Claude Code entry is silent on a plain push" test -z "$(claude_ao "$(cl_tool 'git push -u origin feat')")"
 check "guard on: the Claude Code entry is silent on ls" test -z "$(claude_ao "$(cl_tool 'ls -la')")"
 check "guard on: the Claude Code entry is silent on input it cannot read" test -z "$(claude_ao 'not json')"
-check "guard on: copilot without a skill denies git push" \
-  test "$(gate copilot tool "$(cp_tool ao1 'git push')" | jq -r .permissionDecision)" = deny
+check "guard on: copilot without a skill denies a force push" \
+  test "$(gate copilot tool "$(cp_tool ao1 'git push --force')" | jq -r .permissionDecision)" = deny
 check "guard on: copilot without a skill does not ask on rm" test -z "$(gate copilot tool "$(cp_tool ao1 'rm -f x.txt')")"
 check "guard on: copilot without a skill writes no session marker" [ ! -e "$GH/.agents/hook-state/ao1" ]
-check "guard on: codex without a skill denies git push" \
-  test "$(gate codex tool "$(cx_tool ao2 'git push')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "guard on: codex without a skill denies a force push" \
+  test "$(gate codex tool "$(cx_tool ao2 'git push --force')" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 check "guard on: codex without a skill does not deny rm" test -z "$(gate codex tool "$(cx_tool ao2 'rm -f x.txt')")"
 gate copilot prompt "$(cp_prompt ao3 '/agentd-diagnose fix the login bug')" >/dev/null
 check "guard on: an agentd session still asks on rm" \
   test "$(gate copilot tool "$(cp_tool ao3 'rm -f x.txt')" | jq -r .permissionDecision)" = ask
 rm -f "$AO"
-check "deleting the file turns the guard off" test -z "$(gate copilot tool "$(cp_tool ao1 'git push')")"
+check "deleting the file turns the guard off" test -z "$(gate copilot tool "$(cp_tool ao1 'git push --force')")"
 check "the Claude Code snippet is valid JSON" jq -e . "$REPO/hooks/claude/always-on.settings.json"
 check "the Claude Code snippet calls the shared hook with --always-on" \
   bash -c 'c=$(jq -r ".hooks.PreToolUse[0].hooks[0].command" "$1"); case "$c" in
@@ -824,8 +840,8 @@ check "guard on: the snippet exits 0 and logs a warning when the hook script is 
 ln -s "$TEST_HOOK" "$SH/.agents/hooks/block-dangerous-shell.sh"
 check "an unset HOME does not crash the Claude Code entry" \
   bash -c 'printf "{}" | env -u HOME "$1" --harness claude --event tool --always-on >/dev/null 2>&1' _ "$TEST_HOOK"
-check "the snippet denies git push through the linked hook" \
-  test "$(cl_tool 'git push origin main' | HOME=$SH sh -c "$snip_cmd" | jq -r .hookSpecificOutput.permissionDecision)" = deny
+check "the snippet denies a force push through the linked hook" \
+  test "$(cl_tool 'git push --force origin main' | HOME=$SH sh -c "$snip_cmd" | jq -r .hookSpecificOutput.permissionDecision)" = deny
 
 # Without jq on PATH: NJ from section 10.
 NOJQ=$NJ
@@ -834,12 +850,12 @@ check "guard on, no jq: the Claude Code entry is silent and logs a warning" \
   bash -c 'out=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness claude --event tool --always-on 2>/dev/null);
     err=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness claude --event tool --always-on 2>&1 >/dev/null);
     [ -z "$out" ] && printf "%s" "$err" | grep -q "jq is missing"' \
-  _ "$(cl_tool 'git push origin main')" "$SH" "$NOJQ" "$TEST_HOOK"
+  _ "$(cl_tool 'git push --force origin main')" "$SH" "$NOJQ" "$TEST_HOOK"
 check "guard on, no jq: copilot without a skill is silent and logs a warning" \
   bash -c 'out=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness copilot --event tool 2>/dev/null);
     err=$(printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness copilot --event tool 2>&1 >/dev/null);
     [ -z "$out" ] && printf "%s" "$err" | grep -q "jq is missing"' \
-  _ "$(cp_tool nj1 'git push origin main')" "$SH" "$NOJQ" "$TEST_HOOK"
+  _ "$(cp_tool nj1 'git push --force origin main')" "$SH" "$NOJQ" "$TEST_HOOK"
 mkdir -p "$SH/.agents/hook-state" && : >"$SH/.agents/hook-state/nj2"
 check "guard on, no jq: an agentd session still denies (fails closed)" \
   bash -c 'printf "%s" "$1" | HOME=$2 PATH=$3 "$4" --harness copilot --event tool 2>/dev/null | grep -q "\"deny\""' \
@@ -851,13 +867,13 @@ mkdir -p "$SID/.agents"
 ln -s "$REPO/skills" "$SID/.agents/skills"
 : >"$SID/.agents/always-on-guard"
 nosid() { printf '%s' "$2" | HOME=$SID "$TEST_HOOK" --harness "$1" --event tool 2>/dev/null; }
-check "no session ID, guard on: copilot denies git push" \
-  test "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"git push"}}' | jq -r .permissionDecision)" = deny
+check "no session ID, guard on: copilot denies a force push" \
+  test "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"git push --force"}}' | jq -r .permissionDecision)" = deny
 check "no session ID, guard on: copilot does not ask on rm" \
   test -z "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"rm -f x.txt"}}')"
 rm -f "$SID/.agents/always-on-guard"
 check "no session ID, guard off: copilot stays dormant" \
-  test -z "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"git push"}}')"
+  test -z "$(nosid copilot '{"toolName":"bash","toolArgs":{"command":"git push --force"}}')"
 new_home
 OUT=$(run --always-on-guard 2>&1); RC=$?
 check "--always-on-guard: the dry run plans the file" has "$OUT" 'always-on-guard (empty marker)'
