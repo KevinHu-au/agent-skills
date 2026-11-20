@@ -190,17 +190,23 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
     subagent, and Codex may give the subagent its own session ID;
   - whether Claude Code keeps a skill's hook after `claude --resume` or after the conversation is compacted.
 
-  The rules: it denies `git push`, `git reset --hard`, a
+  The rules: it denies a `git push` that overwrites or deletes remote branches (`-f`, `--force`,
+  `--force-with-lease`, `--force-if-includes`, `-d`, `--delete`, `--mirror`, `--prune`, or a refspec that starts
+  with `+` or `:`), `git reset --hard`, a
   forced `git clean`, `git branch -D` or a forced branch delete, a forced `git checkout` or `git switch`, and
-  `git checkout .` or `git restore .`. It also catches forms such as `git -C "<path>" push`, `/usr/bin/git push`,
-  `(git push)`, `bash -c 'git push'` and a line continuation. It asks before `rm`, `rmdir`, `unlink`, `trash`,
+  `git checkout .` or `git restore .`. It also catches forms such as `git -C "<path>" push -f`, `/usr/bin/git push -f`,
+  `(git push -f)`, `bash -c 'git push -f'` and a line continuation. It asks before `rm`, `rmdir`, `unlink`, `trash`,
   `shred`, `find -delete`, and the PowerShell `Remove-Item`, `ri`, `del`, `erase` and `rd`. It also asks before
-  `git commit`, `git rebase`, `git filter-branch`, `git stash drop` and `git stash clear`, `git checkout -- <path>`
-  and `git restore`, `gh pr create`, `gh pr merge`, `az repos pr create`, `az repos pr update --status completed`,
-  `az repos pr update --auto-complete true`, a `gh api` call to a pull request's `merge` endpoint, and `sqlcmd` or `Invoke-Sqlcmd` with an `INSERT`, `UPDATE`,
-  `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `MERGE`, `CREATE`, `EXEC` or `EXECUTE` in the command. A SQL script passed
+  `git rebase`, `git filter-branch`, `git stash drop` and `git stash clear`, `git checkout -- <path>`
+  and `git restore`, and `sqlcmd` or `Invoke-Sqlcmd` with an `INSERT`, `UPDATE`,
+  `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `MERGE`, `CREATE`, `EXEC` or `EXECUTE` in the command. A plain `git push`,
+  `git commit`, and the pull request commands (`gh pr create`, `gh pr merge`, `az repos pr create`,
+  `az repos pr update`, `gh api`) pass without a deny or an ask. A SQL script passed
   with `-i` is not read, so it is not caught. Nor are `bcp ... in` or `dotnet ef database update`. Other forms it
-  does not catch include a command in a variable (`g=git; $g push`), a git alias (`git -c alias.p=push p`),
+  does not catch include a command in a variable (`g=git; $g push -f`), a git alias (`git -c alias.p=push p -f`),
+  a force or mirror push set in git config (`git -c remote.origin.mirror=true push`, or a `+` refspec in
+  `remote.<name>.push`), a quote inside a flag (`git push -""f`), brace expansion (`git push {-f,}`), a flag after
+  a quoted `;`, `&` or `|` (`git push -o 'a|b' --force`),
   a script run with `bash script.sh`, a Python one-liner that calls `subprocess` or `shutil.rmtree`, `mv` to a temp
   folder, truncation with `: >`, `rsync --delete`, `git reflog expire` with `git gc --prune`,
   `git worktree remove --force`, `git stash`, `sqlpackage` and `osql`. It prints nothing
@@ -219,7 +225,8 @@ repo/hooks/codex/hooks.json.tmpl  ->  ~/.codex/hooks.json   (rendered copy)
   hook command cannot quote it. It warns instead.
 - Older installs linked the script into `~/.copilot/hooks/` and call it with no flags. Until you re-install, that
   older hook keeps checking every Copilot session, with the older rules only (dangerous git and file removal). A
-  `git pull` adds no new rules to it. The installer does not remove the old link, so remove it yourself if you
+  `git pull` adds no new rules to it. It shares the dangerous git rules, so a plain `git push` now passes there
+  too, while a force or deleting push is still denied. The installer does not remove the old link, so remove it yourself if you
   like. An older `git-safety.json` differs from the new one, so the first run reports a `CONFLICT`. Re-run with
   `--apply --adopt` to replace it.
 
@@ -249,10 +256,11 @@ What it does:
 
 - It writes one empty file, `~/.agents/always-on-guard`. The hook checks for this file on every shell command.
 - While the file exists, every Copilot CLI and Codex session gets the deny rules. So does every Claude Code session,
-  once you merge the snippet below. The deny rules are: `git push`; `git reset --hard`; a forced `git clean`;
+  once you merge the snippet below. The deny rules are: a forced or deleting `git push`; `git reset --hard`; a forced `git clean`;
   `git branch -D`, `-M` or `-f`; `git checkout -f`, `-B` or `.`; `git switch -C`, `--force`, `--force-create` or
   `--discard-changes`; and `git restore .`.
-- The ask rules (removing files, `git commit`, pull requests, SQL writes) still run only inside an agentd skill.
+- The ask rules (removing files, rewriting history, discarding changes, SQL writes) still run only inside an
+  agentd skill.
 - Outside an agentd skill, the guard stays silent when it cannot read the command, for example when `jq` is
   missing. So it never blocks an ordinary session for that reason, but it then checks nothing. The installer warns
   when `jq` is missing, and the hook writes a line to the tool's hook log.
@@ -278,7 +286,7 @@ after you remove this repository. Running `./install.sh` again without the flag 
 installer never deletes anything, and while the file exists it prints a note that the guard is on.
 
 The guard can also deny a harmless command. A command word inside quoted text counts, so a commit message, a pull
-request body or an `echo` that names `git push` is denied too. Inside agentd skills this was always the case; with
+request body or an `echo` that names `git push --force` is denied too. Inside agentd skills this was always the case; with
 the guard it happens in every session. Reword the text, or run that command yourself.
 
 The same limits apply as for the hook inside agentd skills: a regex cannot catch every shell form (see the list

@@ -1,7 +1,8 @@
 #!/bin/bash
 # Shell safety hook for the agentd skills, shared by Claude Code, Copilot CLI and Codex.
-# Denies dangerous git commands. Asks before commands that remove files, commit, rewrite git history,
-# discard changes, create, complete or merge a pull request, or write to a SQL Server database.
+# Denies dangerous git commands, including a force push or a push that deletes a remote branch.
+# Asks before commands that remove files, rewrite git history, discard changes, or write to a SQL Server database.
+# A plain git push, git commit and pull request commands are allowed.
 # Prints nothing for everything else (empty output means the tool's default behaviour).
 #
 # Usage: block-dangerous-shell.sh [--harness claude|copilot|codex] [--event tool|prompt|end] [--always-on]
@@ -12,7 +13,8 @@
 #   codex    Called from ~/.codex/hooks.json. Prints the hookSpecificOutput shape. Codex hooks cannot ask,
 #            so every ask becomes a deny. Gated (see below).
 #   (none)   Older installs that call the script with no flags. The input decides the shape, and only the
-#            older rules run (dangerous git and file removal), so a git pull changes nothing for them.
+#            older rules run (dangerous git and file removal), so a git pull adds no new rules for them.
+#            They share the dangerous git rules, so a plain git push now passes there too.
 #
 # The gate. Copilot and Codex cannot attach a hook to a skill, so their hook is installed for the user and
 # stays dormant until an agentd skill starts in that session. An agentd skill is one in ~/.agents/skills whose
@@ -305,7 +307,16 @@ GIT="${START}git[\"']?([[:space:]]+(${GIT_OPTS})[[:space:]]+${VALUE}|[[:space:]]
 ARGS='[[:space:]]([^;&|]*[[:space:]])?'
 FORCE='-[A-Za-z]*f[A-Za-z]*|--force'
 
-DANGEROUS_GIT="(${GIT}push${END})"
+# A plain push is allowed. A push that overwrites or deletes remote branches is denied: -f and -d (also in a
+# group such as -uf or -4f), --force, --force-with-lease and --force-if-includes (with or without a value),
+# --delete, --mirror, --prune (and the prefixes git accepts for them, such as --del, --mir and --pru), and a
+# refspec that starts with + (force) or :<name> (delete; a bare : only pushes matching branches). The flag or
+# refspec may follow quotes, a backslash, $' or $".
+# A force or mirror set in git config (git -c remote.origin.mirror=true push) is not caught.
+PRE='(["'"'"'\\]|[$]["'"'"'])*'
+PUSH_FLAG='-[A-Za-z0-9]*[fd][A-Za-z0-9]*|--force[^[:space:];&|]*|--de[a-z]*|--m[a-z]*|--pru[a-z]*'
+DANGEROUS_GIT="(${GIT}push${ARGS}${PRE}(${PUSH_FLAG})${END})"
+DANGEROUS_GIT="${DANGEROUS_GIT}|(${GIT}push${ARGS}${PRE}(\\+|:[^[:space:];&|()\`<>\"']))"
 DANGEROUS_GIT="${DANGEROUS_GIT}|(${GIT}reset${ARGS}--hard${END})"
 DANGEROUS_GIT="${DANGEROUS_GIT}|(${GIT}clean${ARGS}(${FORCE})${END})"
 # branch -D, -M (force delete or force rename) and -f (force move).
@@ -342,17 +353,10 @@ ask_if() {
   fi
 }
 
-ask_if "(${GIT}commit${END})" "creates a git commit"
 ask_if "(${GIT}(rebase|filter-branch)${END})|(${GIT}stash${ARGS}(drop|clear)${END})" \
   "rewrites git history or drops a stash"
 # checkout -- <path> and restore throw away working-tree changes. The forms that discard everything are denied above.
 ask_if "(${GIT}checkout${ARGS}--${END})|(${GIT}restore${END})" "discards changes in the working tree"
-ask_if "(${START}gh[[:space:]]+pr[[:space:]]+(create|merge)${END})|(${START}az[[:space:]]+repos[[:space:]]+pr[[:space:]]+create${END})" \
-  "creates or merges a pull request"
-# Completing an Azure DevOps pull request merges it, now or (with auto-complete) once its policies pass.
-# gh api can merge through the REST endpoint.
-ask_if "(${START}az[[:space:]]+repos[[:space:]]+pr[[:space:]]+update${ARGS}(--status([[:space:]]+|=)[\"']?completed|--auto-complete([[:space:]]+|=)[\"']?true))|(${START}gh[[:space:]]+api[[:space:]][^;&|]*pulls/[0-9]+/merge)" \
-  "completes or merges a pull request"
 
 # A SQL client run with a write keyword. EXEC is included because a stored procedure can write.
 # A script passed with -i is not read, so it is not caught.
