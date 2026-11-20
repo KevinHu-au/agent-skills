@@ -48,7 +48,7 @@ Out of scope:
 
 The shell safety hook matches commands with regular expressions. A regex cannot catch every shell form. The
 README lists the forms it does not catch, such as a command in a variable, a git alias, or a script run with
-`bash script.sh`. See the hook description under [How the links work](README.md#how-the-links-work).
+`bash script.sh`. See [Rules](README.md#rules) under the shell safety hook.
 
 By default, the hook checks commands only inside an agentd skill. Do not rely on it as your only control. The
 strongest protection against an unwanted push does not depend on any agent: turn on branch protection for the

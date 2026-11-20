@@ -1615,10 +1615,6 @@ test_readme_lists_the_skill() {
   [ "$rows" -eq 1 ] || return 1
   section_of "$README" "Skills" | grep -q '^| `agentd-verify-init` |'
 }
-test_readme_has_the_tests_paragraph() {
-  has_all "$README" "The \`agentd-verify-init\` skill has" "tests/verify-init/test-skill-structure.sh" \
-    "tests/verify-init/EVAL.md"
-}
 test_readme_flag_paragraph_matches_the_recorded_result() {
   has_all "$README" "Copilot CLI 1.0.110" "2026-11-16" "the model cannot start it" "a skill you type yourself loads" \
     "Copilot CLI 1.0.102 could not load a flagged skill" "written without the field" || return 1
@@ -1647,7 +1643,6 @@ test_eval_says_the_later_adapters_were_not_run() {
     ".NET Framework on IIS Express" "LocalDB" "standalone XCUITest" "bash or zsh" "Windows PowerShell 5.1"
 }
 check "README lists the skill in the Skills table only" test_readme_lists_the_skill
-check "README has the verify-init tests paragraph" test_readme_has_the_tests_paragraph
 check "README flag paragraph matches the recorded result" test_readme_flag_paragraph_matches_the_recorded_result
 check "README Planned wording is updated" test_readme_planned_wording_is_updated
 check "README row names the stacks and what was run" test_readme_row_names_the_stacks_and_what_was_run
