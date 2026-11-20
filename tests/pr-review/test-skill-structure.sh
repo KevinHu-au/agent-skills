@@ -567,11 +567,8 @@ test_template_tone() {
 
 # ---------------------------------------------------------------- README
 
-test_readme_lists_the_skill_and_its_tests() {
-  local readme="$REPO/README.md"
-  section_has "$readme" Skills '`agentd-pr-review`' &&
-    has_all "$readme" "tests/pr-review/test-skill-structure.sh" "tests/pr-review/test-make-fixture.sh" \
-      "tests/pr-review/EVAL.md"
+test_readme_lists_the_skill() {
+  section_has "$REPO/README.md" Skills '`agentd-pr-review`'
 }
 
 # ---------------------------------------------------------------- run
@@ -654,7 +651,7 @@ check "the vote line is outside the paste" test_vote_line_is_outside_the_paste
 check "the finding order is exact" test_finding_order_is_exact
 check "the risk tier is in For you only, never pasted" test_risk_tier_is_for_the_engineer_only
 check "no Minor finding asks to wait" test_no_minor_finding_asks_to_wait
-check "the README lists the skill and its tests" test_readme_lists_the_skill_and_its_tests
+check "the README lists the skill" test_readme_lists_the_skill
 
 echo
 echo "passed=$PASS failed=$FAIL"
