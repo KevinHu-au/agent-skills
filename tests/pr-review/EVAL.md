@@ -21,7 +21,8 @@ Build a fresh fixture for every run. The work item to paste is in `work-item.md`
    read the fixture only.
 2. **Skill run.** Give a fresh agent the skill path, the fixture path and the work item. It may read the skill folder,
    the blast-radius references and the fixture only. Nobody is at the keyboard, so the prompt gives the answers in
-   advance: base `origin/main` confirmed, run plan confirmed, nobody checks the UI.
+   advance: base `origin/main` confirmed, nobody checks the UI. The run plan needs no answer: the skill runs it
+   without asking.
 3. **Mechanical checks** with the commands in `expected-findings.md`.
 4. **Score** with the rubric. Record the results and any change to the skill under Iterations.
 

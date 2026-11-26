@@ -831,12 +831,18 @@ test_gotchas_say_why_the_flag_is_left_out() {
 # ---------------------------------------------------------------- agentd-dev-rev change
 
 DEV="$REPO/skills/agentd-dev-rev/SKILL.md"
+# Step 9 keeps a short summary in SKILL.md and points to this reference file for the detail.
+DEV_VH="$REPO/skills/agentd-dev-rev/references/verify-handoff.md"
 
 # dev_step <n>: the text of Workflow step n in agentd-dev-rev, as one line. It runs to the next numbered step or H2.
+# Step 9 also takes in references/verify-handoff.md, which holds its detail.
 dev_step() {
-  section_of "$DEV" Workflow 2>/dev/null | awk -v n="$1" '
-    /^[0-9]+\. / { on = (index($0, n ". ") == 1) }
-    on' | joined
+  {
+    section_of "$DEV" Workflow 2>/dev/null | awk -v n="$1" '
+      /^[0-9]+\. / { on = (index($0, n ". ") == 1) }
+      on'
+    [ "$1" = 9 ] && [ -s "$DEV_VH" ] && grep -q 'references/verify-handoff.md' "$DEV" && cat "$DEV_VH"
+  } | joined
 }
 
 # dev_step_has <n> <text>...: Workflow step n contains every text, ignoring case.
@@ -874,8 +880,8 @@ test_dev_rev_step_8_points_to_step_9() {
 
 test_dev_rev_verify_block_matches_the_template() {
   local d t
-  [ -s "$DEV" ] && [ -s "$VT" ] || return 1
-  d=$(fenced_from "$DEV" 'Verify:')
+  [ -s "$DEV_VH" ] && [ -s "$VT" ] || return 1
+  d=$(fenced_from "$DEV_VH" 'Verify:')
   t=$(fenced_from "$VT" 'Verify:')
   [ -n "$d" ] && [ "$d" = "$t" ] && [ "$d" = "$VERIFY_BLOCK" ] && ! printf '%s\n' "$d" | grep -q '^Expected:'
 }
@@ -948,13 +954,11 @@ test_dev_rev_rules_not_weakened() {
     'Never use broad staging when unrelated dirty files exist.' \
     'Before adding, removing, or upgrading a package, ask the engineer for approval.' \
     'must be either explicitly required by the task or approved by the engineer.' || return 1
-  h2_list "$DEV" | grep -qx 'Common Mistakes' || return 1
-  for r in '| Committing after review passes | Keep changes staged and hand off. |' \
-    '| Reviewing unstaged or narrative-only changes | Review the actual staged diff. |' \
-    '| Silently accepting product/backcompat decisions | Ask the engineer. |' \
-    '| Hiding disagreed claims | Report them with evidence. |'; do
-    grep -qxF -- "$r" "$DEV" || return 1
-  done
+  # The Common Mistakes table is gone; each of its rules is checked where it lives.
+  section_has "$DEV" Workflow 'The reviewer must inspect the staged diff, not your narrative.' \
+    'Unsure or product-impacting: ask the engineer.' 'disagreed findings with reasons' 'Do not commit.' &&
+    section_has "$DEV" "Triage Rules" 'Backcompat risk not explicitly required' 'Product behavior choice' \
+      'report the claim and evidence for disagreement'
 }
 
 # ---------------------------------------------------------------- run
@@ -1655,7 +1659,7 @@ LOOKUP_WINS='A marked skill in the repository wins over one outside it; name the
 LOOKUP_EXIT='Exit status 1 means none is recorded; for any other failure (the folder is gone, the tool is missing), say so in the reply and carry on without it.'
 
 test_lookup_sentences_are_the_same_in_three_places() {
-  has_all "$DEV" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT" &&
+  has_all "$DEV_VH" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT" &&
     has_all "$SKILL" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT" &&
     has_all "$UM" "$LOOKUP_FIND" "$LOOKUP_WINS" "$LOOKUP_EXIT"
 }

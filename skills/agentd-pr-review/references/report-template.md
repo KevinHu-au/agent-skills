@@ -138,6 +138,14 @@ Not to paste. Bold labels, in this order:
 - **Questions for the work item creator:** every gap in the requirement, and every sibling gap, as a question the
   engineer can forward. Each question names the finding it settles. With no work item, label it
   **Questions for the PR author:**.
+- **Questions for you:** the questions the run did not stop to ask. For each criterion not met in untouched code: does
+  another PR deliver it? With no work item: is the inferred intent right? Each question names the finding it settles,
+  and says that the finding stays as it is until the engineer answers. With no such question, write `none`.
+- **Set aside:** each behaviour you considered and left out as outside the work item, or the inferred intent, and each
+  finding you dropped at the gate in Evidence, one line each, with the reason, so the engineer can rule on it. Nothing is dropped silently. With none, write `none`.
+- **Refuted after challenge:** each Block or Major finding the challenge refuted: its title, `path:line`, the severity
+  it had and the evidence that refutes it. The engineer can restore it. With none, write `none`. When no challenge
+  ran, say why.
 - **Old failures:** tests that fail on the base as well. Not findings.
 - **Not run or not checked:** each suite or check you skipped, and why, and each criterion you only partly checked,
   with the count of group members left unchecked.

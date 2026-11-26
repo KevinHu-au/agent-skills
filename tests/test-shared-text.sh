@@ -100,7 +100,7 @@ check "README names the supported stacks and the fallback" bash -c \
 # The leave-and-return trace is one text in blast-radius surfaces.md (the reference copy) and in the dev-rev reviewer
 # prompt, which the reviewer gets in whole. Change both together.
 LEAVE_AND_RETURN='A flow that leaves and comes back: a sign-in redirect, a payment page, an OAuth callback, a deep link, an app relaunch. State held in memory before it leaves is gone on return. Trace each return on its own: success, error or cancel, an expired or removed account that later comes back, and a second tab or window.'
-for f in agentd-blast-radius/references/surfaces.md agentd-dev-rev/SKILL.md; do
+for f in agentd-blast-radius/references/surfaces.md agentd-dev-rev/references/reviewer-prompt.md; do
   check "$f has the leave-and-return trace word for word" bash -c \
     'tr "\n" " " <"$1" | tr -s " " | grep -qF -- "$2"' _ "$SKILLS/$f" "$LEAVE_AND_RETURN"
 done

@@ -174,8 +174,8 @@ test_skill_is_manual_only() {
 # to 155 for no-work-item mode, which changes the Prerequisite, Flow steps 2 and 7, Severity and Output. Raised again
 # to 160 for checking each acceptance criterion as written, on the code at HEAD, in Flow steps 4 and 6 and Severity.
 # Counts the body only: the frontmatter (name, description, hooks) is for the tool, not instructions.
-test_skill_is_at_most_160_lines() {
-  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 160 ]
+test_skill_is_at_most_180_lines() {
+  [ -s "$SKILL" ] && [ "$(awk 'c >= 2 { n++ } /^---[ \t]*$/ && c < 2 { c++ } END { print n + 0 }' "$SKILL")" -le 180 ]
 }
 
 test_required_h2_sections_in_order() {
@@ -211,10 +211,13 @@ test_no_work_item_mode_infers_the_intent() {
     "names of new tests" "against its own claims" "half-finished change"
 }
 
-test_no_work_item_intent_is_confirmed_with_the_run_plan() {
-  section_has "$SKILL" Flow "whether the inferred intent is right" "in the same message" "rebuild step 2" \
-    "redo steps 4 to 6 before running the tests" "A correction in the engineer's words is still the inferred intent." \
-    "If the engineer pastes the work item instead, leave no-work-item mode"
+test_no_work_item_intent_is_asked_in_the_report() {
+  section_has "$SKILL" Flow "whether the inferred intent is right" "Questions for you" "rebuild step 2" \
+    "redo steps 4 to 9" "add the worktrees again" "redo steps 2 to 9" "A correction in the engineer's words is still the inferred intent." \
+    "If the engineer pastes the work item instead, leave no-work-item mode" &&
+    ! has_all "$SKILL" "in the same message" &&
+    has_all "$REFS/report-template.md" "**Questions for you:**" "is the inferred intent right?" \
+      "does another PR deliver it?"
 }
 
 test_no_work_item_severity() {
@@ -338,8 +341,11 @@ test_lint_on_changed_lines_only() {
   has_all "$SKILL" "lines the PR changed"
 }
 
-test_one_confirmation_for_the_run_plan() {
-  section_has "$SKILL" "Running commands" "one confirmation" "Read-only inspection"
+test_run_plan_runs_without_a_confirmation() {
+  section_has "$SKILL" "Running commands" "Read-only inspection" \
+    "add it to the list in chat before you run it" "may use the network" &&
+    section_has "$SKILL" Flow "without waiting for a confirmation" &&
+    ! has_all "$SKILL" "one confirmation" && ! has_all "$SKILL" "confirmed list"
 }
 
 test_ui_checks_only_when_needed() {
@@ -573,18 +579,50 @@ test_readme_lists_the_skill() {
 
 # ---------------------------------------------------------------- run
 
+
+test_block_and_major_findings_pass_a_gate() {
+  section_has "$SKILL" Evidence "Block or Major finding about the code" "name its trigger" \
+    "read the callers and the guards" "why the existing guards" "or drop it and list it under Set aside with the reason" \
+    "already has its trigger"
+}
+
+test_breakage_check_hunts_swallowed_errors() {
+  section_has "$SKILL" Flow "swallowed errors" "empty \`catch\`" "fallback that hides a failure" "lost stack trace" \
+    "no rollback"
+}
+
+test_a_test_that_asserts_nothing_is_not_coverage() {
+  section_has "$SKILL" Severity "asserts nothing" "does not cover the change" "weak test that still checks the behaviour"
+}
+
+test_report_lists_what_was_set_aside() {
+  section_in_order "$REFS/report-template.md" "For you only" "**Questions for you:**" "**Set aside:**" "**Old failures:**" &&
+    section_has "$REFS/report-template.md" "For you only" "Nothing is dropped silently" "dropped at the gate in Evidence"
+}
+
+test_block_and_major_findings_are_challenged() {
+  section_has "$SKILL" Evidence "**Challenge.**" "every Block and Major finding that is not \`confirmed:\`" \
+    "one fresh, read-only" "on the same model as this session, at the same or higher effort" \
+    "If the harness cannot set them, say so in the report" "not your reasoning" "spawn no agents" "try to disprove" "holds, refuted or unsure" \
+    "Refuted needs \`path:line\`" "Check that evidence" "Refuted after challenge" "Unsure" \
+    "keeps the finding with hedged wording" "When no sub-agent can run" &&
+    section_has "$SKILL" Flow "Challenge the Block and Major findings (see Evidence)" &&
+    section_in_order "$REFS/report-template.md" "For you only" "**Set aside:**" "**Refuted after challenge:**" \
+      "**Old failures:**" &&
+    section_has "$REFS/report-template.md" "For you only" "The engineer can restore it" "When no challenge ran, say why"
+}
 check "fence helpers handle nested fences" test_fence_helpers_handle_nested_fences
 check "line_has needs every text on one line" test_line_has_needs_one_line
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when and covers the job" test_description_starts_with_use_when_and_covers_the_job
 check "the skill is manual-only" test_skill_is_manual_only
-check "the SKILL.md body is at most 160 lines" test_skill_is_at_most_160_lines
+check "the SKILL.md body is at most 180 lines" test_skill_is_at_most_180_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "Flow has nine numbered steps in order" test_flow_has_nine_numbered_steps_in_order
 check "a missing paste asks once" test_missing_paste_asks_once
 check "no-work-item mode starts only when the engineer says so" test_no_work_item_mode_starts_only_when_the_engineer_says_so
 check "no-work-item mode infers the intent" test_no_work_item_mode_infers_the_intent
-check "the inferred intent is confirmed with the run plan" test_no_work_item_intent_is_confirmed_with_the_run_plan
+check "the inferred intent is asked in the report" test_no_work_item_intent_is_asked_in_the_report
 check "no-work-item severity" test_no_work_item_severity
 check "with no work item the vote line says to check the work item" test_no_work_item_vote_line_says_check_the_work_item
 check "with no work item the summary says the requirement was not checked" test_no_work_item_summary_says_the_requirement_was_not_checked
@@ -607,7 +645,7 @@ check "the base re-run is in a scratch folder" test_base_rerun_in_scratch
 check "a failed restore is unknown" test_failed_restore_is_unknown
 check "a new failure is Block, an old failure is listed" test_new_failure_is_block_old_failure_is_listed
 check "lint on changed lines only" test_lint_on_changed_lines_only
-check "one confirmation for the run plan" test_one_confirmation_for_the_run_plan
+check "the run plan runs without a confirmation" test_run_plan_runs_without_a_confirmation
 check "UI checks only when needed" test_ui_checks_only_when_needed
 check "severity definitions" test_severity_definitions
 check "scope creep is Major with a question" test_scope_creep_is_major_with_a_question
@@ -653,6 +691,11 @@ check "the risk tier is in For you only, never pasted" test_risk_tier_is_for_the
 check "no Minor finding asks to wait" test_no_minor_finding_asks_to_wait
 check "the README lists the skill" test_readme_lists_the_skill
 
+check "Block and Major findings pass a gate" test_block_and_major_findings_pass_a_gate
+check "the breakage check hunts swallowed errors" test_breakage_check_hunts_swallowed_errors
+check "a test that asserts nothing is not coverage" test_a_test_that_asserts_nothing_is_not_coverage
+check "the report lists what was set aside" test_report_lists_what_was_set_aside
+check "Block and Major findings are challenged before the report" test_block_and_major_findings_are_challenged
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]
