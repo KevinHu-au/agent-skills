@@ -131,7 +131,8 @@ requirement, or a test that fails only on the PR branch, already has its trigger
 - **unknown:** you looked and found nothing. Write `unknown:`, say where you looked, and who can answer.
 
 **Challenge.** Before the report, give every Block and Major finding that is not `confirmed:` to one fresh, read-only
-sub-agent. Give it each finding's `path:line`, trigger and evidence, not your reasoning. Tell it to spawn no agents and
+sub-agent, on the same model as this session, at the same or higher effort. If the harness cannot set them, say so in
+the report. Give it each finding's `path:line`, trigger and evidence, not your reasoning. Tell it to spawn no agents and
 to try to disprove each finding from the code. It returns holds, refuted or unsure for each. Refuted needs `path:line`
 evidence: a guard, a caller that never passes the value, or a test that covers the case. Check that evidence. A
 finding you agree is refuted leaves the findings and goes under Refuted after challenge, with the evidence. Unsure

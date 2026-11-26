@@ -602,7 +602,8 @@ test_report_lists_what_was_set_aside() {
 
 test_block_and_major_findings_are_challenged() {
   section_has "$SKILL" Evidence "**Challenge.**" "every Block and Major finding that is not \`confirmed:\`" \
-    "one fresh, read-only" "not your reasoning" "spawn no agents" "try to disprove" "holds, refuted or unsure" \
+    "one fresh, read-only" "on the same model as this session, at the same or higher effort" \
+    "If the harness cannot set them, say so in the report" "not your reasoning" "spawn no agents" "try to disprove" "holds, refuted or unsure" \
     "Refuted needs \`path:line\`" "Check that evidence" "Refuted after challenge" "Unsure" \
     "keeps the finding with hedged wording" "When no sub-agent can run" &&
     section_has "$SKILL" Flow "Challenge the Block and Major findings (see Evidence)" &&
