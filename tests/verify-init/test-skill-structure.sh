@@ -1689,10 +1689,11 @@ test_update_mode_diff_handles_an_outside_folder() {
   has_all "$UM" 'outside the repository' 'add no exclude' 'skip the filter that leaves out the skill folder'
 }
 
+# The README names the folder and the registry, not the onboarding-pack subcommands: the README keeps helper-script
+# detail out on purpose (900330b). The subcommands are documented in global/bin/onboarding-pack.
 test_readme_supports_policy_none_for_verify_init() {
   ! has_all "$README" 'does not support the policy `none` yet' || return 1
-  has_all "$README" 'agentd-verify-init' 'onboarding-pack verify-folder' 'verify-find' 'verify-set' '~/.agents/verify/<app>/' \
-    'verify-skills.tsv'
+  has_all "$README" 'agentd-verify-init' '~/.agents/verify/<app>/' 'verify-skills.tsv'
 }
 
 test_dev_rev_writes_the_api_line_only_when_named() {
