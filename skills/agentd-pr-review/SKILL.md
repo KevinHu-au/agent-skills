@@ -53,7 +53,7 @@ inside one.` Work from the repository root.
 
 ## Flow
 
-1. **Read the inputs.** Read the paste, the screenshots and the contract. Say in one sentence what the PR is for.
+1. **Read the inputs.** Say in one sentence what the PR is for.
 2. **Build the requirement.** Write what "done" means for this PR in a few lines. Split it into what the work item says
    and what you assumed. Acceptance criteria are often incomplete or missing. Do not stop: review against your stated
    assumptions, and write each gap as a question for the work item creator. In no-work-item mode, do step 3 first,
@@ -80,16 +80,18 @@ inside one.` Work from the repository root.
    `surfaces.md` is missing, say so in one line and check these instead: wire shapes, data, configuration and flags,
    indirection, timing and state, other readers of the same bytes, generated files, libraries and the runtime,
    authorisation reach, external systems, and tests that encode the old behaviour. Callers found by search are the
-   start, not the finding. On a wide PR, read-only sub-agents may run steps 5 and 6. Give them the acceptance criteria
+   start, not the finding. In the changed code, also look for swallowed errors: an empty `catch`, an error turned into
+   `null` or an empty list, a fallback that hides a failure, a lost stack trace, or no rollback when a step fails. On a wide PR, read-only sub-agents may run steps 5 and 6. Give them the acceptance criteria
    as pasted, or in no-work-item mode the inferred intent marked as one, and say your requirement may be wrong. Each
    returns a short summary with `path:line` evidence.
-7. **Run plan.** List the commands, as Running commands says, and ask for one confirmation. Ask in the same message
-   whether another PR delivers each criterion not met in untouched code, and in no-work-item mode, whether the inferred
-   intent is right. If the engineer corrects it, rebuild step 2 and redo steps 4 to 6 before running the tests. A
-   correction in the engineer's words is still the inferred intent. If the engineer pastes the work item instead, leave
-   no-work-item mode and redo steps 2 to 6.
+7. **Run plan.** List the commands in chat, as Running commands says, and run them without waiting for a confirmation.
+   Ask in the report, under Questions for you, whether another PR delivers each criterion not met in untouched code,
+   and in no-work-item mode, whether the inferred intent is right; until then, treat none as delivered elsewhere. The
+   answers come after the report, when the worktrees are gone. If the engineer corrects the intent, rebuild step 2 and
+   redo steps 4 to 9: add the worktrees again, run the tests, challenge and write a new report. A correction in the
+   engineer's words is still the inferred intent. If the engineer pastes the work item instead, leave no-work-item mode and redo steps 2 to 9.
 8. **Run the tests.** Run them, read every result, and compare failures with the base.
-9. **Report.** Write the output with `references/report-template.md`. Then remove the worktrees and the scratch folder (see Scratch folder).
+9. **Report.** Challenge the Block and Major findings (see Evidence). Write the output with `references/report-template.md`. Then remove the worktrees and the scratch folder (see Scratch folder).
 
 ## Severity
 
@@ -98,10 +100,11 @@ inside one.` Work from the repository root.
   loss or corruption. A contract break the work item does not ask for: a change of shape (fields, types, keys, routes),
   not a change in which rows come back.
 - **Major:** a likely bug or regression in a realistic case. A sibling place that likely needs the same change. Changed
-  behaviour with no test. A handled event that no test raises is not covered. A criterion that is only partly met. A
+  behaviour with no test. A handled event that no test raises is not covered. A test that asserts nothing, or only that
+  no exception is thrown, does not cover the change either. A criterion that is only partly met. A
   change that does more than the work item asks is Major plus a question for the work item creator, not Block.
-- **Minor:** a small, real improvement: a misleading name, a missed existing helper, a weak test, a convention the
-  repository follows elsewhere. No style nits that carry no risk.
+- **Minor:** a small, real improvement: a misleading name, a missed existing helper, a weak test that still checks the
+  behaviour, a convention the repository follows elsewhere. No style nits that carry no risk.
 
 When the work item is silent or vague on the point, a finding about the requirement or an assumed requirement is at
 most Major, with a question for the work item creator: an unmet or partly met criterion, a sibling gap, extra scope.
@@ -116,22 +119,35 @@ is this shape change intended, and who reads it? The other Block rules and the r
 
 Every finding cites `path:line` and sits in one tier. Never invent a path, a caller or an API.
 
+Before you write a Block or Major finding about the code, name its trigger (the input, the state and the wrong
+outcome), and read the callers and the guards around it. A Block finding also says why the existing guards (types,
+validation, the framework) do not stop it. If you cannot, lower it, or drop it and list it under Set aside with the
+reason. A finding that is a question about the
+requirement, or a test that fails only on the PR branch, already has its trigger.
+
 - **confirmed:** a test run shows it, or the engineer saw it in the UI and told you.
 - **supported:** independent sources agree (code, history, a document), but nothing was run.
 - **inferred:** a reading of the code. Write `inferred:` and hedge the wording.
 - **unknown:** you looked and found nothing. Write `unknown:`, say where you looked, and who can answer.
+
+**Challenge.** Before the report, give every Block and Major finding that is not `confirmed:` to one fresh, read-only
+sub-agent. Give it each finding's `path:line`, trigger and evidence, not your reasoning. Tell it to spawn no agents and
+to try to disprove each finding from the code. It returns holds, refuted or unsure for each. Refuted needs `path:line`
+evidence: a guard, a caller that never passes the value, or a test that covers the case. Check that evidence. A
+finding you agree is refuted leaves the findings and goes under Refuted after challenge, with the evidence. Unsure
+keeps the finding with hedged wording. When no sub-agent can run, keep the findings and say so in the report.
 
 ## Running commands
 
 Take every command from the contract's Commands heading. A rubric command joins the plan only as the reference says.
 Never guess a command. With no contract, run only a command
 the repository states (a README, a script, a pipeline file), and mark the rest `unknown:`. Read-only inspection
-(reading, searching, `git log`, `git diff`, `git show`, `git blame`, `git merge-base`, `"$HOME/.agents/bin/onboarding-pack" find`) needs
-no confirmation.
+(reading, searching, `git log`, `git diff`, `git show`, `git blame`, `git merge-base`, `"$HOME/.agents/bin/onboarding-pack" find`) does
+not go on the run plan.
 
 - **Run plan.** List the build, each test suite, `docker info` when a suite needs Docker, the base re-run, the lint
   check, the scratch folder, each `git worktree add`, the submodule update and each `git worktree remove --force` on
-  `wt-head` or `wt-base`. Ask for one confirmation. A command not on the confirmed list needs its own.
+  `wt-head` or `wt-base`, and say the restore and the submodule update may use the network. A command found later comes from the same sources: add it to the list in chat before you run it.
 - **Which tests.** The unit tests and the automation tests. Automation tests means the subcutaneous or integration
   suites, not UI automation against a running app.
 - **Docker.** If Docker is not running, skip that suite, say so, and never report it as passed.

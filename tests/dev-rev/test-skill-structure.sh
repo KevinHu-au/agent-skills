@@ -50,6 +50,17 @@ section_of() {
   ' "$SKILL"
 }
 
+# PROMPT: the reviewer prompt that steps 5 and 7 fill. It moved out of SKILL.md into a reference file.
+PROMPT="$(dirname "$SKILL")/references/reviewer-prompt.md"
+
+# prompt_has <text>...: the reviewer prompt file contains every text, ignoring case. Line breaks are joined.
+prompt_has() {
+  local body t
+  [ -s "$PROMPT" ] || return 1
+  body=$(tr '\n' ' ' <"$PROMPT" | tr -s ' ')
+  for t in "$@"; do printf '%s\n' "$body" | grep -qiF -- "$t" || return 1; done
+}
+
 # section_has <heading> <text>...: the section contains every text, ignoring case and line breaks.
 section_has() {
   local body t
@@ -72,17 +83,17 @@ test_skill_is_manual_only() {
     grep -qx 'disable-model-invocation: true'
 }
 
-test_skill_is_at_most_260_lines() {
-  [ "$(wc -l <"$SKILL" | tr -d ' ')" -le 260 ]
+test_skill_is_at_most_150_lines() {
+  [ "$(wc -l <"$SKILL" | tr -d ' ')" -le 150 ]
 }
 
 test_required_h2_sections_in_order() {
   [ "$(h2_list | tr '\n' '|')" = \
-    "Hard Rules|Project facts|Inputs|Workflow|Reviewer Prompt Template|Harness Mapping|Triage Rules|Common Mistakes|" ]
+    "Hard Rules|Project facts|Inputs|Workflow|Harness Mapping|Triage Rules|" ]
 }
 
 test_no_absolute_home_paths() {
-  ! grep -qE '/Users/|/home/' "$SKILL"
+  ! grep -qE '/Users/|/home/' "$SKILL" "$(dirname "$SKILL")"/references/*.md
 }
 
 # Model names may appear only under Harness Mapping. Every other line stays name-free,
@@ -92,7 +103,7 @@ test_reviewer_model_names_only_in_harness_mapping() {
   ! awk '
     /^## / { skip = ($0 == "## Harness Mapping"); next }
     !skip
-  ' "$SKILL" | grep -qiE 'opus|gpt-?[0-9]|claude-|sonnet|haiku|fable|gemini|(^|[^a-z])o[0-9](-mini)?($|[^a-z0-9])'
+  ' "$SKILL" "$(dirname "$SKILL")"/references/*.md | grep -qiE 'opus|gpt-?[0-9]|claude-|sonnet|haiku|fable|gemini|(^|[^a-z])o[0-9](-mini)?($|[^a-z0-9])'
 }
 
 test_reviewer_model_rule() {
@@ -105,7 +116,7 @@ test_reviewer_model_rule() {
     section_has Workflow 'the model the Harness Mapping table names, or the fallback it allows' 'the reviewer model' \
       'that the named model was not offered' 'as the reviewer stated it' 'reviewer model mismatch' \
       'The review still counts' &&
-    section_of "Reviewer Prompt Template" | awk '/^```/ { f = !f; next } f' |
+    awk '/^```/ { f = !f; next } f' "$PROMPT" |
       grep -qiF 'Begin the report by stating the model you are running as' &&
     section_has "Harness Mapping" 'Reviewer model' 'later version of the same model line' \
       'never a smaller or faster variant' 'name it in the step 8 handoff' \
@@ -117,7 +128,8 @@ test_reviewer_model_rule() {
     printf '%s\n' "$map" | grep -qE '^\| Copilot CLI \| Opus 5\.5 \|.*If it cannot set both, stop \(Hard Rule 4\)' &&
     printf '%s\n' "$map" | grep -qE '^\| Other harness, including Codex \| Ask the engineer \|.*With nobody to answer, or no such mechanism, stop' &&
     ! printf '%s\n' "$map" | grep -qi 'when the tool supports it' &&
-    section_has "Common Mistakes" "the table's model, or its allowed fallback"
+    section_has Workflow 'Fill the prompt in `references/reviewer-prompt.md`, resolved from this skill'"'"'s own folder' \
+      'Report the model the challenge agent stated too' 'challenge model mismatch'
 }
 
 test_standalone_use_asks_with_defaults_and_waits() {
@@ -175,14 +187,17 @@ test_round_2_skip_rule_is_kept() {
 }
 
 test_reviewer_prompt_gets_the_inputs() {
-  section_has "Reviewer Prompt Template" '<diagnose hand-off block>' '<blast-radius add-on block>' \
+  prompt_has '<diagnose hand-off block>' '<blast-radius add-on block>' \
     '<intake engineer block>' '<assumptions>' '<risk areas>' 'verbatim' 'Every `Do not change` item' \
     'Every stop condition' 'Failing test first' 'Tests to write first'
 }
 
-test_common_mistakes_rows_for_the_new_rules() {
-  grep -qF '| Changing a `Do not change` item, or going past a stop condition, from a pasted block | Stop and report to the engineer. |' "$SKILL" &&
-    grep -qF '| Reporting a run of 0 tests as a pass | Report "ran 0 tests". It is not a pass. |' "$SKILL"
+# The Common Mistakes table was removed: each row repeated a rule stated elsewhere. These rules must stay where they live.
+test_rules_from_the_old_common_mistakes_table_stay() {
+  section_has Inputs 'A `Do not change` item is a hard limit' 'A stop condition ends the work' &&
+    section_has Workflow 'reported as "ran 0 tests", never as a pass' 'not your narrative' &&
+    section_has "Hard Rules" 'Never commit.' 'Do not use a cheaper model' 'Run Round 2 only if' &&
+    ! h2_list | grep -qx 'Common Mistakes' && ! h2_list | grep -qx 'Reviewer Prompt Template'
 }
 
 test_edge_values_of_the_blocks_have_a_rule() {
@@ -209,7 +224,7 @@ test_risk_tier_is_reported_only() {
     "report no tier" &&
     section_has Workflow "set the risk tier from the task" "set the risk tier again from the staged paths" \
       "keep the higher one" '`Risk tier:`' '`Read first:`' "the risk tier with its reasons" &&
-    section_has "Reviewer Prompt Template" "<risk tier>" "a signal its reasons miss" "Report it as minor" &&
+    prompt_has "<risk tier>" "a signal its reasons miss" "Report it as minor" &&
     section_has "Triage Rules" "The risk tier misses a signal" "Never lower it on a reviewer claim" "does not count toward Round 2"
 }
 
@@ -219,7 +234,7 @@ test_reviewer_gets_the_work_item_and_checks_each_criterion() {
     "With no list, ask or stop first" \
     "Once the task is agreed, your restatement is the requirement" &&
     section_has Workflow "the work item as Inputs says" '"may be incomplete"' "never narrows the review" &&
-    section_has "Reviewer Prompt Template" "This is the author's summary, and it may be wrong" "<work item>" \
+    prompt_has "This is the author's summary, and it may be wrong" "<work item>" \
       "Every acceptance criterion in the work item, as written" "a criterion the diff does not touch still counts" \
       "out of scope, not a finding, only when a pasted block puts it under \`Follow-on\` or \`Do not change\`" \
       "or the engineer said another change delivers it" "Judge the staged code" "every group a criterion names" \
@@ -227,14 +242,42 @@ test_reviewer_gets_the_work_item_and_checks_each_criterion() {
       "With no list, find what the author's summary leaves out" "is a claim" "name any it misses" \
       "Leave and return. A flow that leaves and comes back" \
       "raises an event only when the test makes it" "that no test raises" \
-      "One line per acceptance criterion: met, partly met, not met or out of scope" '"no list"' &&
-    grep -qF '| Giving the reviewer your summary in place of the acceptance criteria |' "$SKILL"
+      "One line per acceptance criterion: met, partly met, not met or out of scope" '"no list"'
 }
 
+
+test_reviewer_works_alone() {
+  prompt_has "Do the whole review yourself" "Do not spawn other agents" "second opinion"
+}
+
+test_reviewer_gates_blocker_and_major_findings() {
+  prompt_has "blocker or major finding about the code" "name its trigger" \
+    "read the callers and the guards" "why the existing guards" "add it to the set-aside list below with the reason" \
+    "already has its trigger"
+}
+
+test_reviewer_hunts_swallowed_errors_and_weak_tests() {
+  prompt_has "Swallowed errors:" "empty \`catch\`" "fallback that hides a failure" \
+    "lost stack trace" "no rollback" "asserts nothing" "is not coverage"
+}
+
+test_reviewer_lists_what_it_set_aside() {
+  prompt_has "set aside as outside the task" "The author rules on each line" &&
+    section_has Workflow "Set aside by the reviewer: rule on each line" "out of scope, with your reason"
+}
+
+test_blocker_and_major_findings_are_challenged() {
+  section_has Workflow "First challenge them" "every blocker and major finding" "one fresh, read-only agent" \
+    "the model and effort Hard Rule 4 sets" "not your reasoning" "spawn no agents" "try to disprove" \
+    "holds, refuted or unsure" "evidence for your triage, not a drop" "The challenge is not a review round" \
+    "Run it after each round" "Refuted by the challenge: check the evidence" \
+    "findings dropped after the challenge with its evidence" &&
+    section_has "Triage Rules" "The challenge refutes a finding" "Drop the finding only if you agree"
+}
 check "frontmatter name matches the folder" test_frontmatter_name_matches_folder
 check "description starts with Use when" test_description_starts_with_use_when
 check "the skill is manual-only" test_skill_is_manual_only
-check "SKILL.md is at most 260 lines" test_skill_is_at_most_260_lines
+check "SKILL.md is at most 150 lines" test_skill_is_at_most_150_lines
 check "H2 sections in order" test_required_h2_sections_in_order
 check "no absolute home paths" test_no_absolute_home_paths
 check "model names appear only under Harness Mapping" test_reviewer_model_names_only_in_harness_mapping
@@ -250,7 +293,7 @@ check "validation: commands, counts, Docker, base re-run, lint" test_validation_
 check "code with no tests gets characterization tests" test_no_tests_means_characterization_tests
 check "the round 2 skip rule is kept" test_round_2_skip_rule_is_kept
 check "the reviewer prompt gets the blocks, assumptions and risk areas" test_reviewer_prompt_gets_the_inputs
-check "Common Mistakes has the rows for the new rules" test_common_mistakes_rows_for_the_new_rules
+check "the rules from the old Common Mistakes table stay where they live" test_rules_from_the_old_common_mistakes_table_stay
 check "Breaks, a none: fix, a support question and two blocks that differ each have a rule" test_edge_values_of_the_blocks_have_a_rule
 check "old breakage needs the same failure on both, and a pasted reproduction command is gated" test_base_re_run_compares_reasons_and_reproduction_is_gated
 check "the project facts paragraph appears once" test_project_facts_paragraph_is_present_once
@@ -258,6 +301,11 @@ check "it still never commits" test_still_never_commits
 check "the risk tier is reported only, set twice, and given to the reviewer" test_risk_tier_is_reported_only
 check "the reviewer gets the work item word for word and checks each criterion" test_reviewer_gets_the_work_item_and_checks_each_criterion
 
+check "the reviewer works alone" test_reviewer_works_alone
+check "the reviewer gates blocker and major findings" test_reviewer_gates_blocker_and_major_findings
+check "the reviewer hunts swallowed errors and weak tests" test_reviewer_hunts_swallowed_errors_and_weak_tests
+check "the reviewer lists what it set aside, and the author rules on it" test_reviewer_lists_what_it_set_aside
+check "blocker and major findings are challenged before triage" test_blocker_and_major_findings_are_challenged
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]

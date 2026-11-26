@@ -14,6 +14,8 @@ REFS="$SKILL_DIR/references"
 TPL="$REFS/rubric-template.md"
 PR_REVIEW="$REPO/skills/agentd-pr-review/SKILL.md"
 DEV_REV="$REPO/skills/agentd-dev-rev/SKILL.md"
+# The reviewer prompt that dev-rev fills. It lives in a reference file next to SKILL.md.
+DEV_REV_PROMPT="$REPO/skills/agentd-dev-rev/references/reviewer-prompt.md"
 NAMES=$(git -C "$REPO" rev-parse --git-path info/customer-names 2>/dev/null)
 case "$NAMES" in /*) ;; ?*) NAMES="$REPO/$NAMES" ;; esac
 PASS=0
@@ -293,9 +295,9 @@ test_pr_review_template_has_the_id_form_and_the_no_rubric_line() {
 test_pr_review_keeps_rubric_severity() { has_all "$PR_REVIEW" "keeps that criterion's Severity" "except \`inferred:\`"; }
 
 test_dev_rev_rubric_rules() {
-  has_all "$DEV_REV" 'Source starts `inferred:` is minor' "No criterion lowers a built-in blocker" \
-    "as the last line of this report; step 9 comes after it" "Give the same criteria to the Round 2 reviewer" \
-    "follow its No rubric section"
+  has_all "$DEV_REV_PROMPT" 'Source starts `inferred:` is minor' "No criterion lowers a built-in blocker" &&
+    has_all "$DEV_REV" "as the last line of this report; step 9 comes after it" \
+      "Give the same criteria to the Round 2 reviewer" "follow its No rubric section"
 }
 
 test_lint_header_line_is_optional() {
@@ -360,11 +362,12 @@ test_pr_review_step_4_checks_the_rubric() {
 
 test_dev_rev_prompt_criteria_sit_under_their_heading() {
   awk '/^Project review criteria/ { h = 1; next } h && /^<criteria>/ { ok = 1; exit } h && /^Check these first/ { exit }
-    END { exit ok ? 0 : 1 }' "$DEV_REV" && has_all "$DEV_REV" "Do not run a \`How to check\` command"
+    END { exit ok ? 0 : 1 }' "$DEV_REV_PROMPT" && has_all "$DEV_REV_PROMPT" "Do not run a \`How to check\` command"
 }
 
 test_dev_rev_gives_the_rubric_to_the_implementer_and_reviewer() {
-  has_all "$DEV_REV" "Project review criteria" "before you write code" "criterion ID"
+  has_all "$DEV_REV_PROMPT" "Project review criteria" "criterion ID" &&
+    has_all "$DEV_REV" "before you write code" "references/reviewer-prompt.md"
 }
 
 # ---------------------------------------------------------------- references/risk-tiers.md
@@ -478,7 +481,7 @@ test_missing_fields_have_a_reading_default() {
     "or else counts as Minor" "List the IDs of such criteria in one line" 'no Source line counts as `inferred:`' \
     "A severity word anywhere else in the heading does not count" &&
     has_all "$TPL" 'treats a missing `Applies to` line as `all`' &&
-    has_all "$DEV_REV" 'A criterion with no `Applies to` line counts as `all`' 'no Source line counts as `inferred:`' \
+    has_all "$DEV_REV_PROMPT" 'A criterion with no `Applies to` line counts as `all`' 'no Source line counts as `inferred:`' \
       "a heading that ends in \`(Block)\`, \`(Major)\` or \`(Minor)\`"
 }
 

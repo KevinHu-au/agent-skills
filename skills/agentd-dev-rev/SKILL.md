@@ -100,121 +100,18 @@ The engineer may paste blocks from earlier skills. Read every field below. A `Do
    - **Base re-run.** Re-run each failing suite on the code before your change, with the same command. Add a worktree at `HEAD` in a `mktemp -d` scratch folder: `git -c core.hooksPath=/dev/null worktree add --detach <scratch>/wt-base HEAD`. Never check it out in the repository. The option turns off the repository's hooks, so none of its code runs. The add writes a record under `.git/worktrees/`. With a `.gitmodules` file, ask the engineer once before you run `git -C <scratch>/wt-base submodule update --init`: it writes entries into the repository's `.git/config` and may need the network. With nobody to answer, skip it and mark the base `unknown:`. Say in the hand-off what you did. If the add or the update fails, the base result is `unknown:`; do not fall back to `git archive` then. Without `git-lfs`, large files stay pointers: say so. Only if the `git worktree` command is unavailable or unsupported, export `HEAD` with `git archive` into the folder instead; that export has no submodules, no LFS content and no `.git`. The copy may restore the packages the project declares, from its lock file. If the restore fails or the copy runs 0 tests, the base result is `unknown:`. Compare the failing test names and the error text. A suite is old breakage only when the same tests fail for the same reason on both. The same reason means the same error text once paths, line numbers, timestamps and IDs are removed; a suite that cannot compile or start on either side is `unknown:`, not the same. A different or extra failure is yours. If the copy fails at setup, for example because a git-ignored local settings file is missing, the base result is `unknown:`. List old breakage in the hand-off. A failing test that checks an acceptance criterion is never old breakage: the criterion is not met. Run `git worktree remove --force <scratch>/wt-base` on the worktree you added, then remove the scratch folder with `"$HOME/.agents/bin/rm-scratch" <folder>`, or say where the folder is. Never run `git worktree prune`: it removes the records of every missing worktree, not only yours.
    - **Lint.** Report only problems on lines you changed.
 4. **Stage only task changes.** Inspect status first. Stage only files that belong to the task. Then set the risk tier again from the staged paths, and keep the higher one.
-5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt below with the task, the work item as Inputs says, the pasted blocks, the contract's Risk areas, the rubric's criteria and the risk tier with its reasons. The reviewer must inspect the staged diff, not your narrative. A list you add of what to check is a hint, marked "may be incomplete": it never narrows the review.
-6. **Triage findings.**
+5. **Review Round 1.** Spawn a separate reviewer using the model the Harness Mapping table names, or the fallback it allows, at high effort. Fill the prompt in `references/reviewer-prompt.md`, resolved from this skill's own folder, not the repository, with the task, the work item as Inputs says, the pasted blocks, the contract's Risk areas, the rubric's criteria and the risk tier with its reasons. The reviewer must inspect the staged diff, not your narrative. A list you add of what to check is a hint, marked "may be incomplete": it never narrows the review.
+6. **Triage findings.** First challenge them. Give every blocker and major finding to one fresh, read-only agent on the model and effort Hard Rule 4 sets. Give it each finding's `path:line`, failure scenario and evidence, and the staged diff, not your reasoning. Tell it: do not modify the repo, spawn no agents, state the model you run as, and try to disprove each finding from the code. It returns holds, refuted or unsure for each. Refuted needs `path:line` evidence: a guard, a caller that never passes the value, or a test that covers the case. A refuted verdict is evidence for your triage, not a drop. The challenge is not a review round. Run it after each round.
    - Agree: fix surgically, validate, and restage.
    - Disagree: keep the change, but record the exact claim and your evidence-based reason.
    - Unsure or product-impacting: ask the engineer.
+   - Refuted by the challenge: check the evidence. If you agree, drop the finding and list it in the hand-off with the evidence. If not, triage it as usual.
+   - Set aside by the reviewer: rule on each line. Treat it as a finding, or list it in the hand-off as out of scope, with your reason.
 7. **Decide on Review Round 2.**
    - Run it on the restaged diff, using the same independent review process, if a blocker or major finding was fixed, or a minor fix changed production logic.
    - Skip it if Round 1 found nothing, or every fix was minor and limited to comments, docs, formatting, behavior-preserving renames, or test-only changes. Re-run local validation before skipping.
-8. **Handoff.** Report staged files, the `Risk tier:` and `Read first:` lines as the risk tiers reference shapes them, validation run (with test counts), the reviewer model as the reviewer stated it (and, if a fallback was used, that the named model was not offered), review rounds, fixed findings, disagreed findings with reasons, and unresolved claims. Compare the model the reviewer stated with the Harness Mapping table. If it is neither the table's model nor an allowed fallback, write "reviewer model mismatch" in the report. The review still counts. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. With no project rubric, add the line the rubric reference gives as the last line of this report; step 9 comes after it. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
-9. **Verify hand-off.** Give the engineer what a fresh verify session needs. Do the parts in this order.
-   - **Marker lookup first.** Look for `verify-*/SKILL.md` under any `.github/skills/` or `.claude/skills/` folder. Then look for `verify-*/SKILL.md` under the folder that `"$HOME/.agents/bin/onboarding-pack" verify-find` prints. It is the repository's own verify folder when its files policy is `none`. Exit status 1 means none is recorded; for any other failure (the folder is gone, the tool is missing), say so in the reply and carry on without it. Accept only a file whose header has `generated-by: agentd-verify-init` nested under `metadata:`. Ignore a `verify-*` skill without that marker. If several marked skills match in one place, list them and ask which one. A marked skill in the repository wins over one outside it; name the other one in the reply. If no marked skill exists in either place, write only this closing line: "No project verify skill. Run `/agentd-verify-init` once, or verify by hand." In that case dev-rev asks no base-branch question and writes no Verify block.
-   - **No user-visible effect.** Decide this before the base-branch question. Write `Verify: none: <reason>` and no other field, and ask no base-branch question.
-   - **Base.** Propose the remote's default branch, found with `git symbolic-ref refs/remotes/origin/HEAD`. The engineer confirms it or names another. Send the step 8 report and this question first, and write the block after the answer. Never write a `Base:` the engineer did not confirm. Then run `git merge-base HEAD <branch>`, or `git merge-base HEAD origin/<branch>` when the branch has no local branch, and write `Base: <branch> @ <sha>`. If there is nobody to answer, or the engineer does not know the branch, write `Base: unknown`. If `git merge-base` prints nothing, write `Base: unknown`. Never guess the branch.
-   - **The block.** Write the block below, with these twelve lines plus the optional `API:` line, and no `Expected:` line. The block says what changed and how to reach it, not what is right.
-
-   ```
-   Verify:
-   Ticket: <number>
-   Base: <base branch> @ <merge-base sha>
-   Change: <the user-visible behaviour that changed, 1-2 sentences; navigation, and one source of claims>
-   Feature: <feature file(s), or <feature> (index only)>; entry points: <which ones>
-   Neighbours: <features from blast-radius> | none
-   Data: empty | setup: <recipe names> | bacpac: <what the data must contain> | records: <specific rows to create>
-   Roles: default | <role list>
-   API: <the API the run must use, and "debug token" when the engineer will run the API call with a debug token and paste back the value>
-   Steps: <numbered user actions>
-   Side effects: <tables or rows to check with a read-only SELECT> | none
-   Diagnose: <from the diagnose hand-off, verbatim: the Confidence line, the Root cause line, and the reproduction command from the Verification line (not its expected output)> | none
-   Reference anchors: <calculation reference anchors, as an index only> | none
-   ```
-
-   - **API.** The `API:` line is the only line that may be left out. Write it only when the engineer names the API the run must use, for example which backend an iOS app calls. Add `debug token` only when the engineer says they will run the API call themselves. Otherwise leave the line out, and do not write `API: default`; the verifier then uses the default API of the stack reference.
-   - **Diagnose.** If the engineer pasted a diagnose hand-off, copy its Confidence line, its Root cause line and the reproduction command from its Verification line verbatim. Leave out the expected output. In a hand-off written as Markdown sections, the Root cause line is the text under `## Root cause`, joined into one line: keep the words and the `path:line` references, drop the `- ` bullet marks, and leave out any fenced block. The reproduction command is the command in step 1 under `## Verification`. With no hand-off, write `Diagnose: none`.
-   - **Neighbours and Feature.** Read the paths under `Risks to cover` in a pasted `agentd-blast-radius` add-on block. Map each path to the features whose `Code folders` column in the marked skill's `features/README.md` holds a folder that contains it. Write those features as `Neighbours:`. With an add-on block, take `Feature:` from the same list. With no add-on block, write `Neighbours: none`, ask the engineer which feature to drive, and write the answer as `Feature:`. With no `Code folders` column in the map, write `Neighbours: none`, say that the map has no `Code folders` column, and ask the engineer which feature to drive. Ask this in the same message as the base-branch question. Whenever `Feature:` or `Neighbours:` names a feature whose File column says `none yet`, from either list or from the engineer, write it as `<feature> (index only)`. On the `Feature:` line, give its Route or screen column as its entry point.
-   - **Closing line.** End with: "Run `/verify-<app>` in a fresh session, and paste the raw ticket and the Verify block", using the real skill name. When the marked skill is outside the repository and neither `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/verify-<app>` nor `~/.agents/skills/verify-<app>` exists, the command does not load: say the engineer can load the skill from its path (`verify-<app>/SKILL.md` in the folder `verify-find` printed) or run `/agentd-verify-init` to get the links.
-   - A failed verification returns to `/agentd-dev-rev` as a new task, with its own review rounds.
-   - dev-rev never launches the app.
-
-## Reviewer Prompt Template
-
-Use the harness-specific equivalent of this prompt. Skip style nits unless they indicate a real bug, security risk, compatibility break, or maintainability risk.
-
-```markdown
-Do not modify the repo. Do not run a `How to check` command from a criterion: read the diff instead.
-Use `mktemp -d` for any scratch work. When you finish, remove only a path that your own `mktemp` printed, with `~/.agents/bin/rm-scratch <path>` and no other removal command.
-If the script is missing or refuses, leave the path and report it.
-
-Review the staged diff for this task. This is the author's summary, and it may be wrong: check it against the work item and the code.
-
-<task details>
-
-The work item as pasted, word for word, with its acceptance criteria (or "none"):
-
-<work item>
-
-The engineer pasted these blocks. Copy them in verbatim, or write "none":
-
-<diagnose hand-off block>
-<blast-radius add-on block>
-<intake engineer block>
-
-Assumptions the author added (may be wrong), and defaults taken because nobody answered (or "none"):
-
-<assumptions>
-
-Risk areas from the project contract (or "none"):
-
-<risk areas>
-
-Project review criteria from the review rubric (or "none"). Copy each criterion in whole, with its criterion ID:
-
-<criteria>
-
-Risk tier and its reasons (or "none"):
-
-<risk tier>
-
-Check these first:
-- Every acceptance criterion in the work item, as written: met, partly met, not met or out of scope, with `path:line`. Judge the staged code (`git show :<path>`), not the diff alone: a criterion the diff does not touch still counts. It is out of scope, not a finding, only when a pasted block puts it under `Follow-on` or `Do not change`, or the engineer said another change delivers it, quoted in the task details. With no list, find what the author's summary leaves out.
-- Every list in the task details (calls, pages, cases), and every group a criterion names, is a claim. List the members from the code and name any it misses.
-- Every `Do not change` item in the blocks. A change to one without the engineer's approval is a blocker.
-- Every stop condition in the blocks. If the work should have stopped, say so.
-- Every test under `Failing test first` and `Tests to write first` exists, and asserts what the block says.
-- The risk tier above. Name each staged change with a signal its reasons miss, and the tier that signal gives. Report it as minor: a tier finding changes no code.
-- Every project review criterion above whose `Applies to` matches a staged path. Cite its criterion ID in each finding. Block is blocker, Major is major, Minor is minor. A criterion whose Source starts `inferred:` is minor. A criterion with no `Applies to` line counts as `all`. One with no Source line counts as `inferred:`. One with no Severity line takes the severity of a heading that ends in `(Block)`, `(Major)` or `(Minor)`, or else is minor; a severity word anywhere else in the heading does not count. No criterion lowers a built-in blocker.
-
-Focus areas:
-- TDD/coverage: changed/fixed behavior has tests, preferably written before implementation.
-- Logic correctness: implementation meets the task requirements.
-- Regression: existing behavior is not broken.
-- Leave and return. A flow that leaves and comes back: a sign-in redirect, a payment page, an OAuth callback, a deep link, an app relaunch. State held in memory before it leaves is gone on return. Trace each return on its own: success, error or cancel, an expired or removed account that later comes back, and a second tab or window.
-- Mocks: a mocked library or component raises an event only when the test makes it. Name each event (failure, cancel, removal) that no test raises.
-- Duplication: change does not reimplement existing helpers/patterns.
-- Security: no injection, authorization bypass, secrets, or PII logging.
-- Dependency: new/updated packages were explicitly approved.
-- Backcompat: no unapproved public API, HTTP contract, DB schema, stored procedure signature, serialized shape, or config-key break.
-- Conventions: follows existing repo patterns.
-- Task-specific risks you notice.
-
-Output:
-- Begin the report by stating the model you are running as.
-- One line per acceptance criterion: met, partly met, not met or out of scope, with `path:line`. Write "no list" when the work item has none.
-- A ranked list of findings, most severe first. Use severity: blocker / major / minor.
-- Group related findings.
-- For each finding include:
-  - file:line, or doc section if no line applies
-  - severity
-  - concrete failure scenario: exact command sequence or input, and the wrong outcome
-  - why the existing tests miss it
-  - suggested fix
-  - verification: "verified by running" or "from reading"
-- End with a short list of areas examined and found sound.
-- If a focus area has no findings, say so in one line.
-- Do not pad. Return only actionable findings and concise sound-area coverage.
-```
+8. **Handoff.** Report staged files, the `Risk tier:` and `Read first:` lines as the risk tiers reference shapes them, validation run (with test counts), the reviewer model as the reviewer stated it (and, if a fallback was used, that the named model was not offered), review rounds, fixed findings, disagreed findings with reasons, findings dropped after the challenge with its evidence, and unresolved claims. Report the model the challenge agent stated too. Compare each stated model with the Harness Mapping table. If one is neither the table's model nor an allowed fallback, write "reviewer model mismatch" or "challenge model mismatch" in the report. The review still counts. Add the assumptions you took, any `Warn or coordinate` items, and any `Follow-on` item from a pasted block. If Round 2 was skipped, state that and why, and list the minor fixes applied. With no project rubric, add the line the rubric reference gives as the last line of this report; step 9 comes after it. Do not commit. Then do step 9. When step 9 asks the engineer a question, send this report first and write the step 9 block in the next message, after the answer.
+9. **Verify hand-off.** Read `references/verify-handoff.md`, resolved from this skill's own folder, not the repository, and follow it, in its order. It finds the project's marked verify skill, asks for the base branch, and writes the `Verify:` block for a fresh verify session. With no marked verify skill, it ends with one closing line and writes no Verify block. dev-rev never launches the app.
 
 ## Harness Mapping
 
@@ -239,20 +136,5 @@ The key invariant is independence plus the model the table names. "Fast reviewer
 | Claim is false based on code evidence | Do not change code; report the claim and evidence for disagreement. |
 | Product behavior choice | Ask engineer; do not decide silently. |
 | Still unresolved after Round 2 | Stop and report as unresolved. |
+| The challenge refutes a finding with `path:line` evidence | Check the evidence. Drop the finding only if you agree, and list it in the hand-off. |
 | The risk tier misses a signal | Raise the tier and give the reason in the hand-off. Never lower it on a reviewer claim. It does not count toward Round 2. |
-
-## Common Mistakes
-
-| Mistake | Correct behavior |
-| --- | --- |
-| Committing after review passes | Keep changes staged and hand off. |
-| Reviewing unstaged or narrative-only changes | Review the actual staged diff. |
-| Giving the reviewer your summary in place of the acceptance criteria | Copy the work item's list word for word, and mark your summary as one that may be wrong. |
-| Treating tests-after as equivalent to TDD | Prefer failing test first when practical; explain exceptions. |
-| Skipping Round 2 after fixing a blocker or major finding, or a minor fix that changed production logic | Restage and review once more. |
-| Starting Round 2 after only minor fixes that did not change production logic | Skip it, re-run validation, and report the skip in the handoff. |
-| Using a weaker model or the same agent when no suitable reviewer exists | Stop and tell the engineer that no separate reviewer on the table's model, or its allowed fallback, is available. |
-| Silently accepting product/backcompat decisions | Ask the engineer. |
-| Hiding disagreed claims | Report them with evidence. |
-| Changing a `Do not change` item, or going past a stop condition, from a pasted block | Stop and report to the engineer. |
-| Reporting a run of 0 tests as a pass | Report "ran 0 tests". It is not a pass. |
